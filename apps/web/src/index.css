@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4f7f8;
+  --paper-deep: #e4ecee;
+  --ink: #15202b;
+  --muted: #5a6b78;
+  --line: #c5d2d8;
+  --border: #c5d2d8;
+  --accent: #0f6e6a;
+  --accent-bright: #14948e;
+  --sand: #d9c8a9;
+  --flow-fill: #ffffff;
+  --flow-stroke: #1f3a44;
+
+  color: var(--ink);
+  background: var(--paper);
+  font-family: "Sora", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(21, 32, 43, 0.04),
+    0 12px 28px -16px rgba(21, 32, 43, 0.16);
+}
+
+.shadow-soft-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.shadow-soft-hover:hover {
+  box-shadow:
+    0 2px 6px rgba(21, 32, 43, 0.07),
+    0 20px 40px -18px rgba(21, 32, 43, 0.22);
+  transform: translateY(-2px);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -10%, #dff0ef 0%, transparent 58%),
+    radial-gradient(ellipse 50% 40% at 100% 30%, #efe6d4 0%, transparent 45%),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.font-display {
+  font-family: "Fraunces", Georgia, serif;
+  font-optical-sizing: auto;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes draw-flow {
+  from {
+    stroke-dashoffset: 240;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pulse-node {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+.anim-rise {
+  animation: rise-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-rise-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.anim-rise-delay-2 {
+  animation-delay: 0.24s;
+}
+
+.anim-rise-delay-3 {
+  animation-delay: 0.36s;
+}
+
+.anim-rise-delay-4 {
+  animation-delay: 0.48s;
+}
+
+.flow-path {
+  stroke-dasharray: 240;
+  animation: draw-flow 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+.flow-node {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: pulse-node 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-rise,
+  .flow-path,
+  .flow-node {
+    animation: none !important;
+  }
+}

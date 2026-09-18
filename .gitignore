@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# Alternative package managers (this repo uses pnpm)
+package-lock.json
+yarn.lock
+npm-shrinkwrap.json
+
+# Builds & caches
+dist/
+build/
+out/
+.turbo/
+.vercel/
+*.tsbuildinfo
+.cache/
+.vite/
+*.local
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & debug
+*.log
+logs/
+
+# Test / coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Generated archives
+*.zipwiki
+*.nzip
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+*~

@@ -1,0 +1,402 @@
+export const SITE_NAME = "ZipWiki";
+export const SITE_TAGLINE =
+  "Give your AI a portable memory of your files.";
+export const SITE_DESCRIPTION =
+  "Install the ZipWiki plugin. Your agent packs documents into a .zipwiki and can tell you what’s inside—no cloud index required.";
+
+export const DOCS_URL =
+  "https://github.com/NeoWareInc/zipwiki/tree/main/doc";
+export const WAITLIST_HREF =
+  "mailto:hello@zipwiki.ai?subject=ZipWiki%20waitlist";
+export const SALES_HREF =
+  "mailto:sales@zipwiki.ai?subject=ZipWiki%20Custom%20plan";
+
+export const NAV = [
+  { to: "/product", label: "Product" },
+  { to: "/how-it-works", label: "How it works" },
+  { to: "/pricing", label: "Pricing" },
+  { to: "/roadmap", label: "Roadmap" },
+] as const;
+
+export const PAGE_TITLES: Record<string, string> = {
+  "/": `${SITE_NAME} — ${SITE_TAGLINE}`,
+  "/product": `Product — ${SITE_NAME}`,
+  "/how-it-works": `How it works — ${SITE_NAME}`,
+  "/pricing": `Pricing — ${SITE_NAME}`,
+  "/roadmap": `Roadmap — ${SITE_NAME}`,
+  "/terms": `Terms — ${SITE_NAME}`,
+  "/privacy": `Privacy — ${SITE_NAME}`,
+};
+
+export const AUDIENCES = [
+  {
+    title: "Anyone in Cursor or Claude",
+    body: "Install the plugin. Ask your agent to pack a folder or find a clause. You never have to learn a command line.",
+  },
+  {
+    title: "Operators who keep the files",
+    body: "The knowledge base is a .zipwiki you can copy, backup, or unzip. It does not live on our servers.",
+  },
+  {
+    title: "Teams that want hosted parse",
+    body: "Free uses local LiteParse. Standard and Pro add hosted LlamaParse and ZipWiki OKF, with a soft fallback—not a hard stop.",
+  },
+] as const;
+
+export const PRODUCT_PILLARS = [
+  {
+    title: "Create",
+    ask: "Pack ./contracts into knowledge/contracts.zipwiki.",
+    body: "The agent parses PDFs locally with LiteParse (Office needs LibreOffice on the machine). Paid plans can use hosted LlamaParse. OKF concepts come from your agent’s LLM, or ZipWiki OKF when you still have quota.",
+  },
+  {
+    title: "Query",
+    ask: "What’s in this package? Find the property deed.",
+    body: "The agent opens the catalog, searches OKF first, then reads wiki/parsed/… only if it needs the body. It extracts to disk only when a real file path is required.",
+  },
+  {
+    title: "Keep it local",
+    ask: "The archive stays a file on disk.",
+    body: "No cloud index required. Accounts and hosted parse come later. Until then, join the waitlist and read the GitHub docs.",
+  },
+] as const;
+
+export const TRUST_BULLETS = [
+  {
+    title: "Standard ZIP",
+    body: "Stock unzip still works. Compression defaults to zstd; Deflate or store remain for Info-ZIP interop.",
+  },
+  {
+    title: "Manifest first",
+    body: "META-INF/manifest.json is the discovery file: primaries, parse counts, and whether OKF is present.",
+  },
+  {
+    title: "Verified reads",
+    body: "Inflate checks ZIP CRC-32. When Extra Field 0x014E or a manifest digest is present, SHA-256 is checked too.",
+  },
+] as const;
+
+export const PARSE_PROBLEM = {
+  title: "Agents cannot query a folder of real documents",
+  lead: "Chat models read text. Most business files are not text. A deed is a scanned PDF. A lease is a Word file. A fax is a TIFF. A 10-K is a 200-page layout. Drop those into a chat and the model either skips them, hallucinates from the filename, or burns a context window on garbage.",
+} as const;
+
+export const PARSE_FAMILIES = [
+  {
+    title: "PDFs",
+    body: "Native text PDFs become markdown locally. Scanned or image-only PDFs need OCR. Multi-column 10-Ks, forms, and stamped deeds are the files LiteParse flags as complex—hosted LlamaParse is the upgrade when layout matters.",
+  },
+  {
+    title: "Office (Word, PowerPoint, Pages)",
+    body: ".doc, .docx, .ppt, .odt, .rtf, and similar are binary packages, not markdown. Local parse converts them through LibreOffice to an intermediate PDF, then extracts text. Without LibreOffice on the machine, the original stays in the archive and the catalog marks it unparsed.",
+  },
+  {
+    title: "Spreadsheets",
+    body: ".xlsx, .xls, .csv, Numbers, and ODS become markdown tables—not a live workbook. The agent can read rows and headers. It cannot run formulas. That is still far more queryable than attaching the binary.",
+  },
+  {
+    title: "Scans and images",
+    body: "JPEG, PNG, TIFF, WebP, and SVG go through OCR. Junk faxes and phone photos of a signed page are the hard case: the original is pixels. Parse is best-effort; OKF still records what the document is so search can find it.",
+  },
+] as const;
+
+export const PARSE_ENGINES = [
+  {
+    title: "LiteParse (local, Free)",
+    body: "Runs on your machine. Strong on native PDFs and plain text. Office needs LibreOffice installed. Images use OCR. Unlimited and not billed. Output is whole-document markdown in wiki/parsed/.",
+  },
+  {
+    title: "LibreOffice (local helper)",
+    body: "Required on the same machine to turn Word, Excel, PowerPoint, and other Office families into something LiteParse can read. Intermediate conversion PDFs never go into the .zipwiki.",
+  },
+  {
+    title: "LlamaParse (hosted, paid)",
+    body: "Used when you want multi-format quality or LiteParse marks a file as complex (dense layout, scans, forms). Soft-falls back to LiteParse when quota runs out—not a hard stop.",
+  },
+] as const;
+
+export const OKF_INDEXING = {
+  title: "OKF is the index. Parsed markdown is the evidence.",
+  lead: "Open Knowledge Format (OKF) is a small markdown file per document: YAML frontmatter plus a short body. It is not a vector database. Search ranks these skims first so the agent does not dump every parse into context.",
+} as const;
+
+export const OKF_FIELDS = [
+  {
+    title: "Frontmatter the agent searches",
+    body: "title, type (Deed, Contract, Financial_Report…), tags, and a short description. Those fields are what “find the property deed” matches before anyone opens the 40-page parse.",
+  },
+  {
+    title: "Key facts and sources",
+    body: "Parties, dates, amounts, and a pointer back to the original and wiki/parsed/… file. The agent can answer from facts, then open the parse only when it needs a quote.",
+  },
+  {
+    title: "wiki/okf/index.md",
+    body: "A catalog of every concept in the package. Open the archive and the agent should report this list—not a raw zip listing of binaries.",
+  },
+  {
+    title: "Who writes OKF",
+    body: "On Free, the plugin has your agent write OKF with its own LLM after pack. Paid plans can use ZipWiki OKF. Either way the files live in the .zipwiki on disk.",
+  },
+] as const;
+
+export const HOW_STEPS = [
+  {
+    title: "Pack",
+    prompt:
+      "Using ZipWiki, pack ./contracts into ./knowledge/contracts.zipwiki and enrich every document with AI OKF.",
+    detail:
+      "Each source file is parsed to markdown when possible, then given an OKF skim (title, type, tags, key facts). Hosted OKF is off by default so your agent writes the concepts.",
+  },
+  {
+    title: "Catalog",
+    prompt:
+      "Open ./knowledge/contracts.zipwiki and tell me what’s inside—titles, types, and what you can read next.",
+    detail:
+      "Each primary shows whether it has OKF and parsed markdown, plus the path the agent will open. Unparsed scans still appear so nothing is silently dropped.",
+  },
+  {
+    title: "Search",
+    prompt:
+      'Search ./knowledge/contracts.zipwiki for "property deed" and show the top hits.',
+    detail:
+      "OKF titles, tags, and descriptions rank first. Parsed text is a lower-weight backup. Hits return paths and snippets—never full bodies.",
+  },
+  {
+    title: "Read",
+    prompt:
+      "Read the OKF for the deed, then the parsed text only if you still need evidence.",
+    detail:
+      "Keep context small. Extract to disk only when another tool needs a real path.",
+  },
+] as const;
+
+export const SAMPLE_CATALOG = [
+  {
+    title: "North Carolina general warranty deed",
+    type: "Deed",
+    okf: true,
+    parsed: true,
+    next: "wiki/okf/property-deed.md → wiki/parsed/property-deed.pdf.md",
+  },
+  {
+    title: "Apple Inc. Form 10-K (FY 2024 excerpt)",
+    type: "Financial_Report",
+    okf: true,
+    parsed: true,
+    next: "wiki/okf/apple-10k-2024-sm.md",
+  },
+  {
+    title: "ZIP files across the software industry",
+    type: "Technical_Doc",
+    okf: true,
+    parsed: true,
+    next: "wiki/okf/zip-files-in-software-industry.md",
+  },
+  {
+    title: "Junk fax 0001 (TIFF)",
+    type: "Image",
+    okf: true,
+    parsed: false,
+    next: "wiki/okf/junkfax_0001.md (source only)",
+  },
+] as const;
+
+export const PLUGIN_BUNDLE = [
+  {
+    title: "Skills",
+    body: "The agent knows when to pack, how to open and search, and how to write OKF enrichment—without you pasting a runbook.",
+  },
+  {
+    title: "MCP server",
+    body: "Local tools talk to files on disk (or a mounted drive). Pack, open, search, read, extract, enrich. Nothing is uploaded unless you use hosted parse.",
+  },
+  {
+    title: "CLI (bundled)",
+    body: "The same engine for CI and scripts. Most people never open a terminal. The plugin includes zipwiki (pack) and zipaccess (query).",
+  },
+] as const;
+
+export const PLUGIN_HOSTS = [
+  {
+    title: "Cursor",
+    body: "Add the ZipWiki plugin from the marketplace. It wires skills, MCP, and the CLI into the project.",
+  },
+  {
+    title: "Claude Code",
+    body: "Project MCP config starts the local ZipWiki server. The skill tells Claude the pack and query loop.",
+  },
+  {
+    title: "Claude Desktop",
+    body: "Stdio MCP in the desktop config. Same tools, same .zipwiki files on disk.",
+  },
+] as const;
+
+export const PLUGIN_STEPS = [
+  "Join the ZipWiki waitlist (hosted parse and accounts ship after the local loop).",
+  "Read the GitHub docs for the .zipwiki format and the pack → catalog → search → read loop.",
+  "Ask your agent to pack a folder or open an existing .zipwiki once the plugin is available.",
+] as const;
+
+export type AgentPrompt = {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+};
+
+export const AGENT_PROMPTS: AgentPrompt[] = [
+  {
+    id: "pack",
+    title: "Pack a folder",
+    description: "Create a knowledge archive and enrich each document.",
+    prompt:
+      "Using ZipWiki, pack ./path/to/docs into ./knowledge/my-docs.zipwiki, enrich every primary with AI OKF, and tell me the output path.",
+  },
+  {
+    id: "open",
+    title: "What’s inside",
+    description: "Catalog titles, types, and what can be read next.",
+    prompt:
+      "Using ZipWiki, open ./knowledge/my-docs.zipwiki and summarize what’s inside (titles, types, OKF, parsed files).",
+  },
+  {
+    id: "search",
+    title: "Search",
+    description: "Find concepts matching a question.",
+    prompt:
+      'Using ZipWiki, search ./knowledge/my-docs.zipwiki for "property deed" and show the top hits with short snippets.',
+  },
+  {
+    id: "read",
+    title: "Read one concept",
+    description: "Skim OKF first, then parsed text if needed.",
+    prompt:
+      "Using ZipWiki on ./knowledge/my-docs.zipwiki, read the OKF for the property deed and give a short summary. Read parsed text only if you still need evidence.",
+  },
+];
+
+export const PLANS = [
+  {
+    slug: "free",
+    name: "Free",
+    price: "$0",
+    blurb:
+      "Plugin + unlimited local LiteParse (PDF native; Office needs LibreOffice on your machine) and OKF from your agent’s LLM. No hosted LlamaParse or ZipWiki OKF quota.",
+    cta: "Join waitlist",
+    href: WAITLIST_HREF,
+  },
+  {
+    slug: "standard",
+    name: "Standard",
+    price: "$10/month",
+    blurb:
+      "2,000 LlamaParse documents (up to 100 pages), multi-format. 2,000 ZipWiki OKF enrichments. Extra usage falls back to Free (LiteParse + your agent’s LLM).",
+    cta: "Join waitlist",
+    href: WAITLIST_HREF,
+  },
+  {
+    slug: "pro",
+    name: "Pro",
+    price: "$50/month",
+    blurb:
+      "20,000 LlamaParse documents (up to 1,000 pages). 20,000 ZipWiki OKF enrichments. Extra usage falls back to Free (LiteParse + host LLM).",
+    cta: "Join waitlist",
+    href: WAITLIST_HREF,
+  },
+  {
+    slug: "custom",
+    name: "Custom",
+    price: "Quote",
+    blurb:
+      "No limit on hosted LlamaParse and ZipWiki OKF. Admin- or sales-assigned. Email sales@zipwiki.ai.",
+    cta: "Talk to sales",
+    href: SALES_HREF,
+  },
+] as const;
+
+export type RoadmapStatus = "Now" | "Next" | "Later";
+
+export const ROADMAP: Array<{
+  title: string;
+  why: string;
+  status: RoadmapStatus;
+}> = [
+  {
+    title: "Site + GitHub docs",
+    why: "zipwiki.ai marketing and the packaging / query / MCP notes in /doc. No dashboard.",
+    status: "Now",
+  },
+  {
+    title: "TypeScript pack, query, MCP",
+    why: "zipwiki pack, zipaccess open/search/read, and stdio MCP for Node, agents, and Vercel. The web runtime stays TypeScript.",
+    status: "Next",
+  },
+  {
+    title: "Cursor marketplace plugin",
+    why: "One install that ships skills, MCP, and the CLI together—so marketing matches the box.",
+    status: "Next",
+  },
+  {
+    title: "Hosted API under zipwiki.ai",
+    why: "api.zipwiki.ai for accounts, keys, and hosted parse. New Fly/Convex/Stripe projects—not zipcodex.ai credentials.",
+    status: "Later",
+  },
+  {
+    title: "Rust native CLI",
+    why: "zipwiki / zipaccess binaries for select environments (macOS arm64 first). Shared ZipWiki ZIP profile, two implementations.",
+    status: "Later",
+  },
+  {
+    title: "Dashboard account plane",
+    why: "Keys, usage, billing, settings, and a browser inspector for a local package.",
+    status: "Later",
+  },
+  {
+    title: "In-browser pack",
+    why: "Create a .zipwiki from the dashboard without opening an agent.",
+    status: "Later",
+  },
+  {
+    title: "Richer Knowledge browser",
+    why: "Digest cards and the original beside its parse.",
+    status: "Later",
+  },
+  {
+    title: "Hosted MCP + saved library",
+    why: "Agents that cannot see your disk; optional account-stored packages.",
+    status: "Later",
+  },
+  {
+    title: "Connector listings",
+    why: "ChatGPT and Claude directory listings—plugin-shaped, not a raw CLI.",
+    status: "Later",
+  },
+  {
+    title: "Encryption",
+    why: "AES so sensitive archives stay sealed in transit.",
+    status: "Later",
+  },
+  {
+    title: "Duplicates and supersession",
+    why: "Collapse near-duplicates; mark older docs as superseded.",
+    status: "Later",
+  },
+  {
+    title: "Per-page figures and quotes",
+    why: "Page-level markdown, extracted figures, bounding-box citations.",
+    status: "Later",
+  },
+  {
+    title: "Ingest pipes",
+    why: "Watched folder, IMAP, or scanner drop → new .zipwiki.",
+    status: "Later",
+  },
+  {
+    title: "Teams and share links",
+    why: "Workspaces, revoke-a-link sharing, only if you need multi-user.",
+    status: "Later",
+  },
+];
+
+export const ADVANCED_CLI = `zipwiki pack ./docs -o knowledge/docs.zipwiki
+zipaccess open knowledge/docs.zipwiki`;
