@@ -58,7 +58,7 @@ the browser all run the same engine — no per-OS binary.
 
 - Plugin (skills + stdio MCP + CLI) in Cursor / Claude
 - Hosted API on `api.zipwiki.ai` (new Convex / Stripe projects)
-- Dashboard: keys, usage, billing, settings
+- Portal in `apps/web`: `/dashboard/settings` (pack/parse/OKF config), keys, billing, knowledge
 - Hosted LlamaParse / ZipWiki OKF for paid plans; local LiteParse stays free
 
 **Done when:** a waitlist user can install the plugin, pack locally without

@@ -31,11 +31,21 @@
     "build:mcp": "pnpm build:zipwiki && pnpm --filter @zipwiki/mcp build",
     "test:zipwiki": "pnpm --filter @zipwiki/zipwiki test",
     "sample-zipwiki": "pnpm zipwiki -- pack samples/test2 -o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse -sf && pnpm zipaccess -- open knowledge/sample-docs.zipwiki",
-    "smoke:zipaccess": "pnpm zipaccess -- open knowledge/sample-docs.zipwiki && pnpm zipaccess -- search knowledge/sample-docs.zipwiki deed"
+    "smoke:zipaccess": "pnpm zipaccess -- open knowledge/sample-docs.zipwiki && pnpm zipaccess -- search knowledge/sample-docs.zipwiki deed",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy"
   },
   "devDependencies": {
+    "convex": "^1.45.0",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@auth/core": "0.41.1",
+    "@convex-dev/auth": "^0.0.95",
+    "@oslojs/crypto": "^1.0.1",
+    "resend": "^6.27.0",
+    "stripe": "^18.5.0"
   },
   "engines": {
     "node": ">=22.13"

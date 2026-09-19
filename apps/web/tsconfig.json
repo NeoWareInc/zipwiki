@@ -1,7 +1,10 @@
 {
   "extends": "@zipwiki/typescript-config/react.json",
   "compilerOptions": {
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@convex/*": ["../../convex/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../../convex"]
 }

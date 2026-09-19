@@ -19,6 +19,9 @@ This is the public-repo gate, not a lab workplan.
 - [x] `@zipwiki/zipwiki` pack / zipaccess (LiteParse + `--no-ai-okf`, no login)
 - [x] `@zipwiki/mcp` stdio (`open` / `search` / `read`)
 - [x] Smoke: `pack samples/test2` → `zipaccess open` → `search deed`
+- [x] Portal routes in `apps/web` (`/dashboard/settings` + Convex functions)
+
+Need `npx convex dev` (new ZipWiki project) before settings persist.
 
 ## Docs included
 
@@ -29,6 +32,7 @@ This is the public-repo gate, not a lab workplan.
 - [OKF_SPEC.md](OKF_SPEC.md) + [OKF_ZIPWIKI_VS_SPEC.md](OKF_ZIPWIKI_VS_SPEC.md)
 - [APPNOTE.TXT](APPNOTE.TXT) — PKWARE ZIP
 - [format/NEOZIP_APPNOTE.md](format/NEOZIP_APPNOTE.md) — internal parent spec
+- [CONVEX.md](CONVEX.md) — portal settings / accounts (new project)
 
 ## Later gates
 
