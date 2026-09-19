@@ -1,0 +1,128 @@
+export {
+  applyEnvFile,
+  findEnvRoot,
+  loadEnvFiles,
+  parseEnvFile,
+  resetEnvFileLoadStateForTests,
+} from "./env.js";
+export {
+  MANAGED_HOME_ENV_KEYS,
+  PLATFORM_FORBIDDEN_HOME_ENV_KEYS,
+  SECRET_HOME_ENV_KEYS,
+  ZIPWIKI_HOME_ENV,
+  assertHomeEnvKeyAllowed,
+  formatHomeEnv,
+  isPlatformForbiddenHomeEnvKey,
+  loadZipwikiHomeEnv,
+  isSecretEnvConfigured,
+  maskSecret,
+  saveZipwikiHomeEnv,
+  shadowedHomeEnvKeys,
+  snapshotShellEnv,
+  zipwikiHomeDir,
+  zipwikiHomeEnvPath,
+  type ManagedHomeEnvKey,
+} from "./home.js";
+export {
+  ONBOARDING_FILENAME,
+  ONBOARDING_VERSION,
+  isOnboardingComplete,
+  loadZipwikiOnboarding,
+  saveZipwikiOnboarding,
+  zipwikiOnboardingPath,
+  type ZipwikiOnboarding,
+} from "./onboarding.js";
+export {
+  buildEffectiveConfigView,
+  formatNonInteractiveSetupError,
+  needsCredentialSetup,
+  type CredentialSetupStatus,
+  type EffectiveConfigView,
+} from "./effective.js";
+export {
+  CONFIG_FILENAME,
+  findConfigPath,
+  isLlamaCloudConfigured,
+  loadZipwikiConfig,
+  parseZipwikiConfigFile,
+  readZipwikiConfigFile,
+  type ZipwikiConfigOverrides,
+} from "./load.js";
+export {
+  hasZipwikiApiCredentials,
+  isHostedApiConfigured,
+  isHostedMode,
+  isRemoteOkfMode,
+  isRemoteParseMode,
+  isZipWikiCliReleaseChannel,
+  resolveAuthLoginTarget,
+  resolveOkfCredentialSource,
+  resolveParseCredentialSource,
+  resolveZipwikiApiConfig,
+  resolveZipwikiApiKey,
+  resolveZipwikiApiTarget,
+  resolveZipwikiApiUrl,
+  formatZipwikiApiTarget,
+  zipwikiApiUrlForTarget,
+  zipCodexCliChannel,
+  ZIPWIKI_API_PRESETS,
+  ZIPWIKI_DEV_API_URL,
+  ZIPWIKI_DEV_API_ALIASES,
+  type OkfCredentialSource,
+  type ParseCredentialSource,
+  type ZipwikiApiConfig,
+  type ZipwikiApiTarget,
+  type ZipWikiOkfMode,
+  type ZipWikiParseMode,
+} from "./api.js";
+export {
+  DEFAULT_ZIPWIKI_CONFIG,
+  EscalateConfigSchema,
+  LlamaParseConfigSchema,
+  LiteParseConfigSchema,
+  OkfConfigSchema,
+  PackConfigSchema,
+  ParseEngineSchema,
+  ParserConfigSchema,
+  ParserModeSchema,
+  resolveOmitOriginalDocuments,
+  ZipwikiConfigSchema,
+  type ParseEngineId,
+  type ParserMode,
+  type ResolvedZipwikiConfig,
+  type ZipwikiConfig,
+  type ZipwikiConfigInput,
+} from "./schema.js";
+export {
+  applyHostedClientConfig,
+  formatClientUsageSummary,
+  printClientUsageSummary,
+  refreshAndPrintClientUsage,
+  type HostedClientConfigResult,
+} from "./hosted-merge.js";
+export {
+  hasLlamaParseQuota,
+  hasZipcodexOkfQuota,
+  type ClientPlanCaps,
+  type ClientUsage,
+} from "./entitlements.js";
+export { maybeReportLocalLiteParse } from "./liteparse-telemetry.js";
+export {
+  applyAccountSettingsToEnv,
+  isZipwikiAccountConnected,
+  loadCachedAccountSettings,
+  pullAccountSettings,
+  requireAccountConnected,
+  requireAccountForHostedCredential,
+  requireSetupComplete,
+  saveCachedAccountSettings,
+  syncAccountSettingsForPack,
+  warnMissingByoSecrets,
+  zipwikiSettingsCachePath,
+  type CachedAccountSettings,
+} from "./account-settings-cache.js";
+export { accountSettingsToConfigInput } from "./account-settings-overlay.js";
+export {
+  maybeMigrateLocalOnboarding,
+  onboardingToAccountPatch,
+} from "./migrate-onboarding.js";

@@ -40,15 +40,16 @@ engine lands.
 
 ## Phase 2 — TypeScript product loop
 
-Move only pack / zipaccess / stdio MCP and the packages they import.
+**Done.** Engine lives in this repo (`@zipwiki/zipwiki`, `@zipwiki/mcp`,
+`@zipwiki/api-client`). Local pack does not require login.
 
-- Create: pack/update, LiteParse, origin Extra Field `0x014F`, catalog
-- Query: `open` / `search` / `read` / `extract` / `origin`
-- MCP: stdio tools
-- Sample: `knowledge/sample-docs.zipwiki` smoke (`open` then search `"deed"`)
+- Create: `zipwiki pack` / `update`, LiteParse, origin Extra Field `0x014F`
+- Query: `zipaccess open` / `search` / `read` / `extract` / `origin`
+- MCP: stdio tools (`zipwiki-mcp`)
+- Sample: `pnpm sample-zipwiki` then `pnpm smoke:zipaccess` (`search deed`)
 
-Local pack must work without account login (LiteParse + `--no-ai-okf`).
-Package names `@zipwiki/*`; home `~/.zipwiki`.
+Package names `@zipwiki/*`; home `~/.zipwiki`. Hosted auth is stubbed through
+for Phase 3 (`zipwiki auth login`).
 
 ## Phase 3 — TypeScript Beta (full product)
 

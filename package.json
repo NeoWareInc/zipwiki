@@ -23,7 +23,15 @@
     "check:fly:dev": "./deploy/fly/check.sh dev",
     "check:fly:prod": "./deploy/fly/check.sh prod",
     "certs:fly:dev": "fly certs check api-dev.zipwiki.ai -c deploy/fly/fly.dev.toml",
-    "certs:fly:prod": "fly certs check api.zipwiki.ai -c deploy/fly/fly.prod.toml"
+    "certs:fly:prod": "fly certs check api.zipwiki.ai -c deploy/fly/fly.prod.toml",
+    "zipwiki": "pnpm --filter @zipwiki/zipwiki exec tsx src/cli.ts",
+    "zipaccess": "pnpm --filter @zipwiki/zipwiki exec tsx src/zipaccess-cli.ts",
+    "dev:mcp": "pnpm --filter @zipwiki/mcp dev",
+    "build:zipwiki": "pnpm --filter @zipwiki/api-client build && pnpm --filter @zipwiki/zipwiki build",
+    "build:mcp": "pnpm build:zipwiki && pnpm --filter @zipwiki/mcp build",
+    "test:zipwiki": "pnpm --filter @zipwiki/zipwiki test",
+    "sample-zipwiki": "pnpm zipwiki -- pack samples/test2 -o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse -sf && pnpm zipaccess -- open knowledge/sample-docs.zipwiki",
+    "smoke:zipaccess": "pnpm zipaccess -- open knowledge/sample-docs.zipwiki && pnpm zipaccess -- search knowledge/sample-docs.zipwiki deed"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

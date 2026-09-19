@@ -1,0 +1,40 @@
+{
+  "name": "@zipwiki/mcp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ZipWiki MCP server — open portable .zipwiki knowledge packages (stdio + shared handlers)",
+  "type": "module",
+  "bin": {
+    "zipwiki-mcp": "./dist/stdio.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./handlers": {
+      "types": "./dist/handlers.d.ts",
+      "import": "./dist/handlers.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx src/stdio.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/stdio.js",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@zipwiki/zipwiki": "workspace:*",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@zipwiki/typescript-config": "workspace:*",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

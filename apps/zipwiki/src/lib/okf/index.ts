@@ -1,0 +1,83 @@
+export type {
+  BuildOkfBundleInput,
+  BuildOkfDocumentInput,
+  OkfBuildResult,
+  OkfEnrichment,
+  OkfFile,
+  OkfPrimaryRef,
+  OkfSourceRef,
+} from "./types.js";
+export {
+  OKF_DOCUMENT_NAME,
+  OKF_INDEX_NAME,
+  OKF_LOG_NAME,
+  OKF_VERSION,
+  conceptFileNameFor,
+  defaultConceptType,
+  extractFrontmatterType,
+  fallbackEnrichment,
+  fallbackTags,
+  indexEntryFromConceptMarkdown,
+  materializeBody,
+  normalizeOkfTags,
+  renderConceptBody,
+  renderOkfFiles,
+  renderOkfIndex,
+  stripLeadingFrontmatter,
+  type OkfIndexEntry,
+} from "./render.js";
+export {
+  DEFAULT_OKF_PROVIDER,
+  OKF_PROVIDERS,
+  OKF_PROVIDER_CONFIGS,
+  buildOkfBundle,
+  buildOkfDocument,
+  createOkfLanguageModel,
+  fetchOkfEnrichment,
+  isAiOkfConfigured,
+  isOkfProviderId,
+  normalizeOkfProvider,
+  okfFilesFingerprint,
+  resolveOkfModel,
+  resolveOkfProvider,
+  stripProviderPrefix,
+  type OkfLanguageModelHandle,
+  type OkfProviderConfig,
+  type OkfProviderId,
+} from "./generate.js";
+export {
+  buildDocumentFrontmatter,
+  buildZipWikiOkfSources,
+  relativeFromOkfRoot,
+  relativeParseFromOkf,
+  yamlEscape,
+} from "./yaml.js";
+export { RemoteOkfAdapter } from "./adapters/remote.js";
+export {
+  parseFrontmatterFields,
+  repairOkfFrontmatter,
+  renderConceptMarkdown,
+  splitFrontmatter,
+  validateOkfFrontmatter,
+  type OkfFrontmatterFields,
+  type OkfGeneratedEvent,
+  type OkfSourceEntry,
+  type OkfValidationIssue,
+  type SplitFrontmatter,
+} from "./frontmatter.js";
+export {
+  WIKI_SEARCH_INDEX_VERSION,
+  buildWikiSearchIndex,
+  parseWikiSearchIndex,
+  scoreWikiSearchDoc,
+  serializeWikiSearchIndex,
+  tokenizeSearchQuery,
+  wikiSearchDocBlob,
+  type WikiSearchDoc,
+  type WikiSearchIndex,
+} from "./search-index.js";
+export {
+  applyCodeOwnedProvenance,
+  dateHeadingFromIso,
+  hashOkfBody,
+} from "./provenance.js";

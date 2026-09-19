@@ -1,0 +1,65 @@
+{
+  "name": "@zipwiki/zipwiki",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ZipWiki — create .zipwiki archives and run LiteParse document tools",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/lib/config/index.d.ts",
+      "import": "./dist/lib/config/index.js"
+    },
+    "./parse": {
+      "types": "./dist/lib/parse/index.d.ts",
+      "import": "./dist/lib/parse/index.js"
+    },
+    "./okf": {
+      "types": "./dist/lib/okf/index.d.ts",
+      "import": "./dist/lib/okf/index.js"
+    },
+    "./archive": {
+      "types": "./dist/lib/archive/index.d.ts",
+      "import": "./dist/lib/archive/index.js"
+    },
+    "./access": {
+      "types": "./dist/lib/access/index.d.ts",
+      "import": "./dist/lib/access/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "zipwiki": "./dist/cli.js",
+    "zipaccess": "./dist/zipaccess-cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/cli.js",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.99",
+    "@ai-sdk/google": "^2.0.94",
+    "@ai-sdk/openai": "^2.0.0",
+    "@clack/prompts": "^1.7.0",
+    "@llamaindex/liteparse": "^2.9.0",
+    "@llamaindex/llama-cloud": "^1.3.0",
+    "ai": "^5.0.0",
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1",
+    "zod": "^3.25.0",
+    "@zipwiki/api-client": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@zipwiki/typescript-config": "workspace:*",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

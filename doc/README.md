@@ -11,5 +11,7 @@ GitHub markdown is the docs host for Phase 1. A `docs.zipwiki.ai` site is later.
 5. [COMPLETE.md](COMPLETE.md) — release checklist
 6. [HOSTED-API.md](HOSTED-API.md) — Fly health host (`api.zipwiki.ai`)
 
+Phase 2 CLIs: `pnpm zipwiki` / `pnpm zipaccess` / `@zipwiki/mcp`.
+
 User-facing name is **ZipWiki ZIP profile**. NeoZip Extra Field IDs live under
 [format/](format/).

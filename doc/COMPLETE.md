@@ -14,6 +14,12 @@ This is the public-repo gate, not a lab workplan.
 - [x] Phase 1b server: `GET /health` in `apps/server` (Fly apps `zipwiki-api-*`)
 - [ ] Custom domain certs (`api-dev.zipwiki.ai` / `api.zipwiki.ai`) after Squarespace CNAMEs
 
+## Phase 2
+
+- [x] `@zipwiki/zipwiki` pack / zipaccess (LiteParse + `--no-ai-okf`, no login)
+- [x] `@zipwiki/mcp` stdio (`open` / `search` / `read`)
+- [x] Smoke: `pack samples/test2` → `zipaccess open` → `search deed`
+
 ## Docs included
 
 - [ZIPWIKI_APPNOTE.md](ZIPWIKI_APPNOTE.md) — packaging contract
@@ -30,9 +36,10 @@ This is the public-repo gate, not a lab workplan.
 `zipwiki-api-prod`). Certs wait on Squarespace CNAMEs for `api*.zipwiki.ai`.
 New Convex/Stripe projects later — not zipcodex.ai credentials.
 
-**Phase 2 — TypeScript engine:** `zipwiki pack` without login (LiteParse +
-`--no-ai-okf`); `zipaccess open` then `search "deed"` on a sample
-`knowledge/sample-docs.zipwiki`; stdio MCP open → search → read.
+**Phase 2 — TypeScript engine (done):** `pnpm zipwiki -- pack samples/test2
+-o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse`; then
+`pnpm smoke:zipaccess`. MCP handlers `open` / `search` / `read_okf` /
+`read_parsed`.
 
 **Phase 3 — TypeScript Beta:** plugin + hosted API + dashboard on zipwiki.ai.
 TypeScript only — runs wherever Node / agents / Vercel run.

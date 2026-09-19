@@ -16,10 +16,9 @@ API: [`apps/server`](apps/server) → `api.zipwiki.ai`.
 
 ## Status
 
-Phase 1 is the **product site and GitHub docs**. Phase 1b is the Fly health
-host (`GET /health`). The TypeScript pack/query/MCP loop is the Beta product
-(runs everywhere). A Rust CLI is after that Beta, and only on machines we
-compile for — see [PHASES.md](PHASES.md).
+Phase 2 is the **TypeScript pack / zipaccess / stdio MCP** loop (no login for
+local LiteParse). Phase 1b is the Fly health host. A Rust CLI is after the
+TypeScript Beta — see [PHASES.md](PHASES.md).
 
 Until then, the lab checkout is `zip-codex`. This repo is what we ship as ZipWiki.
 
@@ -37,6 +36,9 @@ Until then, the lab checkout is `zip-codex`. This repo is what we ship as ZipWik
 pnpm install
 pnpm --filter @zipwiki/web dev
 pnpm --filter @zipwiki/server dev   # http://localhost:3001
+pnpm zipwiki -- pack samples/test2 -o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse
+pnpm zipaccess -- open knowledge/sample-docs.zipwiki
+pnpm zipaccess -- search knowledge/sample-docs.zipwiki deed
 ```
 
 Production-like build:
@@ -44,6 +46,8 @@ Production-like build:
 ```bash
 pnpm --filter @zipwiki/web build
 pnpm --filter @zipwiki/server build
+pnpm build:zipwiki
+pnpm --filter @zipwiki/mcp build
 ```
 
 ## Names

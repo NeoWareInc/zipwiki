@@ -1,7 +1,17 @@
 packages:
   - "apps/web"
   - "apps/server"
+  - "apps/zipwiki"
+  - "apps/mcp"
   - "packages/*"
 
 allowBuilds:
   esbuild: true
+  "@llamaindex/liteparse": true
+  "@llamaindex/liteparse-darwin-arm64": true
+  "@llamaindex/liteparse-darwin-x64": true
+  "@llamaindex/liteparse-linux-arm64-gnu": true
+  "@llamaindex/liteparse-linux-x64-gnu": true
+  "@llamaindex/liteparse-linux-x64-musl": true
+  "@llamaindex/liteparse-win32-arm64-msvc": true
+  "@llamaindex/liteparse-win32-x64-msvc": true

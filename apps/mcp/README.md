@@ -1,7 +1,12 @@
-# apps/mcp
+# @zipwiki/mcp
 
-Placeholder for stdio MCP (`zipwiki-mcp`).
+Stdio MCP (`zipwiki-mcp`). Tools: `open`, `search`, `query`, `read_okf`,
+`read_parsed`, `read_entry`, `read`, `origin`, `extract`, `pack`, `update`,
+`okf_enrich`.
 
-Lands in **Phase 2** with the TypeScript pack/query loop. TypeScript remains
-the MCP runtime after Beta; a Rust CLI (Phase 4) is optional and only on
-machines we compile for.
+```bash
+pnpm --filter @zipwiki/mcp build
+node apps/mcp/dist/stdio.js
+```
+
+Default package argument: a `.zipwiki` path, or `wiki.zipwiki` in the cwd.
