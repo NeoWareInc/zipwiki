@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Logo } from "../components/Logo";
 
 function LegalShell({
   title,
@@ -15,13 +16,7 @@ function LegalShell({
             to="/"
             className="inline-flex items-center gap-2 text-sm text-(--muted) hover:text-(--ink)"
           >
-            <img
-              src="/zipwiki-icon.png"
-              alt=""
-              width={28}
-              height={28}
-              className="h-7 w-7 rounded-md"
-            />
+            <Logo variant="mark" alt="" className="h-7 w-7" />
             ZipWiki
           </Link>
           <h1 className="font-display text-3xl font-semibold text-(--ink)">

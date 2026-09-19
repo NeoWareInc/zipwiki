@@ -3,13 +3,13 @@ import {
   ADVANCED_CLI,
   AGENT_PROMPTS,
   AUDIENCES,
-  DOCS_URL,
   PLUGIN_BUNDLE,
   PLUGIN_HOSTS,
   PLUGIN_STEPS,
   SITE_TAGLINE,
   WAITLIST_HREF,
 } from "../lib/marketing-copy";
+import { Logo } from "../components/Logo";
 import {
   FeatureGrid,
   PrimaryCta,
@@ -23,18 +23,12 @@ export default function Landing() {
     <main>
       <section className="mx-auto flex max-w-6xl flex-col justify-center gap-10 px-6 py-12 md:gap-14 md:py-16">
         <div className="max-w-2xl space-y-5">
-          <div className="anim-rise flex items-center gap-4">
-            <img
-              src="/zipwiki-icon.png"
-              alt=""
-              width={72}
-              height={72}
-              className="h-18 w-18 rounded-[1.15rem] shadow-sm"
+          <h1 className="anim-rise">
+            <Logo
+              variant="lockup"
+              className="h-16 w-auto sm:h-20 md:h-[5.75rem]"
             />
-            <h1 className="font-display text-5xl leading-[1.05] font-semibold tracking-tight text-(--ink) md:text-6xl">
-              ZipWiki
-            </h1>
-          </div>
+          </h1>
           <p className="anim-rise anim-rise-delay-1 font-display text-2xl leading-snug text-(--ink) md:text-3xl">
             {SITE_TAGLINE}
           </p>
@@ -45,7 +39,7 @@ export default function Landing() {
           </p>
           <div className="anim-rise anim-rise-delay-3 flex flex-wrap items-center gap-3 pt-1">
             <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
-            <SecondaryCta to={DOCS_URL}>Docs on GitHub</SecondaryCta>
+            <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
           </div>
         </div>
         <UserFlow />
@@ -103,9 +97,9 @@ export default function Landing() {
       <section className="border-t border-(--line) bg-white/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
-            Waitlist → docs → ask
+            Waitlist → plugin → ask
           </h2>
-          <ol className="mt-8 grid gap-4 md:grid-cols-3">
+          <ol className="mt-8 grid gap-4 md:grid-cols-2">
             {PLUGIN_STEPS.map((step, i) => (
               <li
                 key={step}

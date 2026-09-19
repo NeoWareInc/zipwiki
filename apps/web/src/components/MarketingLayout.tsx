@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
-  DOCS_URL,
   NAV,
   PAGE_TITLES,
   SITE_DESCRIPTION,
   SITE_NAME,
   WAITLIST_HREF,
 } from "../lib/marketing-copy";
+import { Logo } from "./Logo";
 
 export function MarketingLayout() {
   const location = useLocation();
@@ -42,17 +42,8 @@ export function MarketingLayout() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-(--line)/70 bg-(--paper)/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-6 py-3">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5 text-(--ink)">
-            <img
-              src="/zipwiki-icon.png"
-              alt=""
-              width={36}
-              height={36}
-              className="h-9 w-9 rounded-[9px] shadow-sm"
-            />
-            <span className="font-display text-xl font-semibold tracking-tight">
-              {SITE_NAME}
-            </span>
+          <Link to="/" className="flex shrink-0 items-center text-(--ink)">
+            <Logo variant="wordmark" className="h-8 w-auto sm:h-9" />
           </Link>
 
           <nav className="hidden items-center gap-5 text-sm lg:flex">
@@ -144,9 +135,6 @@ export function MarketingLayout() {
             <Link to="/pricing" className="hover:text-(--accent)">
               Pricing
             </Link>
-            <a href={DOCS_URL} className="hover:text-(--accent)">
-              Docs
-            </a>
             <Link to="/terms" className="hover:text-(--accent)">
               Terms
             </Link>
@@ -165,19 +153,11 @@ export function MarketingLayout() {
 
 function WaitlistLinks() {
   return (
-    <>
-      <a
-        href={DOCS_URL}
-        className="font-medium text-(--muted) hover:text-(--accent)"
-      >
-        Docs
-      </a>
-      <a
-        href={WAITLIST_HREF}
-        className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--accent-bright)"
-      >
-        Join waitlist
-      </a>
-    </>
+    <a
+      href={WAITLIST_HREF}
+      className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--accent-bright)"
+    >
+      Join waitlist
+    </a>
   );
 }

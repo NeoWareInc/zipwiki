@@ -4,8 +4,6 @@ export const SITE_TAGLINE =
 export const SITE_DESCRIPTION =
   "Install the ZipWiki plugin. Your agent packs documents into a .zipwiki and can tell you what’s inside—no cloud index required.";
 
-export const DOCS_URL =
-  "https://github.com/NeoWareInc/zipwiki/tree/main/doc";
 export const WAITLIST_HREF =
   "mailto:hello@zipwiki.ai?subject=ZipWiki%20waitlist";
 export const SALES_HREF =
@@ -57,7 +55,7 @@ export const PRODUCT_PILLARS = [
   {
     title: "Keep it local",
     ask: "The archive stays a file on disk.",
-    body: "No cloud index required. Accounts and hosted parse come later. Until then, join the waitlist and read the GitHub docs.",
+    body: "No cloud index required. Accounts and hosted parse come later. Until then, join the waitlist.",
   },
 ] as const;
 
@@ -233,8 +231,7 @@ export const PLUGIN_HOSTS = [
 
 export const PLUGIN_STEPS = [
   "Join the ZipWiki waitlist (hosted parse and accounts ship after the local loop).",
-  "Read the GitHub docs for the .zipwiki format and the pack → catalog → search → read loop.",
-  "Ask your agent to pack a folder or open an existing .zipwiki once the plugin is available.",
+  "Install the plugin when it is available, then ask your agent to pack a folder or open an existing .zipwiki.",
 ] as const;
 
 export type AgentPrompt = {
@@ -322,8 +319,8 @@ export const ROADMAP: Array<{
   status: RoadmapStatus;
 }> = [
   {
-    title: "Site + GitHub docs",
-    why: "zipwiki.ai marketing and the packaging / query / MCP notes in /doc. No dashboard.",
+    title: "Marketing site",
+    why: "zipwiki.ai product pages, waitlist, and pricing. No dashboard.",
     status: "Now",
   },
   {

@@ -9,4 +9,4 @@ pnpm --filter @zipwiki/web build
 
 Routes: `/` `/product` `/how-it-works` `/pricing` `/roadmap` `/terms` `/privacy`.
 
-CTAs: waitlist (`hello@zipwiki.ai`) and GitHub `/doc`. No dashboard, auth, or Convex.
+CTAs: waitlist (`hello@zipwiki.ai`). No dashboard, auth, or Convex.
