@@ -40,10 +40,13 @@ export function MarketingLayout() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-(--line)/70 bg-(--paper)/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-6 py-3">
+      <header className="sticky top-0 z-20 overflow-visible border-b border-(--line)/70 bg-(--paper)/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-6 py-3.5">
           <Link to="/" className="flex shrink-0 items-center text-(--ink)">
-            <Logo variant="wordmark" className="h-8 w-auto sm:h-9" />
+            <Logo
+              variant="lockup"
+              className="h-14 w-auto object-contain object-left sm:h-16"
+            />
           </Link>
 
           <nav className="hidden items-center gap-5 text-sm lg:flex">

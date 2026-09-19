@@ -1,6 +1,6 @@
 const ASSETS = {
   lockup: { src: "/zipwiki-logo.svg", width: 442, height: 148 },
-  wordmark: { src: "/zipwiki-logo-wordmark.svg", width: 442, height: 108 },
+  wordmark: { src: "/zipwiki-logo-wordmark.svg", width: 442, height: 118 },
   mark: { src: "/zipwiki-mark.svg", width: 180, height: 180 },
 } as const;
 
