@@ -12,11 +12,14 @@ plus a wiki tree), then catalog, search, and read them locally.
 | **stdio MCP** | Agents on this machine → zipaccess + zipwiki |
 
 Public documentation lives in [`/doc`](doc/). Marketing site: [`apps/web`](apps/web).
+API: [`apps/server`](apps/server) → `api.zipwiki.ai`.
 
 ## Status
 
-Phase 1 of this repo is the **product site and GitHub docs**. The TypeScript
-pack/query/MCP loop and the Rust CLI land in later phases (see [PHASES.md](PHASES.md)).
+Phase 1 is the **product site and GitHub docs**. Phase 1b is the Fly health
+host (`GET /health`). The TypeScript pack/query/MCP loop is the Beta product
+(runs everywhere). A Rust CLI is after that Beta, and only on machines we
+compile for — see [PHASES.md](PHASES.md).
 
 Until then, the lab checkout is `zip-codex`. This repo is what we ship as ZipWiki.
 
@@ -33,12 +36,14 @@ Until then, the lab checkout is `zip-codex`. This repo is what we ship as ZipWik
 ```bash
 pnpm install
 pnpm --filter @zipwiki/web dev
+pnpm --filter @zipwiki/server dev   # http://localhost:3001
 ```
 
 Production-like build:
 
 ```bash
 pnpm --filter @zipwiki/web build
+pnpm --filter @zipwiki/server build
 ```
 
 ## Names

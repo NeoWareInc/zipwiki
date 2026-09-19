@@ -8,8 +8,22 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "dev:web": "pnpm --filter @zipwiki/web dev",
-    "build:web": "pnpm --filter @zipwiki/web build"
+    "build:web": "pnpm --filter @zipwiki/web build",
+    "dev:server": "pnpm --filter @zipwiki/server dev",
+    "build:server": "pnpm --filter @zipwiki/server build",
+    "test:server": "pnpm --filter @zipwiki/server test",
+    "dev:stack": "docker compose -f deploy/docker-compose.yml --env-file deploy/.env up --build",
+    "deploy:fly:dev": "fly deploy . --config deploy/fly/fly.dev.toml",
+    "deploy:fly:prod": "fly deploy . --config deploy/fly/fly.prod.toml",
+    "secrets:fly:dev": "./deploy/fly/set-secrets.sh dev",
+    "secrets:fly:prod": "./deploy/fly/set-secrets.sh prod",
+    "check:fly": "./deploy/fly/check.sh",
+    "check:fly:dev": "./deploy/fly/check.sh dev",
+    "check:fly:prod": "./deploy/fly/check.sh prod",
+    "certs:fly:dev": "fly certs check api-dev.zipwiki.ai -c deploy/fly/fly.dev.toml",
+    "certs:fly:prod": "fly certs check api.zipwiki.ai -c deploy/fly/fly.prod.toml"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

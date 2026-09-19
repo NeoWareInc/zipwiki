@@ -1,0 +1,17 @@
+# ZipWiki API image (same Dockerfile Fly uses).
+#   pnpm dev:stack
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up --build
+
+services:
+  zipwiki-api:
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    environment:
+      PORT: "3001"
+      HOST: "0.0.0.0"
+      ZIPWIKI_PUBLIC_API_URL: ${ZIPWIKI_PUBLIC_API_URL:-http://localhost:3001}
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:5173,http://localhost:5174}
+      CONVEX_SITE_URL: ${CONVEX_SITE_URL:-}
+    ports:
+      - "3001:3001"

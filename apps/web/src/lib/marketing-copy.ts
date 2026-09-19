@@ -352,7 +352,7 @@ export const ROADMAP: Array<{
   },
   {
     title: "TypeScript pack, query, MCP",
-    why: "zipwiki pack, zipaccess open/search/read, and stdio MCP for Node, agents, and Vercel. The web runtime stays TypeScript.",
+    why: "The Beta engine. zipwiki pack, zipaccess open/search/read, and stdio MCP run on Node, agents, and Vercel — anywhere TypeScript runs.",
     status: "Next",
   },
   {
@@ -366,13 +366,13 @@ export const ROADMAP: Array<{
     status: "Later",
   },
   {
-    title: "Rust native CLI",
-    why: "zipwiki / zipaccess binaries for select environments (macOS arm64 first). Shared ZipWiki ZIP profile, two implementations.",
+    title: "Dashboard account plane",
+    why: "Keys, usage, billing, settings, and a browser inspector for a local package.",
     status: "Later",
   },
   {
-    title: "Dashboard account plane",
-    why: "Keys, usage, billing, settings, and a browser inspector for a local package.",
+    title: "Rust native CLI",
+    why: "After TypeScript Beta. zipwiki / zipaccess binaries only on machines we compile for (macOS arm64 first). TypeScript stays the everywhere runtime.",
     status: "Later",
   },
   {

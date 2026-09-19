@@ -1,0 +1,51 @@
+# ZipWiki hosted API — production
+# App: zipwiki-api-prod  →  api.zipwiki.ai
+#
+# Deploy from the repository root (Docker context = repo root):
+#   fly deploy . --config deploy/fly/fly.prod.toml
+
+app = "zipwiki-api-prod"
+primary_region = "iad"
+kill_signal = "SIGTERM"
+kill_timeout = 30
+
+[build]
+  dockerfile = "../../apps/server/Dockerfile"
+
+[deploy]
+  strategy = "rolling"
+  wait_timeout = "10m"
+
+[env]
+  NODE_ENV = "production"
+  HOST = "0.0.0.0"
+  PORT = "3001"
+  WEB_ORIGIN = "https://zipwiki.ai,https://www.zipwiki.ai"
+
+[processes]
+  app = "node dist/index.js"
+
+[http_service]
+  internal_port = 3001
+  processes = ["app"]
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 40
+    hard_limit = 60
+
+[[http_service.checks]]
+  grace_period = "20s"
+  interval = "15s"
+  timeout = "5s"
+  method = "GET"
+  path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  processes = ["app"]

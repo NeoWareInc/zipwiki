@@ -1,7 +1,8 @@
 # CLI reference
 
-ZipWiki ships two command-line tools (TypeScript in Phase 2; Rust binaries in
-Phase 3 for select environments).
+ZipWiki ships two command-line tools. Phase 2/3 (Beta) is TypeScript — it
+runs wherever Node runs. Rust binaries come after Beta (Phase 4), and only
+on machines we compile for.
 
 | Tool | Job |
 | --- | --- |

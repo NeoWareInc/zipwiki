@@ -1,7 +1,15 @@
-# apps/server
+# @zipwiki/server
 
-Placeholder. The ZipWiki API (`api.zipwiki.ai`) is **Phase 1b**, after marketing
-copy and IA are locked.
+ZipWiki API on Fly (`api-dev.zipwiki.ai` / `api.zipwiki.ai`).
 
-New Fly / Convex / Stripe projects — do not point production ZipWiki at
-zipcodex.ai credentials.
+Phase 1b is a health host. Parse, OKF, MCP, Convex, and Stripe stay in the
+lab (`zip-codex`) until later phases. New Fly apps — do not point this
+service at zipcodex.ai credentials.
+
+```bash
+pnpm --filter @zipwiki/server dev     # http://localhost:3001
+pnpm --filter @zipwiki/server test
+curl -sS http://localhost:3001/health
+```
+
+Deploy: [`deploy/fly/README.md`](../../deploy/fly/README.md).

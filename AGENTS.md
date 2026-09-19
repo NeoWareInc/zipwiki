@@ -24,5 +24,6 @@ Default package: `package` tool arg, or `wiki.zipwiki` in the MCP cwd.
 Specs: [doc/ZIPWIKI_APPNOTE.md](doc/ZIPWIKI_APPNOTE.md), [doc/ZIPACCESS.md](doc/ZIPACCESS.md),
 [doc/MCP.md](doc/MCP.md), [doc/CLI.md](doc/CLI.md).
 
-This checkout is Phase 1 (docs + marketing). Engine, MCP, and Rust CLI are stubs
-until later phases — see [PHASES.md](PHASES.md).
+This checkout is Phase 1 (docs + marketing) plus Phase 1b (`apps/server`
+health host on Fly). The TypeScript engine and MCP land in Phases 2–3 (Beta).
+A Rust CLI is Phase 4, after that Beta — see [PHASES.md](PHASES.md).

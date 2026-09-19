@@ -4,14 +4,15 @@ Product: **ZipWiki** · Domain: **zipwiki.ai** · File: **`.zipwiki`**
 
 This is the public-repo gate, not a lab workplan.
 
-## Phase 1 (current)
+## Phase 1 + 1b
 
 - [x] Sibling repo `zipwiki` (pnpm / Turborepo, `apps/web` only)
 - [x] GitHub markdown in `/doc` rebranded (ZipWiki, `.zipwiki`, zipwiki.ai)
 - [x] Marketing site: `/` `/product` `/how-it-works` `/pricing` `/roadmap` `/terms` `/privacy`
 - [x] Waitlist / docs CTAs (no dashboard, login, or Convex)
 - [ ] Vercel project + `zipwiki.ai` / `www.zipwiki.ai`
-- [ ] Review live copy and IA, then start Phase 1b server
+- [x] Phase 1b server: `GET /health` in `apps/server` (Fly apps `zipwiki-api-*`)
+- [ ] Custom domain certs (`api-dev.zipwiki.ai` / `api.zipwiki.ai`) after Squarespace CNAMEs
 
 ## Docs included
 
@@ -25,12 +26,17 @@ This is the public-repo gate, not a lab workplan.
 
 ## Later gates
 
-**Phase 1b — server:** health endpoint on `api.zipwiki.ai`; new Fly/Convex/Stripe
-projects (not zipcodex.ai credentials).
+**Phase 1b — server:** `GET /health` on Fly (`zipwiki-api-dev` /
+`zipwiki-api-prod`). Certs wait on Squarespace CNAMEs for `api*.zipwiki.ai`.
+New Convex/Stripe projects later — not zipcodex.ai credentials.
 
 **Phase 2 — TypeScript engine:** `zipwiki pack` without login (LiteParse +
 `--no-ai-okf`); `zipaccess open` then `search "deed"` on a sample
 `knowledge/sample-docs.zipwiki`; stdio MCP open → search → read.
 
-**Phase 3 — Rust:** one native environment packs a `.zipwiki` that TypeScript
-zipaccess can open.
+**Phase 3 — TypeScript Beta:** plugin + hosted API + dashboard on zipwiki.ai.
+TypeScript only — runs wherever Node / agents / Vercel run.
+
+**Phase 4 — Rust (after Beta):** one compiled environment packs a `.zipwiki`
+that TypeScript zipaccess can open. Rust is per-machine; TypeScript stays the
+everywhere runtime.

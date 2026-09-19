@@ -17,17 +17,25 @@ deploy to zipwiki.ai with no dashboard, Convex, or pack engine.
 
 **Site IA (locked for this pass):** `/` `/product` `/how-it-works` `/pricing`
 `/roadmap` `/terms` `/privacy`. CTAs: waitlist (`hello@zipwiki.ai`) and docs on
-GitHub. Dual runtime is stated on `/roadmap` (TypeScript next, Rust later).
+GitHub. `/roadmap` states TypeScript as the Beta runtime (runs everywhere);
+Rust is after that Beta, and only on machines we compile for.
 
 **Copy lock:** review the live site, then start Phase 1b. Do not move the engine
 until that review.
 
 ## Phase 1b — Server under zipwiki.ai
 
-Not started. Intent: `apps/server` + `api.zipwiki.ai` (dev/prod). Reuse patterns
-from the lab server, but **new** Fly/Convex/Stripe projects.
+**Health live.** `apps/server` is a Fastify host (lab patterns, no parse/OKF/MCP).
+New Fly apps in the NeoWare org — not `zipcodex-api-*`:
 
-**Done when:** health endpoint + domain certs. Dashboard/auth optional until the
+| Env | App | Live now |
+| --- | --- | --- |
+| Dev | `zipwiki-api-dev` | https://zipwiki-api-dev.fly.dev/health |
+| Prod | `zipwiki-api-prod` | https://zipwiki-api-prod.fly.dev/health |
+
+Certs for `api-dev.zipwiki.ai` / `api.zipwiki.ai` are created and wait on
+Squarespace A/AAAA records (see [`deploy/fly/README.md`](deploy/fly/README.md)).
+Convex/Stripe stay later, on new projects. Dashboard/auth optional until the
 engine lands.
 
 ## Phase 2 — TypeScript product loop
@@ -42,22 +50,30 @@ Move only pack / zipaccess / stdio MCP and the packages they import.
 Local pack must work without account login (LiteParse + `--no-ai-okf`).
 Package names `@zipwiki/*`; home `~/.zipwiki`.
 
-## Phase 3 — Rust runtime (select environments)
+## Phase 3 — TypeScript Beta (full product)
 
-TypeScript stays for MCP in Node, Vercel/web, and JS agent hosts.
+The first public Beta is **TypeScript only**. Node, agents, Vercel, Fly, and
+the browser all run the same engine — no per-OS binary.
 
-Rust for native `zipwiki` / `zipaccess` (and later Zip64 / large archives).
+- Plugin (skills + stdio MCP + CLI) in Cursor / Claude
+- Hosted API on `api.zipwiki.ai` (new Convex / Stripe projects)
+- Dashboard: keys, usage, billing, settings
+- Hosted LlamaParse / ZipWiki OKF for paid plans; local LiteParse stays free
 
-**Done when:** one environment (e.g. macOS arm64 CLI) packs and catalogs a
-`.zipwiki` that TypeScript zipaccess can open.
+**Done when:** a waitlist user can install the plugin, pack locally without
+login, query via MCP, and (on a paid plan) use hosted parse/OKF.
 
-## Phase 4 — Hosted product (optional)
+## Phase 4 — Rust runtime (after TypeScript Beta)
 
-Dashboard inspect, device login, Stripe, LlamaParse metering — after the local
-loop is pleasant on zipwiki.ai.
+Native `zipwiki` / `zipaccess` binaries for machines we compile for (macOS
+arm64 first; later Zip64 / large archives). TypeScript remains the everywhere
+runtime: MCP, Node, Vercel/web, JS agent hosts, and any OS without a binary.
+
+**Done when:** one compiled environment packs and catalogs a `.zipwiki` that
+TypeScript zipaccess can open.
 
 ## Open questions
 
 - GitHub repo visibility; Vercel project; DNS for zipwiki.ai
 - Redirects from zipcodex.ai / zip-codex.vercel.app
-- First Rust target OS after Phase 2 (default: macOS arm64)
+- First Rust target OS after TypeScript Beta (default: macOS arm64)
