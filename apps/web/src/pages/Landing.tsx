@@ -135,7 +135,8 @@ export default function Landing() {
           Prompts to paste
         </h2>
         <p className="mt-2 max-w-2xl text-(--muted)">
-          After the plugin is on, these are the asks—not terminal commands.
+          After the plugin is on, run the Florida session-laws sample. These
+          are the asks—not terminal commands.
         </p>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           {AGENT_PROMPTS.map((item) => (

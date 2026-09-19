@@ -44,12 +44,12 @@ export const AUDIENCES = [
 export const PRODUCT_PILLARS = [
   {
     title: "Create",
-    ask: "Pack ./contracts into knowledge/contracts.zipwiki.",
+    ask: "Pack ./florida-laws into knowledge/florida-laws.zipwiki.",
     body: "The agent parses PDFs locally with LiteParse (Office needs LibreOffice on the machine). Paid plans can use hosted LlamaParse. OKF concepts come from your agent’s LLM, or ZipWiki OKF when you still have quota.",
   },
   {
     title: "Query",
-    ask: "What’s in this package? Find the property deed.",
+    ask: "What’s in this package? Find homestead exemption.",
     body: "The agent opens the catalog, searches OKF first, then reads wiki/parsed/… only if it needs the body. It extracts to disk only when a real file path is required.",
   },
   {
@@ -76,7 +76,7 @@ export const TRUST_BULLETS = [
 
 export const PARSE_PROBLEM = {
   title: "Agents cannot query a folder of real documents",
-  lead: "Chat models read text. Most business files are not text. A deed is a scanned PDF. A lease is a Word file. A fax is a TIFF. A 10-K is a 200-page layout. Drop those into a chat and the model either skips them, hallucinates from the filename, or burns a context window on garbage.",
+  lead: "Chat models read text. Most business files are not text. A Florida session law is a multi-page PDF on laws.flrules.org. A deed is a scan. A lease is a Word file. Drop those into a chat and the model either skips them, hallucinates from the filename, or burns a context window on garbage.",
 } as const;
 
 export const PARSE_FAMILIES = [
@@ -121,7 +121,7 @@ export const OKF_INDEXING = {
 export const OKF_FIELDS = [
   {
     title: "Frontmatter the agent searches",
-    body: "title, type (Deed, Contract, Financial_Report…), tags, and a short description. Those fields are what “find the property deed” matches before anyone opens the 40-page parse.",
+    body: "title, type (Session_Law, Statute…), tags, and a short description. Those fields are what “find homestead exemption” matches before anyone opens the full chapter parse.",
   },
   {
     title: "Key facts and sources",
@@ -141,63 +141,83 @@ export const HOW_STEPS = [
   {
     title: "Pack",
     prompt:
-      "Using ZipWiki, pack ./contracts into ./knowledge/contracts.zipwiki and enrich every document with AI OKF.",
+      "Using ZipWiki, pack ./florida-laws into ./knowledge/florida-laws.zipwiki, enrich every document with AI OKF, and map Ch_{year}-{chapter}.pdf origins to https://laws.flrules.org/{year}/{chapter}.",
     detail:
-      "Each source file is parsed to markdown when possible, then given an OKF skim (title, type, tags, key facts). Hosted OKF is off by default so your agent writes the concepts.",
+      "Each session-law PDF is parsed to markdown when possible, then given an OKF skim (title, type, tags, key facts). Origin Extra Field 0x014F stores the official laws.flrules.org URL. Hosted OKF is off by default so your agent writes the concepts.",
   },
   {
     title: "Catalog",
     prompt:
-      "Open ./knowledge/contracts.zipwiki and tell me what’s inside—titles, types, and what you can read next.",
+      "Open ./knowledge/florida-laws.zipwiki and tell me what’s inside—titles, types, OKF, parsed files, and origin URLs.",
     detail:
       "Each primary shows whether it has OKF and parsed markdown, plus the path the agent will open. Unparsed scans still appear so nothing is silently dropped.",
   },
   {
     title: "Search",
     prompt:
-      'Search ./knowledge/contracts.zipwiki for "property deed" and show the top hits.',
+      'Search ./knowledge/florida-laws.zipwiki for "homestead exemption" and show the top hits with short snippets.',
     detail:
-      "OKF titles, tags, and descriptions rank first. Parsed text is a lower-weight backup. Hits return paths and snippets—never full bodies.",
+      "OKF titles, tags, and descriptions rank first. Parsed text is a lower-weight backup. Hits return paths and snippets—never full chapter bodies.",
   },
   {
     title: "Read",
     prompt:
-      "Read the OKF for the deed, then the parsed text only if you still need evidence.",
+      "Read the OKF for Chapter 2025-1, then the parsed text only if you still need evidence.",
     detail:
       "Keep context small. Extract to disk only when another tool needs a real path.",
+  },
+  {
+    title: "Origin",
+    prompt:
+      "On ./knowledge/florida-laws.zipwiki, show the origin URL for Ch_2025-001 and fetch it to verify CRC-32.",
+    detail:
+      "The parse member carries Extra Field 0x014F. Fetch downloads https://laws.flrules.org/2025/1 and checks CRC-32 (and size or SHA-256 when those tags were written).",
   },
 ] as const;
 
 export const SAMPLE_CATALOG = [
   {
-    title: "North Carolina general warranty deed",
-    type: "Deed",
+    title: "Chapter 2025-1, Laws of Florida",
+    type: "Session_Law",
     okf: true,
     parsed: true,
-    next: "wiki/okf/property-deed.md → wiki/parsed/property-deed.pdf.md",
+    next: "wiki/okf/Ch_2025-001.md → laws.flrules.org/2025/1",
   },
   {
-    title: "Apple Inc. Form 10-K (FY 2024 excerpt)",
-    type: "Financial_Report",
+    title: "Chapter 2025-42, Laws of Florida",
+    type: "Session_Law",
     okf: true,
     parsed: true,
-    next: "wiki/okf/apple-10k-2024-sm.md",
+    next: "wiki/okf/Ch_2025-042.md → laws.flrules.org/2025/42",
   },
   {
-    title: "ZIP files across the software industry",
-    type: "Technical_Doc",
+    title: "Chapter 2024-168, Laws of Florida",
+    type: "Session_Law",
     okf: true,
     parsed: true,
-    next: "wiki/okf/zip-files-in-software-industry.md",
+    next: "wiki/okf/Ch_2024-168.md → laws.flrules.org/2024/168",
   },
   {
-    title: "Junk fax 0001 (TIFF)",
-    type: "Image",
+    title: "Chapter 2023-203 (scan)",
+    type: "Session_Law",
     okf: true,
     parsed: false,
-    next: "wiki/okf/junkfax_0001.md (source only)",
+    next: "wiki/okf/Ch_2023-203.md (source + origin only)",
   },
 ] as const;
+
+export const SAMPLE_OKF = `---
+title: Chapter 2025-1, Laws of Florida
+type: Session_Law
+tags: [florida, session-law, 2025]
+description: First chapter of the 2025 Laws of Florida.
+sources:
+  - wiki/parsed/Ch_2025-001.pdf.md
+origin: https://laws.flrules.org/2025/1
+---
+
+Chapter 2025-1. Official text at laws.flrules.org/2025/1.
+Filename Ch_2025-001.pdf maps year and chapter onto that URL.`;
 
 export const PLUGIN_BUNDLE = [
   {
@@ -244,31 +264,38 @@ export type AgentPrompt = {
 export const AGENT_PROMPTS: AgentPrompt[] = [
   {
     id: "pack",
-    title: "Pack a folder",
-    description: "Create a knowledge archive and enrich each document.",
+    title: "Pack Florida session laws",
+    description: "Create the sample archive and attach official origin URLs.",
     prompt:
-      "Using ZipWiki, pack ./path/to/docs into ./knowledge/my-docs.zipwiki, enrich every primary with AI OKF, and tell me the output path.",
+      "Using ZipWiki, pack ./florida-laws into ./knowledge/florida-laws.zipwiki, enrich every primary with AI OKF, map Ch_{year}-{chapter}.pdf to https://laws.flrules.org/{year}/{chapter}, and tell me the output path.",
   },
   {
     id: "open",
     title: "What’s inside",
-    description: "Catalog titles, types, and what can be read next.",
+    description: "Catalog titles, types, OKF, parses, and origins.",
     prompt:
-      "Using ZipWiki, open ./knowledge/my-docs.zipwiki and summarize what’s inside (titles, types, OKF, parsed files).",
+      "Using ZipWiki, open ./knowledge/florida-laws.zipwiki and summarize what’s inside (titles, types, OKF, parsed files, origin URLs).",
   },
   {
     id: "search",
     title: "Search",
-    description: "Find concepts matching a question.",
+    description: "Find chapters matching a question.",
     prompt:
-      'Using ZipWiki, search ./knowledge/my-docs.zipwiki for "property deed" and show the top hits with short snippets.',
+      'Using ZipWiki, search ./knowledge/florida-laws.zipwiki for "homestead exemption" and show the top hits with short snippets.',
   },
   {
     id: "read",
-    title: "Read one concept",
+    title: "Read one chapter",
     description: "Skim OKF first, then parsed text if needed.",
     prompt:
-      "Using ZipWiki on ./knowledge/my-docs.zipwiki, read the OKF for the property deed and give a short summary. Read parsed text only if you still need evidence.",
+      "Using ZipWiki on ./knowledge/florida-laws.zipwiki, read the OKF for Chapter 2025-1 and give a short summary. Read parsed text only if you still need evidence.",
+  },
+  {
+    id: "origin",
+    title: "Verify the original",
+    description: "Fetch Extra Field 0x014F and check CRC-32.",
+    prompt:
+      "Using ZipWiki on ./knowledge/florida-laws.zipwiki, show the origin URL for Ch_2025-001 and fetch it to verify CRC-32.",
   },
 ];
 
@@ -395,5 +422,8 @@ export const ROADMAP: Array<{
   },
 ];
 
-export const ADVANCED_CLI = `zipwiki pack ./docs -o knowledge/docs.zipwiki
-zipaccess open knowledge/docs.zipwiki`;
+export const ADVANCED_CLI = `zipwiki pack ./florida-laws -o knowledge/florida-laws.zipwiki \\
+  --origin-pattern 'Ch_(?<year>\\d{4})-(?<chapter>\\d+)' \\
+  --origin-url-template 'https://laws.flrules.org/{year}/{chapter}'
+zipaccess open knowledge/florida-laws.zipwiki
+zipaccess search knowledge/florida-laws.zipwiki "homestead exemption"`;

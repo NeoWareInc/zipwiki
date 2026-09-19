@@ -1,155 +1,81 @@
-const STEPS = [
-  { id: "docs", label: "Your files", detail: "Contracts, scans, notes" },
-  { id: "plugin", label: "Plugin", detail: "Cursor or Claude" },
-  { id: "archive", label: ".zipwiki", detail: "Portable knowledge file" },
-  { id: "agents", label: "Ask", detail: "What’s inside / find it" },
+const FILES = [
+  "Ch_2025-001.pdf",
+  "Ch_2025-042.pdf",
+  "Ch_2024-168.pdf",
 ] as const;
 
-const NODE_X = [96, 304, 512, 720];
-const NODE_Y = 110;
+const LOOP = [
+  { step: "Catalog", detail: "What’s inside the package" },
+  { step: "Search", detail: "“homestead exemption”" },
+  { step: "Read", detail: "OKF first, then parsed" },
+  { step: "Origin", detail: "laws.flrules.org/2025/1" },
+] as const;
 
 export default function UserFlow() {
   return (
-    <figure className="anim-rise anim-rise-delay-4 w-full" aria-label="ZipWiki user flow">
-      <svg
-        viewBox="0 0 816 220"
-        role="img"
-        className="h-auto w-full"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <title>From files through the ZipWiki plugin to a .zipwiki</title>
-        <desc>
-          Flow showing documents going through the ZipWiki plugin into a
-          portable .zipwiki, then answered by your agent.
-        </desc>
+    <figure
+      className="anim-rise anim-rise-delay-4 w-full"
+      aria-label="ZipWiki loop on the Florida session-laws sample"
+    >
+      <div className="rounded-2xl border border-(--border) bg-white/80 p-5 shadow-soft sm:p-7">
+        <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+          Sample — Florida session laws
+        </p>
+        <p className="mt-1 text-sm text-(--muted)">
+          Pack the PDFs. Query the{" "}
+          <code className="text-[0.9em]">.zipwiki</code>. Fetch the official
+          original only if you need it.
+        </p>
 
-        <defs>
-          <linearGradient id="flow-band" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#dff0ef" stopOpacity="0.2" />
-            <stop offset="40%" stopColor="#ffffff" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#efe6d4" stopOpacity="0.35" />
-          </linearGradient>
-          <marker
-            id="arrow"
-            markerWidth="8"
-            markerHeight="8"
-            refX="6"
-            refY="3"
-            orient="auto"
-          >
-            <path d="M0,0 L6,3 L0,6 Z" fill="var(--accent)" />
-          </marker>
-        </defs>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {FILES.map((name) => (
+            <span
+              key={name}
+              className="inline-flex items-center rounded-md border border-(--border) bg-(--paper) px-2.5 py-1 font-mono text-xs text-(--ink)"
+            >
+              {name}
+            </span>
+          ))}
+        </div>
 
-        <rect
-          x="12"
-          y="24"
-          width="792"
-          height="172"
-          rx="28"
-          fill="url(#flow-band)"
-          stroke="var(--line)"
-          strokeWidth="1"
-        />
+        <p className="mt-4 text-center text-xs font-semibold tracking-wide text-(--accent) uppercase">
+          Pack · LiteParse + OKF
+        </p>
 
-        {NODE_X.slice(0, -1).map((fromX, i) => {
-          const toX = NODE_X[i + 1];
-          return (
-            <path
-              key={`link-${i}`}
-              className="flow-path"
-              d={`M ${fromX + 48} ${NODE_Y} C ${fromX + 90} ${NODE_Y}, ${toX - 90} ${NODE_Y}, ${toX - 48} ${NODE_Y}`}
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              markerEnd="url(#arrow)"
-              style={{ animationDelay: `${0.35 + i * 0.15}s` }}
-            />
-          );
-        })}
+        <div className="mt-3 rounded-xl border border-(--line) bg-(--paper) px-4 py-4 sm:px-5">
+          <p className="font-display text-lg font-semibold text-(--ink)">
+            florida-laws.zipwiki
+          </p>
+          <p className="mt-1 font-mono text-xs text-(--muted)">
+            ./knowledge/florida-laws.zipwiki
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-(--ink)">
+              wiki/okf/
+            </span>
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-(--ink)">
+              wiki/parsed/
+            </span>
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-(--ink)">
+              origin 0x014F
+            </span>
+          </div>
+        </div>
 
-        {STEPS.map((step, i) => {
-          const x = NODE_X[i];
-          const y = NODE_Y;
-          return (
-            <g key={step.id} className="flow-node" style={{ animationDelay: `${i * 0.35}s` }}>
-              <circle
-                cx={x}
-                cy={y}
-                r="42"
-                fill="var(--flow-fill)"
-                stroke="var(--flow-stroke)"
-                strokeWidth="2"
-              />
-              <StepIcon index={i} x={x} y={y - 8} />
-              <text
-                x={x}
-                y={y + 68}
-                textAnchor="middle"
-                fill="var(--ink)"
-                style={{ fontFamily: "Sora, sans-serif", fontSize: 14, fontWeight: 600 }}
-              >
-                {step.label}
-              </text>
-              <text
-                x={x}
-                y={y + 88}
-                textAnchor="middle"
-                fill="var(--muted)"
-                style={{ fontFamily: "Sora, sans-serif", fontSize: 11 }}
-              >
-                {step.detail}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+        <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {LOOP.map((item, i) => (
+            <li
+              key={item.step}
+              className="rounded-xl border border-(--border) bg-white px-3 py-3"
+            >
+              <p className="text-[0.65rem] font-semibold tracking-wide text-(--accent) uppercase">
+                {String(i + 1).padStart(2, "0")} {item.step}
+              </p>
+              <p className="mt-1 text-sm leading-snug text-(--ink)">{item.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
     </figure>
   );
-}
-
-function StepIcon({ index, x, y }: { index: number; x: number; y: number }) {
-  const stroke = "var(--accent)";
-  const common = {
-    fill: "none",
-    stroke,
-    strokeWidth: 2,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
-
-  switch (index) {
-    case 0:
-      return (
-        <g transform={`translate(${x - 12}, ${y - 12})`}>
-          <rect x="2" y="1" width="16" height="20" rx="2" {...common} />
-          <path d="M6 7h8M6 11h8M6 15h5" {...common} />
-        </g>
-      );
-    case 1:
-      return (
-        <g transform={`translate(${x - 12}, ${y - 12})`}>
-          <circle cx="12" cy="12" r="9" {...common} />
-          <path d="M8 12l3 3 5-6" {...common} />
-        </g>
-      );
-    case 2:
-      return (
-        <g transform={`translate(${x - 12}, ${y - 12})`}>
-          <path d="M4 7h16v12H4z" {...common} />
-          <path d="M4 7l8-4 8 4" {...common} />
-          <path d="M12 7v12" {...common} />
-        </g>
-      );
-    default:
-      return (
-        <g transform={`translate(${x - 12}, ${y - 12})`}>
-          <rect x="3" y="6" width="18" height="12" rx="3" {...common} />
-          <circle cx="9" cy="12" r="1.5" fill={stroke} stroke="none" />
-          <circle cx="15" cy="12" r="1.5" fill={stroke} stroke="none" />
-          <path d="M8 3h8" {...common} />
-        </g>
-      );
-  }
 }

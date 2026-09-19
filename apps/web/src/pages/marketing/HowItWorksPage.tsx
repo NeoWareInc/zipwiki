@@ -6,6 +6,7 @@ import {
   PARSE_FAMILIES,
   PARSE_PROBLEM,
   SAMPLE_CATALOG,
+  SAMPLE_OKF,
 } from "../../lib/marketing-copy";
 import { FeatureGrid, PageHero, PromptCard, Section } from "./MarketingUi";
 
@@ -70,23 +71,14 @@ export default function HowItWorksPage() {
               Example OKF frontmatter
             </p>
             <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
-              {`---
-title: North Carolina general warranty deed
-type: Deed
-tags: [real-estate, conveyance, mecklenburg]
-description: Warranty deed conveying lot 14 from seller to buyer.
-sources:
-  - wiki/parsed/property-deed.pdf.md
----
-
-Grantor conveys lot 14. Consideration recorded. Recorded 2023-04-12.`}
+              {SAMPLE_OKF}
             </pre>
           </div>
           <p className="mt-6 max-w-3xl text-sm leading-relaxed text-(--muted)">
             Search looks at those fields first, then optionally scans parsed
-            markdown at a lower weight. That is why “find the deed” works
-            without loading every PDF into the chat. OKF is markdown you can
-            open in any editor—the same files live at{" "}
+            markdown at a lower weight. That is why “find homestead exemption”
+            works without loading every chapter into the chat. OKF is markdown
+            you can open in any editor—the same files live at{" "}
             <code className="text-xs">wiki/okf/</code> inside the zip.
           </p>
         </Section>
@@ -94,7 +86,7 @@ Grantor conveys lot 14. Consideration recorded. Recorded 2023-04-12.`}
 
       <Section>
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
-          Pack, catalog, search, read
+          Pack, catalog, search, read, origin
         </h2>
         <p className="mt-3 max-w-2xl text-(--muted)">
           Same loop every time. Prefer OKF skims before dumping full parses.
@@ -128,9 +120,12 @@ Grantor conveys lot 14. Consideration recorded. Recorded 2023-04-12.`}
             What the agent should report
           </h2>
           <p className="mt-3 max-w-2xl text-(--muted)">
-            A catalog from OKF, not a raw zip listing. Unparsed files (Office
-            without LibreOffice, some images) still appear so you can see what
-            needs a better parse or a hosted pass.
+            A catalog from OKF, not a raw zip listing. This is the Florida
+            session-laws sample: <code className="text-xs">Ch_YYYY-NNN.pdf</code>{" "}
+            maps to{" "}
+            <code className="text-xs">https://laws.flrules.org/{"{year}/{chapter}"}</code>.
+            Unparsed scans still appear so you can see what needs a better parse
+            or a hosted pass.
           </p>
           <div className="mt-8 overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
             <table className="w-full min-w-[40rem] text-left text-sm">
