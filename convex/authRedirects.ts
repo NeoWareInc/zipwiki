@@ -21,8 +21,21 @@ export function isTrustedZipWikiHost(hostname: string): boolean {
   return false;
 }
 
+function isLocalDevOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isAllowedRedirectOrigin(origin: string): boolean {
   if (allowedAuthOrigins().includes(origin)) return true;
+  if (isLocalDevOrigin(origin)) return true;
   try {
     const url = new URL(origin);
     return url.protocol === "https:" && isTrustedZipWikiHost(url.hostname);
@@ -32,8 +45,15 @@ function isAllowedRedirectOrigin(origin: string): boolean {
 }
 
 /** Resolve a post-auth redirectTo against the allowlist. */
-export function resolveAuthRedirect(redirectTo: string): string {
-  const raw = redirectTo.trim();
+export function resolveAuthRedirect(redirectTo?: string): string {
+  const raw = redirectTo?.trim() ?? "";
+  if (!raw) {
+    const site = (process.env.SITE_URL ?? "").trim().replace(/\/$/, "");
+    if (!site) {
+      throw new Error("SITE_URL is not configured for relative redirectTo");
+    }
+    return site;
+  }
   const site = (process.env.SITE_URL ?? "").trim().replace(/\/$/, "");
   const origins = allowedAuthOrigins();
 

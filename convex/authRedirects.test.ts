@@ -46,6 +46,15 @@ describe("authRedirects", () => {
     );
   });
 
+  it("allows any localhost port", () => {
+    process.env.SITE_URL = "https://zipwiki.ai";
+    delete process.env.WEB_ORIGIN;
+    assert.equal(
+      resolveAuthRedirect("http://localhost:5174/signed-in"),
+      "http://localhost:5174/signed-in",
+    );
+  });
+
   it("allows this project's Vercel aliases without listing each one", () => {
     process.env.SITE_URL = "https://zipwiki-web.vercel.app";
     delete process.env.WEB_ORIGIN;

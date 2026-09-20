@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@convex-dev/auth@0.0.95': 9fca4f8b157f6f96fabd9d60f162fd18d33c5a850ce3da0245c1f81fa5919b01
+
 importers:
 
   .:
@@ -13,7 +16,7 @@ importers:
         version: 0.41.1
       '@convex-dev/auth':
         specifier: ^0.0.95
-        version: 0.0.95(@auth/core@0.41.1)(convex@1.46.0(react@19.3.0))(react@19.3.0)
+        version: 0.0.95(patch_hash=9fca4f8b157f6f96fabd9d60f162fd18d33c5a850ce3da0245c1f81fa5919b01)(@auth/core@0.41.1)(convex@1.46.0(react@19.3.0))(react@19.3.0)
       '@oslojs/crypto':
         specifier: ^1.0.1
         version: 1.0.1
@@ -88,7 +91,7 @@ importers:
         version: 0.41.1
       '@convex-dev/auth':
         specifier: ^0.0.95
-        version: 0.0.95(@auth/core@0.41.1)(convex@1.46.0(react@19.3.0))(react@19.3.0)
+        version: 0.0.95(patch_hash=9fca4f8b157f6f96fabd9d60f162fd18d33c5a850ce3da0245c1f81fa5919b01)(@auth/core@0.41.1)(convex@1.46.0(react@19.3.0))(react@19.3.0)
       '@tanstack/react-query':
         specifier: ^5.85.5
         version: 5.103.1(react@19.3.0)
@@ -2372,7 +2375,7 @@ snapshots:
       fast-wrap-ansi: 0.2.2
       sisteransi: 1.0.5
 
-  '@convex-dev/auth@0.0.95(@auth/core@0.41.1)(convex@1.46.0(react@19.3.0))(react@19.3.0)':
+  '@convex-dev/auth@0.0.95(patch_hash=9fca4f8b157f6f96fabd9d60f162fd18d33c5a850ce3da0245c1f81fa5919b01)(@auth/core@0.41.1)(convex@1.46.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@auth/core': 0.41.1
       '@oslojs/crypto': 1.0.1
