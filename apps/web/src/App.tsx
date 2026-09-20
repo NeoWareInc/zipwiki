@@ -21,6 +21,7 @@ import CliSetupPage from "./pages/CliSetupPage";
 import DeviceApprovePage from "./pages/DeviceApprovePage";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AuthCallbackPage } from "./components/AuthSession";
 
 const qc = new QueryClient();
 
@@ -42,6 +43,7 @@ export default function App() {
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/signed-in" element={<AuthCallbackPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/cli/device" element={<DeviceApprovePage />} />
             <Route path="/cli/setup" element={<CliSetupPage />} />

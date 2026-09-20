@@ -28,7 +28,13 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    base: "/",
     envDir: repoRoot,
+    experimental: {
+      renderBuiltUrl(filename) {
+        return `/${filename}`;
+      },
+    },
     define: {
       "import.meta.env.VITE_CONVEX_URL": JSON.stringify(convexUrl),
       "import.meta.env.VITE_API_URL": JSON.stringify(
@@ -43,8 +49,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
+        // SPA routes must not be proxied. Fly only needs API prefixes —
+        // a blanket `/auth` steals `/signed-in` cousins like `/auth/callback`.
         "/api": proxyTarget,
-        "/auth": proxyTarget,
+        "/auth/device": proxyTarget,
         "/account": proxyTarget,
         "/webhooks": proxyTarget,
         "/health": proxyTarget,

@@ -35,13 +35,11 @@ export function GoogleSignInButton({
       onClick={() => {
         const next =
           returnPath?.startsWith("/") ? returnPath : "/dashboard";
-        if (next !== "/login" && next !== "/signup") {
+        if (next !== "/login" && next !== "/signup" && next !== "/signed-in") {
           sessionStorage.setItem("zipwiki.auth.next", next);
         }
-        // Land on /login so ConvexAuthProvider can consume ?code= without
-        // ProtectedRoute bouncing an unauthenticated /dashboard.
         void signIn("google", {
-          redirectTo: `${window.location.origin}/login`,
+          redirectTo: `${window.location.origin}/signed-in`,
         });
       }}
       className="flex w-full items-center justify-center gap-2 rounded-md border border-(--border) bg-white px-4 py-2.5 text-sm font-medium text-(--ink) transition-colors hover:bg-(--paper)"

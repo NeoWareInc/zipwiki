@@ -1,14 +1,10 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import {
-  Authenticated,
-  AuthLoading,
-  Unauthenticated,
-  useMutation,
-  useQuery,
-} from "convex/react";
+import { useConvexAuth } from "@convex-dev/auth/react";
+import { useMutation, useQuery } from "convex/react";
 import { useEffect } from "react";
 import { api } from "@convex/_generated/api";
 import type { MeResponse } from "../lib/api";
+import { AuthBusy } from "./AuthSession";
 
 function EnsureProfile() {
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
@@ -27,19 +23,11 @@ function EnsureProfile() {
   }, [ensure, seed]);
 
   if (me === undefined) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-(--muted)">
-        Loading…
-      </div>
-    );
+    return <AuthBusy label="Loading…" />;
   }
 
   if (me === null) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-(--muted)">
-        Setting up account…
-      </div>
-    );
+    return <AuthBusy label="Setting up account…" />;
   }
 
   const data: MeResponse = {
@@ -63,36 +51,21 @@ function EnsureProfile() {
 
 export function ProtectedRoute({ admin }: { admin?: boolean }) {
   const location = useLocation();
+  const { isLoading, isAuthenticated } = useConvexAuth();
   const me = useQuery(api.profiles.me);
-  const exchangingCode = new URLSearchParams(location.search).has("code");
 
-  return (
-    <>
-      <AuthLoading>
-        <div className="flex min-h-screen items-center justify-center text-(--muted)">
-          Loading…
-        </div>
-      </AuthLoading>
-      <Unauthenticated>
-        {exchangingCode ? (
-          <div className="flex min-h-screen items-center justify-center text-(--muted)">
-            Finishing sign-in…
-          </div>
-        ) : (
-          <Navigate
-            to="/login"
-            state={{ from: `${location.pathname}${location.search}` }}
-            replace
-          />
-        )}
-      </Unauthenticated>
-      <Authenticated>
-        {admin && me && me.user.role !== "admin" ? (
-          <Navigate to="/dashboard" replace />
-        ) : (
-          <EnsureProfile />
-        )}
-      </Authenticated>
-    </>
-  );
+  if (isLoading) return <AuthBusy label="Loading…" />;
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: `${location.pathname}${location.search}` }}
+        replace
+      />
+    );
+  }
+  if (admin && me && me.user.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <EnsureProfile />;
 }

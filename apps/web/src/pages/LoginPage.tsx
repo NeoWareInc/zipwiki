@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { Authenticated, AuthLoading, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   AuthCard,
@@ -19,6 +19,7 @@ import {
   authInputClassName,
   authPrimaryButtonClassName,
 } from "../components/AuthChrome";
+import { AuthBusy, takeAuthNext, useAuthSettling } from "../components/AuthSession";
 
 const KNOWN_CODES = new Set([
   "use_google_sign_in",
@@ -43,12 +44,10 @@ export default function LoginPage() {
   const [error, setError] = useState(params.get("error") ?? "");
   const [pending, setPending] = useState(false);
 
+  const { settling, isAuthenticated } = useAuthSettling();
   const from =
-    (location.state as { from?: string } | null)?.from ||
-    sessionStorage.getItem("zipwiki.auth.next") ||
-    "/dashboard";
+    (location.state as { from?: string } | null)?.from || "/dashboard";
   const safeFrom = from.startsWith("/") ? from : "/dashboard";
-  const exchangingCode = params.has("code");
 
   async function finishSignIn() {
     sessionStorage.removeItem("zipwiki.auth.next");
@@ -91,24 +90,15 @@ export default function LoginPage() {
     }
   }
 
-  if (exchangingCode) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-(--muted)">
-        Finishing sign-in…
-      </div>
-    );
+  if (settling) return <AuthBusy label="Finishing sign-in…" />;
+  if (isAuthenticated) {
+    const next =
+      (location.state as { from?: string } | null)?.from || takeAuthNext();
+    return <Navigate to={next.startsWith("/") ? next : "/dashboard"} replace />;
   }
 
   return (
     <>
-      <AuthLoading>
-        <div className="flex min-h-screen items-center justify-center text-(--muted)">
-          Loading…
-        </div>
-      </AuthLoading>
-      <Authenticated>
-        <Navigate to={safeFrom} replace />
-      </Authenticated>
       <AuthCard
         title="Sign in to ZipWiki"
         subtitle={

@@ -3,5 +3,11 @@
   "installCommand": "cd ../.. && pnpm install",
   "buildCommand": "bash ../../scripts/vercel-build-web.sh",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
