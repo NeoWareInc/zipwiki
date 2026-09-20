@@ -1,8 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "vite",
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm exec turbo run build --filter=@zipwiki/web",
+  "buildCommand": "pnpm exec turbo run build --filter=@zipwiki/web && rm -rf dist && cp -R apps/web/dist dist",
   "outputDirectory": "apps/web/dist",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
