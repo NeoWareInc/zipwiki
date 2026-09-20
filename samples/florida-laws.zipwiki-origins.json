@@ -1,0 +1,5 @@
+{
+  "pattern": "Ch_(?<year>\\d{4})-(?<chapter>\\d+)",
+  "urlTemplate": "https://laws.flrules.org/{year}/{chapter}",
+  "include": ["*.pdf"]
+}

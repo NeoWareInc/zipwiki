@@ -33,9 +33,16 @@ coverage/
 .nyc_output/
 *.lcov
 
-# Generated archives
+# Archives / generated parse & pack output
 *.zipwiki
 *.nzip
+sample-output/
+sample-output/**
+!sample-output/.gitkeep
+samples/.stage/
+samples/test1-output/
+samples/test2-output/
+samples/test2-origin-output/
 
 # OS / editor
 .DS_Store
