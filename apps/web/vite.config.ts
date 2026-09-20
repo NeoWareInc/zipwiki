@@ -6,7 +6,7 @@ import path from "node:path";
 const repoRoot = path.resolve(__dirname, "../..");
 
 function convexDeploymentUrl(raw: string | undefined): string {
-  const url = raw?.trim() ?? "";
+  const url = raw?.trim().replace(/\/+$/, "") ?? "";
   if (!url) return "";
   if (!/^https?:\/\//i.test(url) || !url.includes(".convex.cloud")) {
     return "";

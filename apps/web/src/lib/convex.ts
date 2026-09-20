@@ -3,7 +3,7 @@ import { ConvexReactClient } from "convex/react";
 function convexDeploymentUrl(
   raw: string | undefined,
 ): string | undefined {
-  const url = raw?.trim();
+  const url = raw?.trim().replace(/\/+$/, "");
   if (!url) return undefined;
   // Vercel env add "VITE_CONVEX_URL production" is a common footgun: the
   // value becomes the word "production", which crashes ConvexReactClient.

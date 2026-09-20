@@ -8,10 +8,10 @@ function describeCallbackError(fromConvex: string | null): string {
   if (
     fromConvex?.includes("server responded with an error in the response body")
   ) {
-    return "Google rejected the token exchange. AUTH_GOOGLE_SECRET on dashing-cod-224 is not a Google Web client secret (those start with GOCSPX-). In Google Cloud → APIs & Services → Credentials, open the Web client 557822079588-2mf0d7qugmiobuui7rkhcl11hkgal0rm, copy Client secret, then: npx convex env set AUTH_GOOGLE_SECRET 'GOCSPX-…'";
+    return "Google rejected the token exchange. AUTH_GOOGLE_SECRET on this Convex deployment must be the Web client secret (starts with GOCSPX-).";
   }
   if (fromConvex) return `Convex OAuth callback failed: ${fromConvex}`;
-  return "Google came back without a Convex code. In Google Cloud the Web client redirect URI must be exactly https://dashing-cod-224.convex.site/api/auth/callback/google";
+  return "Google came back without a Convex code. In Google Cloud the Web client redirect URI must match https://<deployment>.convex.site/api/auth/callback/google";
 }
 
 export function rememberAuthNext(path: string) {
@@ -62,7 +62,7 @@ export function AuthCallbackPage() {
     started.current = true;
     void (async () => {
       try {
-        const result = await signIn(undefined, { code });
+        const result = await signIn("google", { code });
         if (!result.signingIn) {
           setError(
             "Convex rejected the one-time code (already used, or the verifier in this browser tab is missing). Start again from /login and do not refresh the return URL.",
