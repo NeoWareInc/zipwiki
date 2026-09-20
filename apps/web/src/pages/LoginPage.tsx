@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { Authenticated, useMutation } from "convex/react";
+import { Authenticated, AuthLoading, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   AuthCard,
@@ -44,10 +44,14 @@ export default function LoginPage() {
   const [pending, setPending] = useState(false);
 
   const from =
-    (location.state as { from?: string } | null)?.from || "/dashboard";
+    (location.state as { from?: string } | null)?.from ||
+    sessionStorage.getItem("zipwiki.auth.next") ||
+    "/dashboard";
   const safeFrom = from.startsWith("/") ? from : "/dashboard";
+  const exchangingCode = params.has("code");
 
   async function finishSignIn() {
+    sessionStorage.removeItem("zipwiki.auth.next");
     await seed({});
     await ensure({});
     navigate(safeFrom);
@@ -87,8 +91,21 @@ export default function LoginPage() {
     }
   }
 
+  if (exchangingCode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-(--muted)">
+        Finishing sign-in…
+      </div>
+    );
+  }
+
   return (
     <>
+      <AuthLoading>
+        <div className="flex min-h-screen items-center justify-center text-(--muted)">
+          Loading…
+        </div>
+      </AuthLoading>
       <Authenticated>
         <Navigate to={safeFrom} replace />
       </Authenticated>

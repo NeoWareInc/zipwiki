@@ -64,6 +64,7 @@ function EnsureProfile() {
 export function ProtectedRoute({ admin }: { admin?: boolean }) {
   const location = useLocation();
   const me = useQuery(api.profiles.me);
+  const exchangingCode = new URLSearchParams(location.search).has("code");
 
   return (
     <>
@@ -73,11 +74,17 @@ export function ProtectedRoute({ admin }: { admin?: boolean }) {
         </div>
       </AuthLoading>
       <Unauthenticated>
-        <Navigate
-          to="/login"
-          state={{ from: `${location.pathname}${location.search}` }}
-          replace
-        />
+        {exchangingCode ? (
+          <div className="flex min-h-screen items-center justify-center text-(--muted)">
+            Finishing sign-in…
+          </div>
+        ) : (
+          <Navigate
+            to="/login"
+            state={{ from: `${location.pathname}${location.search}` }}
+            replace
+          />
+        )}
       </Unauthenticated>
       <Authenticated>
         {admin && me && me.user.role !== "admin" ? (

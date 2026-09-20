@@ -8,8 +8,27 @@ export function allowedAuthOrigins(): string[] {
     .map((s) => s.trim().replace(/\/$/, ""))
     .filter(Boolean);
   const site = (process.env.SITE_URL ?? "").trim().replace(/\/$/, "");
-  const defaults = ["http://localhost:5173"];
+  const defaults = ["http://localhost:5173", "http://localhost:3000"];
   return [...new Set([...fromWeb, ...(site ? [site] : []), ...defaults])];
+}
+
+/** This project's Vercel aliases / deployment hosts (not arbitrary *.vercel.app). */
+export function isTrustedZipWikiHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (host === "zipwiki.ai" || host === "www.zipwiki.ai") return true;
+  if (/^zipwiki-web(?:[.-][a-z0-9-]+)?\.vercel\.app$/.test(host)) return true;
+  if (/^zipwiki-[a-z0-9]+-neoware\.vercel\.app$/.test(host)) return true;
+  return false;
+}
+
+function isAllowedRedirectOrigin(origin: string): boolean {
+  if (allowedAuthOrigins().includes(origin)) return true;
+  try {
+    const url = new URL(origin);
+    return url.protocol === "https:" && isTrustedZipWikiHost(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 /** Resolve a post-auth redirectTo against the allowlist. */
@@ -32,8 +51,7 @@ export function resolveAuthRedirect(redirectTo: string): string {
     throw new Error(`Invalid redirectTo: ${raw}`);
   }
 
-  const origin = url.origin;
-  if (!origins.includes(origin)) {
+  if (!isAllowedRedirectOrigin(url.origin)) {
     throw new Error(
       `Invalid redirectTo ${raw} for allowed origins: ${origins.join(", ")}`,
     );

@@ -41,11 +41,28 @@ describe("authRedirects", () => {
     process.env.SITE_URL = "https://zipwiki.ai";
     process.env.WEB_ORIGIN = "https://zipwiki.ai";
     assert.throws(() => resolveAuthRedirect("https://evil.example/phish"));
+    assert.throws(() =>
+      resolveAuthRedirect("https://evil-neoware.vercel.app/dashboard"),
+    );
+  });
+
+  it("allows this project's Vercel aliases without listing each one", () => {
+    process.env.SITE_URL = "https://zipwiki-web.vercel.app";
+    delete process.env.WEB_ORIGIN;
+    assert.equal(
+      resolveAuthRedirect("https://zipwiki-web-dev.vercel.app/dashboard"),
+      "https://zipwiki-web-dev.vercel.app/dashboard",
+    );
+    assert.equal(
+      resolveAuthRedirect("https://zipwiki-cr0jjilji-neoware.vercel.app/login"),
+      "https://zipwiki-cr0jjilji-neoware.vercel.app/login",
+    );
   });
 
   it("always includes localhost:5173 in the allowlist", () => {
     process.env.SITE_URL = "https://zipwiki.ai";
     delete process.env.WEB_ORIGIN;
     assert.ok(allowedAuthOrigins().includes("http://localhost:5173"));
+    assert.ok(allowedAuthOrigins().includes("http://localhost:3000"));
   });
 });
