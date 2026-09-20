@@ -23,11 +23,11 @@ describe("resolveRepoPath", () => {
     process.env.INIT_CWD = REPO_ROOT;
     try {
       const dest = resolveRepoPath(
-        "samples/florida-laws-origin-output/Ch_2025-001.pdf",
+        "samples/.output/florida-laws/Ch_2025-001.pdf",
       );
       assert.equal(
         dest,
-        resolve(REPO_ROOT, "samples/florida-laws-origin-output/Ch_2025-001.pdf"),
+        resolve(REPO_ROOT, "samples/.output/florida-laws/Ch_2025-001.pdf"),
       );
     } finally {
       restoreInit();
