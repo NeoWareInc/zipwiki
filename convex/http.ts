@@ -237,6 +237,7 @@ http.route({
         kind: "parse" | "okf";
         engine?: string;
         bytes?: number;
+        billable?: boolean;
       };
       if (!body.account_id || !body.kind) {
         return json({ error: "invalid_request" }, 400);
@@ -246,6 +247,7 @@ http.route({
         kind: body.kind,
         engine: body.engine,
         bytes: body.bytes,
+        billable: body.billable,
       });
       return json({ ok: true });
     } catch {

@@ -37,7 +37,7 @@ export const AUDIENCES = [
   },
   {
     title: "Teams that want hosted parse",
-    body: "Free uses local LiteParse. Standard and Pro add hosted LlamaParse and ZipWiki OKF, with a soft fallback—not a hard stop.",
+    body: "Free uses local LiteParse and your agent’s LLM. Buy prepaid credits for hosted LlamaParse and ZipWiki OKF — soft fallback when credits run out.",
   },
 ] as const;
 
@@ -45,7 +45,7 @@ export const PRODUCT_PILLARS = [
   {
     title: "Create",
     ask: "Pack ./florida-laws into knowledge/florida-laws.zipwiki.",
-    body: "The agent parses PDFs locally with LiteParse (Office needs LibreOffice on the machine). Paid plans can use hosted LlamaParse. OKF concepts come from your agent’s LLM, or ZipWiki OKF when you still have quota.",
+    body: "The agent parses PDFs locally with LiteParse (Office needs LibreOffice on the machine). Credits unlock hosted LlamaParse. OKF concepts come from your agent’s LLM, or ZipWiki OKF when you have credits.",
   },
   {
     title: "Query",
@@ -109,7 +109,7 @@ export const PARSE_ENGINES = [
   },
   {
     title: "LlamaParse (hosted, paid)",
-    body: "Used when you want multi-format quality or LiteParse marks a file as complex (dense layout, scans, forms). Soft-falls back to LiteParse when quota runs out—not a hard stop.",
+    body: "Used when you want multi-format quality or LiteParse marks a file as complex (dense layout, scans, forms). Soft-falls back to LiteParse when credits run out—not a hard stop.",
   },
 ] as const;
 
@@ -305,34 +305,25 @@ export const PLANS = [
     name: "Free",
     price: "$0",
     blurb:
-      "Plugin + unlimited local LiteParse (PDF native; Office needs LibreOffice on your machine) and OKF from your agent’s LLM. No hosted LlamaParse or ZipWiki OKF quota.",
-    cta: "Join waitlist",
-    href: WAITLIST_HREF,
+      "Plugin + unlimited local LiteParse (PDF native; Office needs LibreOffice on your machine) and OKF from your agent’s LLM via MCP. No credits required.",
+    cta: "Get started",
+    href: "/signup",
   },
   {
-    slug: "standard",
-    name: "Standard",
-    price: "$10/month",
+    slug: "credits",
+    name: "Credits",
+    price: "$5–$10,000",
     blurb:
-      "2,000 LlamaParse documents (up to 100 pages), multi-format. 2,000 ZipWiki OKF enrichments. Extra usage falls back to Free (LiteParse + your agent’s LLM).",
-    cta: "Join waitlist",
-    href: WAITLIST_HREF,
-  },
-  {
-    slug: "pro",
-    name: "Pro",
-    price: "$50/month",
-    blurb:
-      "20,000 LlamaParse documents (up to 1,000 pages). 20,000 ZipWiki OKF enrichments. Extra usage falls back to Free (LiteParse + host LLM).",
-    cta: "Join waitlist",
-    href: WAITLIST_HREF,
+      "Prepaid credits for hosted LlamaParse and hosted ZipWiki OKF (outside MCP). 100 credits per dollar. Buy from $5 to $10,000 (default $10). Soft-falls back to Free when empty.",
+    cta: "Buy credits",
+    href: "/dashboard/billing",
   },
   {
     slug: "custom",
-    name: "Custom",
+    name: "Unlimited",
     price: "Quote",
     blurb:
-      "No limit on hosted LlamaParse and ZipWiki OKF. Admin- or sales-assigned. Email sales@zipwiki.ai.",
+      "Unlimited hosted LlamaParse and ZipWiki OKF. Admin- or sales-assigned. Email sales@zipwiki.ai.",
     cta: "Talk to sales",
     href: SALES_HREF,
   },

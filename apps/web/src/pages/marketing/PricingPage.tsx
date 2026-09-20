@@ -7,10 +7,10 @@ export default function PricingPage() {
       <Section>
         <PageHero
           kicker="Pricing"
-          title="Free to start. Hosted parse when you need it."
-          lead="Free is the plugin plus local LiteParse and your agent’s LLM. Paid plans add hosted LlamaParse and ZipWiki OKF. When those quotas run out, you soft-fall back to Free—not a hard block."
+          title="Free to start. Credits when you need hosted parse."
+          lead="Free is the plugin plus local LiteParse and your agent’s LLM via MCP. Buy prepaid credits ($5–$10,000, 100 per dollar) for hosted LlamaParse and ZipWiki OKF. When credits run out, you soft-fall back to Free—not a hard block."
         />
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
           {PLANS.map((plan) => (
             <div
               key={plan.slug}

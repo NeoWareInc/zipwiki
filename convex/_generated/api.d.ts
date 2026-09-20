@@ -17,6 +17,7 @@ import type * as deviceAuthHttp from "../deviceAuthHttp.js";
 import type * as http from "../http.js";
 import type * as lib_admin from "../lib/admin.js";
 import type * as lib_adminEmails from "../lib/adminEmails.js";
+import type * as lib_credits from "../lib/credits.js";
 import type * as lib_crypto from "../lib/crypto.js";
 import type * as otp_ResendOTP from "../otp/ResendOTP.js";
 import type * as plans from "../plans.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/admin": typeof lib_admin;
   "lib/adminEmails": typeof lib_adminEmails;
+  "lib/credits": typeof lib_credits;
   "lib/crypto": typeof lib_crypto;
   "otp/ResendOTP": typeof otp_ResendOTP;
   plans: typeof plans;

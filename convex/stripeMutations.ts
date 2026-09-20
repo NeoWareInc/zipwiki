@@ -112,3 +112,44 @@ export const markPastDue = internalMutation({
     return { ok: true };
   },
 });
+
+/** Idempotent credit grant from Stripe Checkout (keyed by session id). */
+export const grantCreditsFromCheckout = internalMutation({
+  args: {
+    accountId: v.id("accounts"),
+    stripeSessionId: v.string(),
+    usdCents: v.number(),
+    credits: v.number(),
+  },
+  handler: async (ctx, { accountId, stripeSessionId, usdCents, credits }) => {
+    if (!Number.isFinite(credits) || credits <= 0) {
+      return { ok: false as const, reason: "invalid_credits" };
+    }
+
+    const existing = await ctx.db
+      .query("creditLedger")
+      .withIndex("by_stripeSessionId", (q) =>
+        q.eq("stripeSessionId", stripeSessionId),
+      )
+      .unique();
+    if (existing) {
+      return { ok: true as const, duplicate: true };
+    }
+
+    const account = await ctx.db.get(accountId);
+    if (!account) return { ok: false as const, reason: "no_account" };
+
+    await ctx.db.patch(accountId, {
+      creditsPurchased: (account.creditsPurchased ?? 0) + credits,
+      status: "active",
+    });
+    await ctx.db.insert("creditLedger", {
+      accountId,
+      kind: "purchase",
+      credits,
+      usdCents,
+      stripeSessionId,
+    });
+    return { ok: true as const, duplicate: false, credits };
+  },
+});

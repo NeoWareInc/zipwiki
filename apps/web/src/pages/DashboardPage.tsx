@@ -2,59 +2,51 @@ import { useQuery } from "convex/react";
 import { Link } from "react-router-dom";
 import { api } from "@convex/_generated/api";
 
-function UsageBar({
-  label,
+function CreditBar({
   used,
-  max,
-  fallbackLabel,
+  purchased,
+  unlimited,
 }: {
-  label: string;
   used: number;
-  max: number;
-  fallbackLabel?: string;
+  purchased: number;
+  unlimited: boolean;
 }) {
-  const unlimited = max >= Number.MAX_SAFE_INTEGER;
-  const exhausted = !unlimited && (max <= 0 || used >= max);
+  if (unlimited) {
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="font-medium">Credits</span>
+          <span className="text-(--muted)">Unlimited</span>
+        </div>
+        <div className="h-2 rounded-full bg-(--line)">
+          <div className="h-2 w-full rounded-full bg-(--accent)" />
+        </div>
+      </div>
+    );
+  }
+
+  const remaining = Math.max(0, purchased - used);
   const pct =
-    unlimited || max <= 0
+    purchased <= 0
       ? 0
-      : Math.min(100, Math.round((used / max) * 100));
-  const warn = !unlimited && max > 0 && pct >= 80 && !exhausted;
+      : Math.min(100, Math.round((used / purchased) * 100));
+  const low = remaining <= 500;
+
   return (
     <div className="space-y-2">
       <div className="flex justify-between text-sm">
-        <span className="font-medium">{label}</span>
-        <span className="text-(--muted)">
-          {max <= 0
-            ? "None (Free path)"
-            : unlimited
-              ? `${used.toLocaleString()} / no limit`
-              : `${used} / ${max}`}
+        <span className="font-medium">Credits</span>
+        <span className="text-(--muted) tabular-nums">
+          {remaining.toLocaleString()} remaining · {used.toLocaleString()} used
+          / {purchased.toLocaleString()} purchased
         </span>
       </div>
       <div className="h-2 rounded-full bg-(--line)">
         <div
-          className={`h-2 rounded-full ${
-            exhausted
-              ? "bg-(--muted)"
-              : warn
-                ? "bg-amber-500"
-                : "bg-(--accent)"
-          }`}
-          style={{
-            width: `${unlimited ? Math.min(8, used > 0 ? 8 : 0) : max <= 0 ? 0 : pct}%`,
-          }}
+          className={`h-2 rounded-full ${low ? "bg-amber-500" : "bg-(--accent)"}`}
+          style={{ width: `${purchased <= 0 ? 0 : pct}%` }}
         />
       </div>
-      {exhausted && fallbackLabel && (
-        <p className="text-xs text-(--muted)">{fallbackLabel}</p>
-      )}
-      {warn && (
-        <p className="text-xs text-amber-700">
-          Approaching monthly limit — further usage falls back to Free
-          (LiteParse + host LLM). Upgrade in Billing if you need more.
-        </p>
-      )}
     </div>
   );
 }
@@ -63,31 +55,57 @@ export default function DashboardPage() {
   const me = useQuery(api.profiles.me);
   const usage = useQuery(api.usage.myUsage);
 
+  const unlimited = usage?.creditsUnlimited === true;
+  const low = usage?.lowCredits === true;
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-semibold">Usage</h1>
         <p className="mt-1 text-(--muted)">
-          Plan: <strong>{me?.plan?.name ?? "—"}</strong> ({me?.account.status})
+          Account: <strong>{me?.account.status ?? "—"}</strong>
         </p>
       </div>
 
+      {low && !unlimited && (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Credits are running low (
+          {(usage?.creditsRemaining ?? 0).toLocaleString()} remaining).{" "}
+          <Link
+            className="font-semibold text-(--accent) underline"
+            to="/dashboard/billing"
+          >
+            Buy more credits
+          </Link>{" "}
+          to keep hosted LlamaParse and ZipWiki OKF available.
+        </p>
+      )}
+
       {usage && (
         <div className="space-y-6 rounded-xl border border-(--border) bg-white shadow-soft p-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <UsageBar
-              label="LlamaParse docs (hosted, billed)"
-              used={usage.parseCount}
-              max={usage.maxParses}
-              fallbackLabel="Falling back to LiteParse (unlimited, not billed)."
-            />
-            <UsageBar
-              label="ZipWiki OKF (hosted, billed)"
-              used={usage.okfCount}
-              max={usage.maxOkf}
-              fallbackLabel="Use host-LLM OKF via MCP okf_enrich."
-            />
+          <CreditBar
+            used={usage.creditsSpent ?? 0}
+            purchased={usage.creditsPurchased ?? 0}
+            unlimited={unlimited}
+          />
+
+          <div className="grid gap-4 md:grid-cols-2 text-sm">
+            <div className="rounded-lg border border-(--border) bg-(--paper) p-4">
+              <p className="font-medium">Hosted LlamaParse (1 credit each)</p>
+              <p className="mt-1 text-(--muted) tabular-nums">
+                {usage.parseCount.toLocaleString()} this month
+              </p>
+            </div>
+            <div className="rounded-lg border border-(--border) bg-(--paper) p-4">
+              <p className="font-medium">
+                Hosted ZipWiki OKF / LLM (1 credit each)
+              </p>
+              <p className="mt-1 text-(--muted) tabular-nums">
+                {usage.okfCount.toLocaleString()} this month
+              </p>
+            </div>
           </div>
+
           <div className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm">
             <p className="font-medium text-(--ink)">
               LiteParse (unlimited, not billed)
@@ -104,18 +122,23 @@ export default function DashboardPage() {
               </strong>
             </p>
             <p className="mt-2 text-xs text-(--muted)">
-              Free and quota-fallback packs use LiteParse. PDF is native; Office
-              formats need LibreOffice on the packing machine.
+              Local packs and credit-fallback use LiteParse. PDF is native;
+              Office formats need LibreOffice on the packing machine. MCP{" "}
+              <code className="text-xs">okf_enrich</code> uses your agent’s LLM
+              at no credit cost.
             </p>
           </div>
-          {usage.maxParses < Number.MAX_SAFE_INTEGER &&
-            (usage.maxParses <= 0 || usage.parseCount >= usage.maxParses) && (
+
+          {!unlimited && (usage.creditsRemaining ?? 0) <= 0 && (
             <p className="text-sm text-(--muted)">
-              No LlamaParse remaining —{" "}
-              <Link className="text-(--accent) hover:underline" to="/dashboard/billing">
-                upgrade
+              No credits remaining —{" "}
+              <Link
+                className="text-(--accent) hover:underline"
+                to="/dashboard/billing"
+              >
+                buy credits
               </Link>{" "}
-              for hosted multi-format LlamaParse.
+              for hosted multi-format LlamaParse and ZipWiki OKF.
             </p>
           )}
           <p className="text-xs text-(--muted)">

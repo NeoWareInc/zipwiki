@@ -1,38 +1,36 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  hasHostedCredits,
   hasLlamaParseQuota,
   hasZipcodexOkfQuota,
 } from "./entitlements.js";
 
 describe("client entitlements", () => {
-  it("free has no LlamaParse quota", () => {
+  it("no credits → no hosted LlamaParse", () => {
+    assert.equal(hasHostedCredits({ creditsRemaining: 0 }), false);
     assert.equal(
-      hasLlamaParseQuota(
-        { slug: "free", maxParsesPerMonth: 0, maxOkfPerMonth: 0 },
-        { parseCount: 0, okfCount: 0 },
-      ),
+      hasLlamaParseQuota({ creditsRemaining: 0, creditsUnlimited: false }),
       false,
     );
   });
 
-  it("exhausted standard has no LlamaParse quota", () => {
+  it("remaining credits unlock hosted parse and OKF", () => {
+    assert.equal(hasHostedCredits({ creditsRemaining: 1 }), true);
     assert.equal(
-      hasLlamaParseQuota(
-        { slug: "standard", maxParsesPerMonth: 2000, maxOkfPerMonth: 2000 },
-        { parseCount: 2000, okfCount: 0 },
-      ),
-      false,
+      hasLlamaParseQuota({ creditsRemaining: 50 }),
+      true,
+    );
+    assert.equal(
+      hasZipcodexOkfQuota({ creditsRemaining: 50 }),
+      true,
     );
   });
 
-  it("okf exhausted → no zipwiki OKF", () => {
+  it("unlimited bypasses balance", () => {
     assert.equal(
-      hasZipcodexOkfQuota(
-        { slug: "pro", maxParsesPerMonth: 20_000, maxOkfPerMonth: 20_000 },
-        { parseCount: 0, okfCount: 20_000 },
-      ),
-      false,
+      hasHostedCredits({ creditsRemaining: 0, creditsUnlimited: true }),
+      true,
     );
   });
 });

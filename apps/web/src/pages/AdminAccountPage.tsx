@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { planEntitlementBlurb, planOptionLabel, sortPlansByTier } from "../lib/plan-labels";
+import { planOptionLabel, sortPlansByTier } from "../lib/plan-labels";
 
 export default function AdminAccountPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,10 +15,13 @@ export default function AdminAccountPage() {
   );
   const plans = useQuery(api.plans.listPlans);
   const setPlan = useMutation(api.admin.setPlan);
+  const grantCredits = useMutation(api.admin.grantCredits);
+  const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
   const setRole = useMutation(api.admin.setRole);
   const setDisabled = useMutation(api.admin.setDisabled);
   const revokeKeys = useMutation(api.admin.revokeKeys);
   const remove = useMutation(api.admin.deleteAccount);
+  const [grantAmount, setGrantAmount] = useState("1000");
 
   if (data === undefined) return <p className="text-(--muted)">Loading…</p>;
   if (data === null) {
@@ -54,16 +57,67 @@ export default function AdminAccountPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-(--border) bg-white shadow-soft p-4 space-y-3">
           <p>
-            Plan:{" "}
+            Credits:{" "}
+            <strong className="tabular-nums">
+              {a.creditsUnlimited
+                ? "Unlimited"
+                : `${a.creditsRemaining.toLocaleString()} remaining`}
+            </strong>
+          </p>
+          {!a.creditsUnlimited && (
+            <p className="text-sm text-(--muted) tabular-nums">
+              Purchased {a.creditsPurchased.toLocaleString()} · Spent{" "}
+              {a.creditsSpent.toLocaleString()}
+            </p>
+          )}
+          <label className="block space-y-1 text-sm">
+            <span className="font-medium">Grant credits</span>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={1}
+                value={grantAmount}
+                onChange={(e) => setGrantAmount(e.target.value)}
+                className="w-full rounded-md border border-(--border) bg-white px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                className="rounded-md border border-(--border) px-3 py-2 text-xs font-semibold"
+                onClick={() =>
+                  void run(() =>
+                    grantCredits({
+                      id: a.id as Id<"accounts">,
+                      credits: Number(grantAmount),
+                    }),
+                  )
+                }
+              >
+                Grant
+              </button>
+            </div>
+          </label>
+          <button
+            type="button"
+            className="rounded-md border border-(--border) px-2 py-1 text-xs"
+            onClick={() =>
+              void run(() =>
+                setCreditsUnlimited({
+                  id: a.id as Id<"accounts">,
+                  unlimited: !a.creditsUnlimited,
+                }),
+              )
+            }
+          >
+            {a.creditsUnlimited ? "Clear unlimited" : "Set unlimited"}
+          </button>
+          <p>
+            Plan row:{" "}
             <strong>
               {a.plan.slug === "custom" ? "Unlimited" : a.plan.name}
             </strong>
           </p>
-          <p className="text-sm text-(--muted)">
-            {planEntitlementBlurb(a.plan)}
-          </p>
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Assign plan</span>
+            <span className="font-medium">Assign plan row (legacy)</span>
             <select
               value={a.plan.slug}
               onChange={(e) =>
@@ -84,8 +138,7 @@ export default function AdminAccountPage() {
             </select>
           </label>
           <p className="text-xs text-(--muted)">
-            Free (LiteParse) → Standard (2,000 docs) → Pro (20,000 docs) →
-            Unlimited. Unlimited is admin/sales assigned, not Stripe self-serve.
+            Billing is prepaid credits. Unlimited is admin/sales assigned.
           </p>
         </div>
         <div className="rounded-xl border border-(--border) bg-white shadow-soft p-4 space-y-2">

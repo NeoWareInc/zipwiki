@@ -2,6 +2,12 @@ import { internalMutation, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { startOfMonthMs } from "./lib/crypto";
+import {
+  CREDIT_COST_LLM,
+  CREDIT_COST_PARSE,
+  isLowCredits,
+  remainingCredits,
+} from "./lib/credits";
 import type { Id } from "./_generated/dataModel";
 
 export const getOrCreatePeriod = internalMutation({
@@ -28,10 +34,10 @@ export const getOrCreatePeriod = internalMutation({
 });
 
 /**
- * Soft-fallback entitlements:
- * - parse: limit 0 or used≥limit → liteparse_fallback (still ok; not billable)
- * - okf: limit 0 or used≥limit → okf_fallback_host_llm (still ok; not billable)
- * Hard fail only when account/plan missing.
+ * Soft-fallback entitlements based on prepaid credits:
+ * - parse: remaining ≥ 1 (or unlimited) → llamaparse; else liteparse_fallback
+ * - okf: remaining ≥ 1 (or unlimited) → okf_billable; else okf_fallback_host_llm
+ * Hard fail only when account missing.
  */
 export const checkQuota = internalQuery({
   args: {
@@ -50,17 +56,11 @@ export const checkQuota = internalQuery({
         limit: 0,
       };
     }
-    const plan = await ctx.db.get(account.planId);
-    if (!plan) {
-      return {
-        ok: false as const,
-        billable: false,
-        fallback: true,
-        entitlement: "missing_plan" as const,
-        used: 0,
-        limit: 0,
-      };
-    }
+
+    const cost = kind === "parse" ? CREDIT_COST_PARSE : CREDIT_COST_LLM;
+    const remaining = remainingCredits(account);
+    const billable =
+      account.creditsUnlimited === true || remaining >= cost;
 
     const periodStart = startOfMonthMs();
     const period = await ctx.db
@@ -72,9 +72,6 @@ export const checkQuota = internalQuery({
 
     const used =
       kind === "parse" ? (period?.parseCount ?? 0) : (period?.okfCount ?? 0);
-    const limit =
-      kind === "parse" ? plan.maxParsesPerMonth : plan.maxOkfPerMonth;
-    const billable = limit > 0 && used < limit;
     const entitlement =
       kind === "parse"
         ? billable
@@ -90,7 +87,10 @@ export const checkQuota = internalQuery({
       fallback: !billable,
       entitlement,
       used,
-      limit,
+      limit: account.creditsUnlimited
+        ? Number.MAX_SAFE_INTEGER
+        : remaining,
+      creditsRemaining: remaining,
       periodStart,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,
       liteparseFailCount: period?.liteparseFailCount ?? 0,
@@ -106,8 +106,10 @@ export const recordUsage = internalMutation({
     kind: v.union(v.literal("parse"), v.literal("okf")),
     engine: v.optional(v.string()),
     bytes: v.optional(v.number()),
+    /** When true (default for hosted), debit prepaid credits. */
+    billable: v.optional(v.boolean()),
   },
-  handler: async (ctx, { accountId, kind, engine, bytes }) => {
+  handler: async (ctx, { accountId, kind, engine, bytes, billable }) => {
     const periodStart = startOfMonthMs();
     let period = await ctx.db
       .query("usagePeriods")
@@ -138,6 +140,26 @@ export const recordUsage = internalMutation({
       type: kind,
       engine,
       bytes,
+    });
+
+    const shouldDebit = billable !== false;
+    if (!shouldDebit) return;
+
+    const account = await ctx.db.get(accountId);
+    if (!account || account.creditsUnlimited) return;
+
+    const cost = kind === "parse" ? CREDIT_COST_PARSE : CREDIT_COST_LLM;
+    const remaining = remainingCredits(account);
+    if (remaining < cost) return;
+
+    await ctx.db.patch(accountId, {
+      creditsSpent: (account.creditsSpent ?? 0) + cost,
+    });
+    await ctx.db.insert("creditLedger", {
+      accountId,
+      kind: kind === "parse" ? "spend_parse" : "spend_llm",
+      credits: -cost,
+      engine,
     });
   },
 });
@@ -202,15 +224,25 @@ export const myUsage = query({
       )
       .unique();
 
+    const purchased = account.creditsPurchased ?? 0;
+    const spent = account.creditsSpent ?? 0;
+    const unlimited = account.creditsUnlimited === true;
+    const remaining = remainingCredits(account);
+
     return {
       parseCount: period?.parseCount ?? 0,
       okfCount: period?.okfCount ?? 0,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,
       liteparseFailCount: period?.liteparseFailCount ?? 0,
-      maxParses: plan?.maxParsesPerMonth ?? 0,
-      maxOkf: plan?.maxOkfPerMonth ?? 0,
-      maxPagesPerDocument: plan?.maxPagesPerDocument ?? null,
+      maxParses: unlimited ? Number.MAX_SAFE_INTEGER : remaining,
+      maxOkf: unlimited ? Number.MAX_SAFE_INTEGER : remaining,
+      maxPagesPerDocument: null,
       periodStart: new Date(periodStart).toISOString(),
+      creditsPurchased: purchased,
+      creditsSpent: spent,
+      creditsRemaining: remaining,
+      creditsUnlimited: unlimited,
+      lowCredits: isLowCredits(remaining, unlimited),
       plan: plan
         ? {
             slug: plan.slug,

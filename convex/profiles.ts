@@ -64,6 +64,9 @@ export const ensureProfileAndAccount = mutation({
         planId: free._id,
         status: "active",
         disabled: false,
+        creditsPurchased: 0,
+        creditsSpent: 0,
+        creditsUnlimited: false,
       });
       account = (await ctx.db.get(accountId))!;
     }
@@ -213,6 +216,9 @@ async function grantAdminForEmail(
           planId: free._id,
           status: "active",
           disabled: false,
+          creditsPurchased: 0,
+          creditsSpent: 0,
+          creditsUnlimited: false,
         });
       }
     }

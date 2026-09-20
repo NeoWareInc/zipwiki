@@ -37,9 +37,33 @@ export default defineSchema({
     stripeSubscriptionId: v.optional(v.union(v.string(), v.null())),
     status: v.string(), // active | past_due | canceled
     disabled: v.boolean(),
+    /** Prepaid credits purchased (lifetime). */
+    creditsPurchased: v.optional(v.number()),
+    /** Prepaid credits spent on hosted parse / hosted LLM. */
+    creditsSpent: v.optional(v.number()),
+    /** Admin/sales: unlimited hosted usage (no credit debit). */
+    creditsUnlimited: v.optional(v.boolean()),
   })
     .index("by_userId", ["userId"])
     .index("by_stripeCustomerId", ["stripeCustomerId"]),
+
+  /** Append-only credit purchases and spends. */
+  creditLedger: defineTable({
+    accountId: v.id("accounts"),
+    kind: v.union(
+      v.literal("purchase"),
+      v.literal("spend_parse"),
+      v.literal("spend_llm"),
+      v.literal("grant"),
+    ),
+    /** Signed: + for purchase/grant, − for spend. */
+    credits: v.number(),
+    usdCents: v.optional(v.number()),
+    stripeSessionId: v.optional(v.string()),
+    engine: v.optional(v.string()),
+  })
+    .index("by_accountId", ["accountId"])
+    .index("by_stripeSessionId", ["stripeSessionId"]),
 
   apiKeys: defineTable({
     accountId: v.id("accounts"),

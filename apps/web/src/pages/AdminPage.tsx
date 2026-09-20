@@ -128,6 +128,8 @@ function AccountTable({
     disabled: boolean;
     plan: { slug: string; name: string };
     usage: { parseCount: number; okfCount: number };
+    creditsRemaining?: number;
+    creditsUnlimited?: boolean;
   }>;
   emptyLabel: string;
   planOptions: Array<{
@@ -149,7 +151,7 @@ function AccountTable({
             <tr>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Plan</th>
-              <th className="px-4 py-3">Usage</th>
+              <th className="px-4 py-3">Credits</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3" />
             </tr>
@@ -183,8 +185,13 @@ function AccountTable({
                     ))}
                   </select>
                 </td>
-                <td className="px-4 py-3 text-(--muted)">
-                  {a.usage.parseCount} / {a.usage.okfCount}
+                <td className="px-4 py-3 text-(--muted) tabular-nums">
+                  {a.creditsUnlimited
+                    ? "Unlimited"
+                    : (a.creditsRemaining ?? 0).toLocaleString()}
+                  <div className="text-xs">
+                    {a.usage.parseCount}p / {a.usage.okfCount}okf
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   {a.disabled ? "disabled" : a.status}

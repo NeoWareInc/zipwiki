@@ -11,6 +11,24 @@ import { api } from "@convex/_generated/api";
 import type { MeResponse } from "../lib/api";
 import { AccountMenu } from "./AccountMenu";
 
+function LowCreditsBanner() {
+  const location = useLocation();
+  const usage = useQuery(api.usage.myUsage);
+  if (!usage?.lowCredits || usage.creditsUnlimited) return null;
+  if (location.pathname.startsWith("/dashboard/billing")) return null;
+  return (
+    <p className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      Credits running low ({usage.creditsRemaining.toLocaleString()} remaining).{" "}
+      <Link
+        className="font-semibold text-(--accent) underline"
+        to="/dashboard/billing"
+      >
+        Buy more
+      </Link>
+    </p>
+  );
+}
+
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-sm transition-colors ${
     isActive
@@ -228,6 +246,7 @@ export function DashboardLayout() {
         )}
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+          <LowCreditsBanner />
           <Outlet />
         </main>
       </div>

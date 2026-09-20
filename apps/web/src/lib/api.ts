@@ -173,10 +173,10 @@ export const api = {
       plan: MeResponse["plan"];
       stripeCustomerId: string | null;
     }>("/account/subscription"),
-  checkout: (plan: "standard" | "pro") =>
+  checkout: (usdCents: number) =>
     request<{ url: string; via?: "checkout" | "portal" }>("/account/checkout", {
       method: "POST",
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ usdCents }),
     }),
   billingPortal: () =>
     request<{ url: string }>("/account/billing-portal", { method: "POST" }),

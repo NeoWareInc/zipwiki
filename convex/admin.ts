@@ -68,6 +68,11 @@ export const listAccounts = query({
           parseCount: period?.parseCount ?? 0,
           okfCount: period?.okfCount ?? 0,
         },
+        creditsRemaining: Math.max(
+          0,
+          (account.creditsPurchased ?? 0) - (account.creditsSpent ?? 0),
+        ),
+        creditsUnlimited: account.creditsUnlimited === true,
       });
     }
     return out;
@@ -118,6 +123,13 @@ export const accountDetail = query({
           maxOkf: plan?.maxOkfPerMonth ?? 0,
           maxPagesPerDocument: plan?.maxPagesPerDocument ?? null,
         },
+        creditsPurchased: account.creditsPurchased ?? 0,
+        creditsSpent: account.creditsSpent ?? 0,
+        creditsRemaining: Math.max(
+          0,
+          (account.creditsPurchased ?? 0) - (account.creditsSpent ?? 0),
+        ),
+        creditsUnlimited: account.creditsUnlimited === true,
       },
       keys: keys.map((k) => ({
         id: k._id,
@@ -162,8 +174,48 @@ export const setPlan = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", planSlug))
       .unique();
     if (!plan) throw new Error("Unknown plan");
-    await ctx.db.patch(id, { planId: plan._id });
+    await ctx.db.patch(id, {
+      planId: plan._id,
+      // Custom/unlimited plan also flips creditsUnlimited for gating.
+      creditsUnlimited: planSlug === "custom",
+    });
     return { ok: true, plan: plan.slug };
+  },
+});
+
+export const grantCredits = mutation({
+  args: {
+    id: v.id("accounts"),
+    credits: v.number(),
+  },
+  handler: async (ctx, { id, credits }) => {
+    await requireAdmin(ctx);
+    if (!Number.isFinite(credits) || credits <= 0) {
+      throw new Error("credits must be a positive number");
+    }
+    const account = await ctx.db.get(id);
+    if (!account) throw new Error("Not found");
+    await ctx.db.patch(id, {
+      creditsPurchased: (account.creditsPurchased ?? 0) + credits,
+    });
+    await ctx.db.insert("creditLedger", {
+      accountId: id,
+      kind: "grant",
+      credits,
+    });
+    return {
+      ok: true,
+      creditsPurchased: (account.creditsPurchased ?? 0) + credits,
+    };
+  },
+});
+
+export const setCreditsUnlimited = mutation({
+  args: { id: v.id("accounts"), unlimited: v.boolean() },
+  handler: async (ctx, { id, unlimited }) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(id, { creditsUnlimited: unlimited });
+    return { ok: true, creditsUnlimited: unlimited };
   },
 });
 
@@ -221,6 +273,11 @@ export const deleteAccount = mutation({
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
       .collect();
     for (const e of events) await ctx.db.delete(e._id);
+    const ledger = await ctx.db
+      .query("creditLedger")
+      .withIndex("by_accountId", (q) => q.eq("accountId", id))
+      .collect();
+    for (const row of ledger) await ctx.db.delete(row._id);
     const settings = await ctx.db
       .query("accountSettings")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))

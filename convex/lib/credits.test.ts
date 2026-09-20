@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import {
+  clampUsdCents,
+  creditsForUsdCents,
+  isLowCredits,
+  remainingCredits,
+  DEFAULT_USD_CENTS,
+  MIN_USD_CENTS,
+  MAX_USD_CENTS,
+  LOW_CREDITS_THRESHOLD,
+} from "./credits.ts";
+
+describe("credits", () => {
+  it("clamps to $5–$10,000", () => {
+    assert.equal(clampUsdCents(100), MIN_USD_CENTS);
+    assert.equal(clampUsdCents(DEFAULT_USD_CENTS), DEFAULT_USD_CENTS);
+    assert.equal(clampUsdCents(2_000_000), MAX_USD_CENTS);
+  });
+
+  it("grants 100 credits per dollar", () => {
+    assert.equal(creditsForUsdCents(1_000), 1_000); // $10
+    assert.equal(creditsForUsdCents(500), 500); // $5
+    assert.equal(creditsForUsdCents(2_550), 2_550); // $25.50
+  });
+
+  it("computes remaining balance", () => {
+    assert.equal(
+      remainingCredits({ creditsPurchased: 1000, creditsSpent: 200 }),
+      800,
+    );
+    assert.equal(
+      remainingCredits({ creditsUnlimited: true, creditsPurchased: 0 }),
+      Number.MAX_SAFE_INTEGER,
+    );
+  });
+
+  it("flags low balance at ≤500", () => {
+    assert.equal(isLowCredits(LOW_CREDITS_THRESHOLD), true);
+    assert.equal(isLowCredits(501), false);
+    assert.equal(isLowCredits(0, true), false);
+  });
+});

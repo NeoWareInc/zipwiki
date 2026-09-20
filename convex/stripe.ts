@@ -5,6 +5,12 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import Stripe from "stripe";
+import {
+  clampUsdCents,
+  creditsForUsdCents,
+  MAX_USD_CENTS,
+  MIN_USD_CENTS,
+} from "./lib/credits";
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
@@ -13,10 +19,12 @@ function getStripe(): Stripe | null {
 }
 
 function webOrigin(): string {
-  return (process.env.WEB_ORIGIN?.trim() || "http://localhost:5173").replace(
-    /\/+$/,
-    "",
-  );
+  const site = process.env.SITE_URL?.trim();
+  if (site) return site.replace(/\/+$/, "");
+  return (process.env.WEB_ORIGIN?.trim() || "http://localhost:5173")
+    .split(",")[0]!
+    .trim()
+    .replace(/\/+$/, "");
 }
 
 export const handleWebhook = internalAction({
@@ -35,6 +43,23 @@ export const handleWebhook = internalAction({
       event = stripe.webhooks.constructEvent(rawBody, signature, secret);
     } catch {
       return { ok: false as const, error: "invalid_signature", status: 400 };
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.mode === "payment" && session.payment_status === "paid") {
+        const accountId = session.metadata?.accountId;
+        const usdCentsRaw = session.metadata?.usdCents;
+        const creditsRaw = session.metadata?.credits;
+        if (accountId && usdCentsRaw && creditsRaw && session.id) {
+          await ctx.runMutation(internal.stripeMutations.grantCreditsFromCheckout, {
+            accountId: accountId as never,
+            stripeSessionId: session.id,
+            usdCents: Number(usdCentsRaw),
+            credits: Number(creditsRaw),
+          });
+        }
+      }
     }
 
     if (
@@ -81,13 +106,30 @@ export const handleWebhook = internalAction({
   },
 });
 
-export const createCheckout = action({
-  args: { plan: v.union(v.literal("standard"), v.literal("pro")) },
-  handler: async (ctx, { plan }): Promise<{ url: string; via: "portal" | "checkout" }> => {
+/** One-time prepaid credit purchase ($5–$10,000). */
+export const createCreditCheckout = action({
+  args: { usdCents: v.number() },
+  handler: async (
+    ctx,
+    { usdCents },
+  ): Promise<{ url: string; via: "checkout" }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
     const stripe = getStripe();
     if (!stripe) throw new Error("stripe_not_configured");
+
+    if (
+      !Number.isFinite(usdCents) ||
+      usdCents < MIN_USD_CENTS ||
+      usdCents > MAX_USD_CENTS
+    ) {
+      throw new Error(
+        `Amount must be between $${MIN_USD_CENTS / 100} and $${MAX_USD_CENTS / 100}`,
+      );
+    }
+
+    const cents = clampUsdCents(usdCents);
+    const credits = creditsForUsdCents(cents);
 
     const account: {
       accountId: string;
@@ -99,12 +141,6 @@ export const createCheckout = action({
       userId,
     });
     if (!account) throw new Error("no_account");
-
-    const priceId =
-      plan === "standard"
-        ? process.env.STRIPE_PRICE_STANDARD?.trim()
-        : process.env.STRIPE_PRICE_PRO?.trim();
-    if (!priceId) throw new Error("plan_not_available");
 
     let customerId: string = account.stripeCustomerId ?? "";
     if (!customerId) {
@@ -119,24 +155,43 @@ export const createCheckout = action({
       });
     }
 
-    if (account.stripeSubscriptionId && account.status === "active") {
-      const portal = await stripe.billingPortal.sessions.create({
-        customer: customerId,
-        return_url: `${webOrigin()}/dashboard/billing`,
-      });
-      return { url: portal.url, via: "portal" };
-    }
-
+    const dollars = (cents / 100).toFixed(2);
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode: "payment",
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            unit_amount: cents,
+            product_data: {
+              name: "ZipWiki credits",
+              description: `${credits.toLocaleString()} credits ($${dollars})`,
+            },
+          },
+        },
+      ],
       success_url: `${webOrigin()}/dashboard/billing?checkout=success`,
       cancel_url: `${webOrigin()}/dashboard/billing?checkout=cancel`,
-      metadata: { accountId: account.accountId, plan },
+      metadata: {
+        accountId: account.accountId,
+        usdCents: String(cents),
+        credits: String(credits),
+      },
     });
     if (!session.url) throw new Error("checkout_failed");
     return { url: session.url, via: "checkout" };
+  },
+});
+
+/** @deprecated Prefer createCreditCheckout — kept for leftover callers. */
+export const createCheckout = action({
+  args: { plan: v.union(v.literal("standard"), v.literal("pro")) },
+  handler: async (): Promise<{ url: string; via: "portal" | "checkout" }> => {
+    throw new Error(
+      "Subscription plans were replaced by prepaid credits. Use createCreditCheckout.",
+    );
   },
 });
 
