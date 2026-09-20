@@ -66,6 +66,12 @@ export function MarketingLayout() {
           </nav>
 
           <div className="hidden items-center gap-3 text-sm lg:flex">
+            <Link
+              to="/login"
+              className="font-medium text-(--muted) transition-colors hover:text-(--accent)"
+            >
+              Sign in
+            </Link>
             <WaitlistLinks />
           </div>
 
@@ -113,7 +119,13 @@ export function MarketingLayout() {
                   {item.label}
                 </NavLink>
               ))}
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <Link
+                  to="/login"
+                  className="font-medium text-(--muted) hover:text-(--accent)"
+                >
+                  Sign in
+                </Link>
                 <WaitlistLinks />
               </div>
             </nav>
@@ -132,6 +144,9 @@ export function MarketingLayout() {
             <p className="mt-1">© 2026 NeoWare Inc.</p>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link to="/login" className="hover:text-(--accent)">
+              Sign in
+            </Link>
             <Link to="/#plugin" className="hover:text-(--accent)">
               Plugin
             </Link>
