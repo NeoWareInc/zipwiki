@@ -1,6 +1,16 @@
-import { internalMutation, mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  mutation,
+  query,
+  type MutationCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import type { Id } from "./_generated/dataModel";
+import {
+  bootstrapAdminEmails,
+  isBootstrapAdminEmail,
+} from "./lib/adminEmails";
 
 /** Ensure profile + free account exist for the signed-in auth user. */
 export const ensureProfileAndAccount = mutation({
@@ -21,13 +31,19 @@ export const ensureProfileAndAccount = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
 
+    const normalized = email.toLowerCase();
+    const admin = isBootstrapAdminEmail(normalized);
+
     if (!profile) {
       const profileId = await ctx.db.insert("profiles", {
         userId,
-        email: email.toLowerCase(),
-        role: "customer",
+        email: normalized,
+        role: admin ? "admin" : "customer",
       });
       profile = (await ctx.db.get(profileId))!;
+    } else if (admin && profile.role !== "admin") {
+      await ctx.db.patch(profile._id, { role: "admin" });
+      profile = (await ctx.db.get(profile._id))!;
     }
 
     let account = await ctx.db
@@ -131,16 +147,100 @@ export const setRole = mutation({
   },
 });
 
+const grantResult = v.object({
+  email: v.string(),
+  ok: v.boolean(),
+  reason: v.optional(v.string()),
+  profileId: v.optional(v.id("profiles")),
+});
+
+type GrantAdminResult = {
+  email: string;
+  ok: boolean;
+  reason?: string;
+  profileId?: Id<"profiles">;
+};
+
+async function grantAdminForEmail(
+  ctx: MutationCtx,
+  rawEmail: string,
+): Promise<GrantAdminResult> {
+  const email = rawEmail.toLowerCase();
+  let profile = await ctx.db
+    .query("profiles")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .unique();
+  if (!profile) {
+    const candidates = await ctx.db.query("profiles").take(200);
+    profile =
+      candidates.find((p) => p.email.toLowerCase() === email) ?? null;
+  }
+
+  if (!profile) {
+    let user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", email))
+      .unique();
+    if (!user) {
+      const candidates = await ctx.db.query("users").take(200);
+      user =
+        candidates.find((u) => u.email?.toLowerCase() === email) ?? null;
+    }
+    if (!user) {
+      return { email, ok: false, reason: "pending_signup" };
+    }
+
+    const profileId = await ctx.db.insert("profiles", {
+      userId: user._id,
+      email,
+      role: "admin",
+    });
+    profile = await ctx.db.get(profileId);
+
+    const account = await ctx.db
+      .query("accounts")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+    if (!account) {
+      const free = await ctx.db
+        .query("plans")
+        .withIndex("by_slug", (q) => q.eq("slug", "free"))
+        .unique();
+      if (free) {
+        await ctx.db.insert("accounts", {
+          userId: user._id,
+          name: email.split("@")[0] || "My account",
+          planId: free._id,
+          status: "active",
+          disabled: false,
+        });
+      }
+    }
+    return { email, ok: true, profileId: profile!._id };
+  }
+
+  if (profile.role !== "admin") {
+    await ctx.db.patch(profile._id, { role: "admin" });
+  }
+  return { email, ok: true, profileId: profile._id };
+}
+
 /** Bootstrap first admin by email (internal / dashboard once). */
 export const bootstrapAdminByEmail = internalMutation({
   args: { email: v.string() },
-  handler: async (ctx, { email }) => {
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", email.toLowerCase()))
-      .unique();
-    if (!profile) return { ok: false, reason: "not_found" };
-    await ctx.db.patch(profile._id, { role: "admin" });
-    return { ok: true, profileId: profile._id };
+  returns: grantResult,
+  handler: async (ctx, { email }) => grantAdminForEmail(ctx, email),
+});
+
+/** Promote the configured bootstrap admin emails (existing users only). */
+export const grantBootstrapAdmins = internalMutation({
+  args: {},
+  returns: v.object({ results: v.array(grantResult) }),
+  handler: async (ctx) => {
+    const results = [];
+    for (const email of bootstrapAdminEmails()) {
+      results.push(await grantAdminForEmail(ctx, email));
+    }
+    return { results };
   },
 });
