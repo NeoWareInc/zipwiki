@@ -240,18 +240,28 @@ http.route({
         engine?: string;
         bytes?: number;
         billable?: boolean;
+        provider?: string;
+        model?: string;
+        pages?: number;
+        input_tokens?: number;
+        output_tokens?: number;
       };
       if (!body.account_id || !body.kind) {
         return json({ error: "invalid_request" }, 400);
       }
-      await ctx.runMutation(internal.usage.recordUsage, {
+      const result = await ctx.runMutation(internal.usage.recordUsage, {
         accountId: body.account_id as never,
         kind: body.kind,
         engine: body.engine,
         bytes: body.bytes,
         billable: body.billable,
+        provider: body.provider,
+        model: body.model,
+        pages: body.pages,
+        inputTokens: body.input_tokens,
+        outputTokens: body.output_tokens,
       });
-      return json({ ok: true });
+      return json({ ok: true, ...result });
     } catch {
       return json({ error: "invalid_request" }, 400);
     }

@@ -38,6 +38,47 @@ export function isLowCredits(remaining: number, unlimited?: boolean): boolean {
   return remaining <= LOW_CREDITS_THRESHOLD;
 }
 
+/** A debit that moves the balance from above the warning line to at or below it. */
+export function crossedLowCreditThreshold(args: {
+  before: number;
+  after: number;
+  unlimited?: boolean;
+  notifiedAt?: number;
+}): boolean {
+  if (args.unlimited) return false;
+  if (args.notifiedAt) return false;
+  return (
+    args.before > LOW_CREDITS_THRESHOLD && args.after <= LOW_CREDITS_THRESHOLD
+  );
+}
+
+/** Off-session reload is in flight for this long before another attempt is allowed. */
+export const AUTO_RELOAD_STALE_MS = 15 * 60 * 1000;
+
+export function shouldStartAutoReload(args: {
+  enabled?: boolean;
+  remaining: number;
+  threshold?: number;
+  pending?: boolean;
+  pendingAt?: number;
+  hasPaymentMethod: boolean;
+  unlimited?: boolean;
+  now: number;
+}): boolean {
+  if (args.unlimited || !args.enabled || !args.hasPaymentMethod) return false;
+  const threshold = args.threshold;
+  if (threshold === undefined || !Number.isFinite(threshold)) return false;
+  if (args.remaining >= threshold) return false;
+  if (
+    args.pending &&
+    args.pendingAt !== undefined &&
+    args.now - args.pendingAt < AUTO_RELOAD_STALE_MS
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export type CreditAccountFields = {
   creditsPurchased?: number;
   creditsSpent?: number;

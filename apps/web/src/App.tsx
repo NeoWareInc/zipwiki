@@ -14,12 +14,15 @@ import KeysPage from "./pages/KeysPage";
 import BillingPage from "./pages/BillingPage";
 import AdminPage from "./pages/AdminPage";
 import AdminAccountPage from "./pages/AdminAccountPage";
+import AdminBillingPage from "./pages/AdminBillingPage";
 import SettingsPage from "./pages/SettingsPage";
 import KnowledgePage from "./pages/KnowledgePage";
 import CreateKnowledgePage from "./pages/CreateKnowledgePage";
 import CliSetupPage from "./pages/CliSetupPage";
 import DeviceApprovePage from "./pages/DeviceApprovePage";
 import { DashboardLayout } from "./components/DashboardLayout";
+import { AdminLayout } from "./components/AdminLayout";
+import { AdminPasskeyGate } from "./components/AdminPasskeyGate";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AuthCallbackPage } from "./components/AuthSession";
 
@@ -60,9 +63,12 @@ export default function App() {
             </Route>
           </Route>
           <Route element={<ProtectedRoute admin />}>
-            <Route element={<DashboardLayout />}>
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/admin/accounts/:id" element={<AdminAccountPage />} />
+            <Route element={<AdminPasskeyGate />}>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin/accounts/:id" element={<AdminAccountPage />} />
+                <Route path="/admin/billing" element={<AdminBillingPage />} />
+              </Route>
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

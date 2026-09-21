@@ -9,6 +9,11 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as adminBilling from "../adminBilling.js";
+import type * as adminPasskey from "../adminPasskey.js";
+import type * as adminPasskeyNode from "../adminPasskeyNode.js";
+import type * as billing from "../billing.js";
+import type * as mail from "../mail.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as authRedirects from "../authRedirects.js";
@@ -34,6 +39,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  adminBilling: typeof adminBilling;
+  adminPasskey: typeof adminPasskey;
+  adminPasskeyNode: typeof adminPasskeyNode;
+  billing: typeof billing;
+  mail: typeof mail;
   apiKeys: typeof apiKeys;
   auth: typeof auth;
   authRedirects: typeof authRedirects;

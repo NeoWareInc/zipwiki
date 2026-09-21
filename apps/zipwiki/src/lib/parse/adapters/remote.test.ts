@@ -70,6 +70,35 @@ describe("RemoteParseAdapter", () => {
     unlinkSync(tmp);
   });
 
+  it("throws a quota code so the caller can use LiteParse", async () => {
+    const tmp = join(tmpdir(), `remote-parse-${Date.now()}.txt`);
+    writeFileSync(tmp, "body", "utf8");
+    const fetchImpl = async (): Promise<Response> =>
+      ({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            engine: "liteparse",
+            text: "",
+            forcedEngine: "liteparse",
+            fallbackReason: "quota_fallback_free",
+          }),
+      }) as Response;
+    const adapter = new RemoteParseAdapter({
+      api: { url: "http://api.example.com", key: "k" },
+      fetchImpl,
+    });
+    await assert.rejects(
+      () => adapter.parse(tmp, { project: project(), cli: { quiet: true } }),
+      (err: unknown) =>
+        typeof err === "object" &&
+        err !== null &&
+        (err as { code?: string }).code === "quota_fallback_free",
+    );
+    unlinkSync(tmp);
+  });
+
   it("surfaces API errors from JSON body", async () => {
     const tmp = join(tmpdir(), `remote-parse-${Date.now()}.txt`);
     writeFileSync(tmp, "body", "utf8");

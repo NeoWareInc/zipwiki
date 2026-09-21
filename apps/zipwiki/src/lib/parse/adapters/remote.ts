@@ -105,16 +105,21 @@ export class RemoteParseAdapter {
       fallbackReason?: string;
     };
     if (
-      !opts.cli?.quiet &&
-      (parsed.forcedEngine === "liteparse" ||
-        parsed.fallbackReason === "quota_fallback_free" ||
-        parsed.fallbackReason === "free_plan")
+      parsed.forcedEngine === "liteparse" ||
+      parsed.fallbackReason === "quota_fallback_free" ||
+      parsed.fallbackReason === "free_plan"
     ) {
       const why =
         parsed.fallbackReason === "quota_fallback_free"
-          ? "LlamaParse quota used; falling back to LiteParse (Free)"
-          : "Free plan — using LiteParse (not billed)";
-      console.error(`[zipwiki] ${why}`);
+          ? "LlamaParse quota used; falling back to LiteParse"
+          : "Hosted parse unavailable — using LiteParse";
+      if (!opts.cli?.quiet) console.error(`[zipwiki] ${why}`);
+      const err = new Error(why);
+      (err as Error & { code?: string }).code =
+        parsed.fallbackReason === "free_plan"
+          ? "free_plan"
+          : "quota_fallback_free";
+      throw err;
     }
 
     return parsed;

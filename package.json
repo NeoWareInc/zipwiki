@@ -2,7 +2,7 @@
   "name": "zipwiki",
   "private": true,
   "version": "0.1.0",
-  "description": "ZipWiki \u2014 portable AI-readable document archives",
+  "description": "ZipWiki — portable AI-readable document archives",
   "packageManager": "pnpm@11.11.0",
   "scripts": {
     "dev": "turbo run dev",
@@ -81,6 +81,7 @@
     "@auth/core": "0.41.1",
     "@convex-dev/auth": "^0.0.95",
     "@oslojs/crypto": "^1.0.1",
+    "@simplewebauthn/server": "^14.0.2",
     "resend": "^6.27.0",
     "stripe": "^18.5.0"
   },

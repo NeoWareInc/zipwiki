@@ -52,13 +52,52 @@ export const handleWebhook = internalAction({
         const usdCentsRaw = session.metadata?.usdCents;
         const creditsRaw = session.metadata?.credits;
         if (accountId && usdCentsRaw && creditsRaw && session.id) {
+          const charge = await paymentDetails(stripe, session.payment_intent);
           await ctx.runMutation(internal.stripeMutations.grantCreditsFromCheckout, {
             accountId: accountId as never,
             stripeSessionId: session.id,
+            stripePaymentIntentId: charge.paymentIntentId,
             usdCents: Number(usdCentsRaw),
             credits: Number(creditsRaw),
+            receiptUrl: charge.receiptUrl,
+          });
+          if (charge.paymentMethodId) {
+            await ctx.runMutation(internal.stripeMutations.setStripePaymentMethod, {
+              accountId: accountId as never,
+              stripePaymentMethodId: charge.paymentMethodId,
+            });
+          }
+        }
+      }
+    }
+
+    if (event.type === "payment_intent.succeeded") {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      if (intent.metadata?.source === "auto_reload") {
+        const accountId = intent.metadata.accountId;
+        const usdCentsRaw = intent.metadata.usdCents;
+        const creditsRaw = intent.metadata.credits;
+        if (accountId && usdCentsRaw && creditsRaw) {
+          const charge = await paymentDetails(stripe, intent.id);
+          await ctx.runMutation(internal.stripeMutations.grantCreditsFromCheckout, {
+            accountId: accountId as never,
+            stripePaymentIntentId: intent.id,
+            usdCents: Number(usdCentsRaw),
+            credits: Number(creditsRaw),
+            receiptUrl: charge.receiptUrl,
+            clearReloadPending: true,
           });
         }
+      }
+    }
+
+    if (event.type === "payment_intent.payment_failed") {
+      const intent = event.data.object as Stripe.PaymentIntent;
+      if (intent.metadata?.source === "auto_reload" && intent.metadata.accountId) {
+        await ctx.runMutation(internal.stripeMutations.markReloadFailed, {
+          accountId: intent.metadata.accountId as never,
+          error: intent.last_payment_error?.message ?? "payment_failed",
+        });
       }
     }
 
@@ -170,6 +209,16 @@ export const createCreditCheckout = action({
       ],
       success_url: `${webOrigin()}/dashboard/billing?checkout=success`,
       cancel_url: `${webOrigin()}/dashboard/billing?checkout=cancel`,
+      payment_intent_data: {
+        setup_future_usage: "off_session",
+        receipt_email: account.email,
+        metadata: {
+          accountId: account.accountId,
+          usdCents: String(cents),
+          credits: String(credits),
+          source: "checkout",
+        },
+      },
       metadata: {
         accountId: account.accountId,
         usdCents: String(cents),
@@ -211,5 +260,104 @@ export const createBillingPortal = action({
       return_url: `${webOrigin()}/dashboard/billing`,
     });
     return { url: portal.url };
+  },
+});
+
+async function paymentDetails(
+  stripe: Stripe,
+  paymentIntent: string | Stripe.PaymentIntent | null | undefined,
+): Promise<{
+  paymentIntentId?: string;
+  paymentMethodId?: string;
+  receiptUrl?: string;
+}> {
+  const id =
+    typeof paymentIntent === "string"
+      ? paymentIntent
+      : paymentIntent?.id;
+  if (!id) return {};
+  const intent = await stripe.paymentIntents.retrieve(id, {
+    expand: ["latest_charge"],
+  });
+  const pm = intent.payment_method;
+  const charge = intent.latest_charge;
+  return {
+    paymentIntentId: intent.id,
+    paymentMethodId: typeof pm === "string" ? pm : pm?.id,
+    receiptUrl:
+      charge && typeof charge !== "string"
+        ? (charge.receipt_url ?? undefined)
+        : undefined,
+  };
+}
+
+/** Off-session credit reload. Idempotent while `autoReloadPending` is fresh. */
+export const maybeAutoReload = internalAction({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    const account = await ctx.runQuery(internal.stripeMutations.getAccountBilling, {
+      accountId,
+    });
+    if (!account?.autoReloadPending) return { ok: false as const, reason: "not_pending" };
+    const stripe = getStripe();
+    if (!stripe) {
+      await ctx.runMutation(internal.stripeMutations.markReloadFailed, {
+        accountId,
+        error: "stripe_not_configured",
+      });
+      return { ok: false as const, reason: "stripe_not_configured" };
+    }
+    if (!account.stripeCustomerId || !account.stripePaymentMethodId || !account.email) {
+      await ctx.runMutation(internal.stripeMutations.markReloadFailed, {
+        accountId,
+        error: "no_payment_method",
+      });
+      return { ok: false as const, reason: "no_payment_method" };
+    }
+
+    const cents = account.autoReloadUsdCents;
+    const credits = creditsForUsdCents(cents);
+    try {
+      const intent = await stripe.paymentIntents.create(
+        {
+          amount: cents,
+          currency: "usd",
+          customer: account.stripeCustomerId,
+          payment_method: account.stripePaymentMethodId,
+          off_session: true,
+          confirm: true,
+          receipt_email: account.email,
+          metadata: {
+            accountId,
+            usdCents: String(cents),
+            credits: String(credits),
+            source: "auto_reload",
+          },
+        },
+        {
+          idempotencyKey: `auto-reload-${accountId}-${account.autoReloadPendingAt ?? 0}`,
+        },
+      );
+      if (intent.status !== "succeeded") {
+        return { ok: true as const, status: intent.status };
+      }
+      const charge = await paymentDetails(stripe, intent.id);
+      await ctx.runMutation(internal.stripeMutations.grantCreditsFromCheckout, {
+        accountId,
+        stripePaymentIntentId: intent.id,
+        usdCents: cents,
+        credits,
+        receiptUrl: charge.receiptUrl,
+        clearReloadPending: true,
+      });
+      return { ok: true as const, status: "succeeded" as const };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "auto_reload_failed";
+      await ctx.runMutation(internal.stripeMutations.markReloadFailed, {
+        accountId,
+        error: message,
+      });
+      return { ok: false as const, reason: message };
+    }
   },
 });

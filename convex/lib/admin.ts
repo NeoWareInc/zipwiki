@@ -9,5 +9,11 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
     .withIndex("by_userId", (q) => q.eq("userId", userId))
     .unique();
   if (!profile || profile.role !== "admin") throw new Error("Admin only");
+  if (
+    !profile.adminStepUpExpiresAt ||
+    profile.adminStepUpExpiresAt <= Date.now()
+  ) {
+    throw new Error("Admin step-up required");
+  }
   return { userId, profile };
 }

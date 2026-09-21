@@ -1,6 +1,6 @@
 import { useSearchParams } from "react-router-dom";
-import { useAction, useQuery } from "convex/react";
-import { useMemo, useState } from "react";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
 
 const PRESETS = [5, 10, 25, 50, 100] as const;
@@ -19,15 +19,28 @@ export default function BillingPage() {
   const [pending, setPending] = useState(false);
   const [usd, setUsd] = useState(DEFAULT_USD);
   const [custom, setCustom] = useState(String(DEFAULT_USD));
+  const [reloadOn, setReloadOn] = useState(false);
+  const [reloadThreshold, setReloadThreshold] = useState("500");
+  const [reloadUsd, setReloadUsd] = useState("10");
+  const [reloadReady, setReloadReady] = useState(false);
   const me = useQuery(api.profiles.me);
   const usage = useQuery(api.usage.myUsage);
   const checkout = useAction(api.stripe.createCreditCheckout);
   const portal = useAction(api.stripe.createBillingPortal);
+  const setAutoReload = useMutation(api.billing.setAutoReload);
 
   const credits = useMemo(
     () => Math.round(clampUsd(usd) * CREDITS_PER_DOLLAR),
     [usd],
   );
+
+  useEffect(() => {
+    if (!usage || reloadReady) return;
+    setReloadReady(true);
+    setReloadOn(usage.autoReloadEnabled);
+    setReloadThreshold(String(usage.autoReloadThresholdCredits));
+    setReloadUsd((usage.autoReloadUsdCents / 100).toFixed(2));
+  }, [usage, reloadReady]);
 
   const remaining = usage?.creditsRemaining ?? 0;
   const purchased = usage?.creditsPurchased ?? 0;
@@ -116,6 +129,75 @@ export default function BillingPage() {
             Manage billing / receipts
           </button>
         )}
+      </div>
+
+      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 space-y-4">
+        <h2 className="font-display text-xl font-semibold">Automatic restock</h2>
+        <p className="text-sm text-(--muted)">
+          When your balance falls under the threshold, ZipWiki charges the card
+          from your last credit purchase and emails a receipt.
+        </p>
+        {!usage?.hasPaymentMethod && (
+          <p className="text-sm text-(--muted)">
+            Buy credits once so Stripe can keep a card for automatic restock.
+          </p>
+        )}
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={reloadOn}
+            onChange={(e) => setReloadOn(e.target.checked)}
+          />
+          Restock automatically
+        </label>
+        <div className="flex flex-wrap gap-3">
+          <label className="block space-y-1 text-sm">
+            <span className="font-medium">When balance is under</span>
+            <input
+              type="number"
+              min={0}
+              value={reloadThreshold}
+              onChange={(e) => setReloadThreshold(e.target.value)}
+              className="w-36 rounded-md border border-(--border) bg-white px-3 py-2"
+            />
+          </label>
+          <label className="block space-y-1 text-sm">
+            <span className="font-medium">Reload amount (USD)</span>
+            <input
+              type="number"
+              min={MIN_USD}
+              max={MAX_USD}
+              step="0.01"
+              value={reloadUsd}
+              onChange={(e) => setReloadUsd(e.target.value)}
+              className="w-36 rounded-md border border-(--border) bg-white px-3 py-2"
+            />
+          </label>
+        </div>
+        {usage?.autoReloadLastError && (
+          <p className="text-sm text-red-600">
+            Last automatic charge failed: {usage.autoReloadLastError}
+          </p>
+        )}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            setPending(true);
+            void setAutoReload({
+              enabled: reloadOn,
+              thresholdCredits: Number(reloadThreshold),
+              usdCents: Math.round(Number(reloadUsd) * 100),
+            })
+              .catch((err) => {
+                alert(err instanceof Error ? err.message : "Could not save");
+              })
+              .finally(() => setPending(false));
+          }}
+          className="rounded-md border border-(--border) px-4 py-2 text-sm font-semibold"
+        >
+          Save automatic restock
+        </button>
       </div>
 
       <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 space-y-4">

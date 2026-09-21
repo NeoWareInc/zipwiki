@@ -93,7 +93,21 @@ export async function parseDocument(
 
   if (isRemoteParseMode({ remoteParse: options.remoteParse })) {
     const remote = options.remote ?? new RemoteParseAdapter();
-    return remote.parse(path, runtime);
+    try {
+      return await remote.parse(path, runtime);
+    } catch (err) {
+      const code =
+        typeof err === "object" && err !== null && "code" in err
+          ? (err as { code?: string }).code
+          : undefined;
+      if (code !== "quota_fallback_free" && code !== "free_plan") throw err;
+      const lite = options.liteparse ?? new LiteParseAdapter();
+      const probe = await lite.parse(path, runtime);
+      return {
+        ...probe,
+        route: { mode: "fixed", reason: errMessage(err) },
+      };
+    }
   }
 
   const lite = options.liteparse ?? new LiteParseAdapter();

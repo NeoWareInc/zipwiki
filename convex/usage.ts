@@ -1,13 +1,16 @@
 import { internalMutation, internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
 import { startOfMonthMs } from "./lib/crypto";
 import {
   CREDIT_COST_LLM,
   CREDIT_COST_PARSE,
   creditSnapshot,
+  crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
+  shouldStartAutoReload,
 } from "./lib/credits";
 import type { Id } from "./_generated/dataModel";
 
@@ -109,8 +112,25 @@ export const recordUsage = internalMutation({
     bytes: v.optional(v.number()),
     /** When true (default for hosted), debit prepaid credits. */
     billable: v.optional(v.boolean()),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    pages: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
   },
-  handler: async (ctx, { accountId, kind, engine, bytes, billable }) => {
+  handler: async (ctx, args) => {
+    const {
+      accountId,
+      kind,
+      engine,
+      bytes,
+      billable,
+      provider,
+      model,
+      pages,
+      inputTokens,
+      outputTokens,
+    } = args;
     const periodStart = startOfMonthMs();
     let period = await ctx.db
       .query("usagePeriods")
@@ -141,27 +161,118 @@ export const recordUsage = internalMutation({
       type: kind,
       engine,
       bytes,
+      provider,
+      model,
+      pages,
+      inputTokens,
+      outputTokens,
     });
 
-    const shouldDebit = billable !== false;
-    if (!shouldDebit) return;
+    const providerSlug =
+      provider ?? (kind === "parse" ? "llamaparse" : "anthropic");
+    const providerAccount = await ctx.db
+      .query("providerAccounts")
+      .withIndex("by_slug", (q) => q.eq("slug", providerSlug))
+      .unique();
+    if (providerAccount) {
+      await ctx.db.insert("providerFloatLedger", {
+        providerAccountId: providerAccount._id,
+        kind: "usage",
+        pages,
+        inputTokens,
+        outputTokens,
+        calls: 1,
+        accountId,
+      });
+    }
 
+    const shouldDebit = billable !== false;
     const account = await ctx.db.get(accountId);
-    if (!account || account.creditsUnlimited) return;
+    if (!shouldDebit || !account) {
+      const remaining = account ? remainingCredits(account) : 0;
+      return {
+        creditsRemaining: remaining,
+        lowCredits: account
+          ? isLowCredits(remaining, account.creditsUnlimited)
+          : false,
+        autoReload: false,
+      };
+    }
+    if (account.creditsUnlimited) {
+      return {
+        creditsRemaining: remainingCredits(account),
+        lowCredits: false,
+        autoReload: false,
+      };
+    }
 
     const cost = kind === "parse" ? CREDIT_COST_PARSE : CREDIT_COST_LLM;
-    const remaining = remainingCredits(account);
-    if (remaining < cost) return;
+    const before = remainingCredits(account);
+    if (before < cost) {
+      return {
+        creditsRemaining: before,
+        lowCredits: isLowCredits(before, false),
+        autoReload: false,
+      };
+    }
+
+    const spent = (account.creditsSpent ?? 0) + cost;
+    const after = Math.max(0, (account.creditsPurchased ?? 0) - spent);
+    const notify = crossedLowCreditThreshold({
+      before,
+      after,
+      notifiedAt: account.lowCreditNotifiedAt,
+    });
+    const now = Date.now();
+    const reload = shouldStartAutoReload({
+      enabled: account.autoReloadEnabled,
+      remaining: after,
+      threshold: account.autoReloadThresholdCredits,
+      pending: account.autoReloadPending,
+      pendingAt: account.autoReloadPendingAt,
+      hasPaymentMethod: Boolean(account.stripePaymentMethodId),
+      now,
+    });
 
     await ctx.db.patch(accountId, {
-      creditsSpent: (account.creditsSpent ?? 0) + cost,
+      creditsSpent: spent,
+      ...(notify ? { lowCreditNotifiedAt: now } : {}),
+      ...(reload
+        ? {
+            autoReloadPending: true,
+            autoReloadPendingAt: now,
+            autoReloadLastError: "",
+          }
+        : {}),
     });
     await ctx.db.insert("creditLedger", {
       accountId,
       kind: kind === "parse" ? "spend_parse" : "spend_llm",
       credits: -cost,
       engine,
+      provider: providerSlug,
+      model,
+      pages,
+      inputTokens,
+      outputTokens,
     });
+
+    if (notify) {
+      await ctx.scheduler.runAfter(0, internal.mail.sendLowCredit, {
+        accountId,
+      });
+    }
+    if (reload) {
+      await ctx.scheduler.runAfter(0, internal.stripe.maybeAutoReload, {
+        accountId,
+      });
+    }
+
+    return {
+      creditsRemaining: after,
+      lowCredits: isLowCredits(after, false),
+      autoReload: reload,
+    };
   },
 });
 
@@ -243,6 +354,11 @@ export const myUsage = query({
         credits.creditsUnlimited,
       ),
       plan: credits.plan,
+      autoReloadEnabled: account.autoReloadEnabled === true,
+      autoReloadThresholdCredits: account.autoReloadThresholdCredits ?? 500,
+      autoReloadUsdCents: account.autoReloadUsdCents ?? 1000,
+      autoReloadLastError: account.autoReloadLastError || null,
+      hasPaymentMethod: Boolean(account.stripePaymentMethodId),
     };
   },
 });

@@ -15,6 +15,8 @@ export default defineSchema({
     email: v.string(),
     role: v.union(v.literal("customer"), v.literal("admin")),
     googleId: v.optional(v.string()),
+    /** Unix ms. Admin queries require a passkey assertion newer than this. */
+    adminStepUpExpiresAt: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
@@ -33,6 +35,15 @@ export default defineSchema({
     creditsSpent: v.optional(v.number()),
     /** Admin/sales: unlimited hosted usage (no credit debit). */
     creditsUnlimited: v.optional(v.boolean()),
+    autoReloadEnabled: v.optional(v.boolean()),
+    autoReloadThresholdCredits: v.optional(v.number()),
+    autoReloadUsdCents: v.optional(v.number()),
+    stripePaymentMethodId: v.optional(v.string()),
+    /** Set when a debit email was sent so a pack does not mail once per file. */
+    lowCreditNotifiedAt: v.optional(v.number()),
+    autoReloadPending: v.optional(v.boolean()),
+    autoReloadPendingAt: v.optional(v.number()),
+    autoReloadLastError: v.optional(v.string()),
   })
     .index("by_userId", ["userId"])
     .index("by_stripeCustomerId", ["stripeCustomerId"]),
@@ -50,10 +61,17 @@ export default defineSchema({
     credits: v.number(),
     usdCents: v.optional(v.number()),
     stripeSessionId: v.optional(v.string()),
+    stripePaymentIntentId: v.optional(v.string()),
     engine: v.optional(v.string()),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    pages: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
   })
     .index("by_accountId", ["accountId"])
-    .index("by_stripeSessionId", ["stripeSessionId"]),
+    .index("by_stripeSessionId", ["stripeSessionId"])
+    .index("by_stripePaymentIntentId", ["stripePaymentIntentId"]),
 
   apiKeys: defineTable({
     accountId: v.id("accounts"),
@@ -81,7 +99,50 @@ export default defineSchema({
     engine: v.optional(v.string()),
     bytes: v.optional(v.number()),
     status: v.optional(v.string()),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    pages: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
   }).index("by_accountId", ["accountId"]),
+
+  /** Master vendor float. The API key itself stays a Fly secret named by `secretEnv`. */
+  providerAccounts: defineTable({
+    slug: v.string(),
+    displayName: v.string(),
+    secretEnv: v.string(),
+    floatUsdCents: v.number(),
+    lowFloatUsdCents: v.number(),
+  }).index("by_slug", ["slug"]),
+
+  providerFloatLedger: defineTable({
+    providerAccountId: v.id("providerAccounts"),
+    kind: v.union(v.literal("topup"), v.literal("usage")),
+    usdCents: v.optional(v.number()),
+    pages: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    calls: v.optional(v.number()),
+    note: v.optional(v.string()),
+    accountId: v.optional(v.id("accounts")),
+  }).index("by_provider", ["providerAccountId"]),
+
+  adminPasskeys: defineTable({
+    userId: v.id("users"),
+    credentialId: v.string(),
+    publicKey: v.string(),
+    counter: v.number(),
+    transports: v.optional(v.array(v.string())),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_credentialId", ["credentialId"]),
+
+  adminPasskeyChallenges: defineTable({
+    userId: v.id("users"),
+    challenge: v.string(),
+    kind: v.union(v.literal("register"), v.literal("authenticate")),
+    expiresAt: v.number(),
+  }).index("by_userId", ["userId"]),
 
   deviceAuthCodes: defineTable({
     deviceCodeHash: v.string(),

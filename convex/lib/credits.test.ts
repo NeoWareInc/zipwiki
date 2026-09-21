@@ -4,8 +4,10 @@ import {
   clampUsdCents,
   creditSnapshot,
   creditsForUsdCents,
+  crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
+  shouldStartAutoReload,
   DEFAULT_USD_CENTS,
   MIN_USD_CENTS,
   MAX_USD_CENTS,
@@ -51,6 +53,65 @@ describe("credits", () => {
     assert.equal(
       creditSnapshot({ creditsUnlimited: true }).plan.slug,
       "unlimited",
+    );
+  });
+
+  it("emails once when a debit crosses the low-credit line", () => {
+    assert.equal(
+      crossedLowCreditThreshold({ before: 501, after: 500 }),
+      true,
+    );
+    assert.equal(
+      crossedLowCreditThreshold({ before: 400, after: 399 }),
+      false,
+    );
+    assert.equal(
+      crossedLowCreditThreshold({
+        before: 501,
+        after: 500,
+        notifiedAt: 1,
+      }),
+      false,
+    );
+    assert.equal(
+      crossedLowCreditThreshold({ before: 501, after: 500, unlimited: true }),
+      false,
+    );
+  });
+
+  it("starts auto-reload only under the threshold with a saved card", () => {
+    const now = 1_000_000;
+    assert.equal(
+      shouldStartAutoReload({
+        enabled: true,
+        remaining: 100,
+        threshold: 200,
+        hasPaymentMethod: true,
+        now,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldStartAutoReload({
+        enabled: true,
+        remaining: 100,
+        threshold: 200,
+        hasPaymentMethod: false,
+        now,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldStartAutoReload({
+        enabled: true,
+        remaining: 100,
+        threshold: 200,
+        hasPaymentMethod: true,
+        pending: true,
+        pendingAt: now - 1000,
+        now,
+      }),
+      false,
     );
   });
 });
