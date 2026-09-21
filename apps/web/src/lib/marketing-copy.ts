@@ -305,27 +305,18 @@ export const PLANS = [
     name: "Free",
     price: "$0",
     blurb:
-      "Plugin + unlimited local LiteParse (PDF native; Office needs LibreOffice on your machine) and OKF from your agent’s LLM via MCP. No credits required.",
+      "Install the plugin. Pack and search locally with LiteParse. Your agent writes OKF with its own LLM. No account balance required.",
     cta: "Get started",
     href: "/signup",
   },
   {
     slug: "credits",
     name: "Credits",
-    price: "$5–$10,000",
+    price: "From $10",
     blurb:
-      "Prepaid credits for hosted LlamaParse and hosted ZipWiki OKF (outside MCP). 100 credits per dollar. Buy from $5 to $10,000 (default $10). Soft-falls back to Free when empty.",
+      "Buy prepaid credits for high-quality hosted parsing and ZipWiki OKF when you need more than the local path. About $10 covers roughly 1,000 pages of high-quality results. When the balance runs out, packs soft-fall back to Free.",
     cta: "Buy credits",
     href: "/dashboard/billing",
-  },
-  {
-    slug: "custom",
-    name: "Unlimited",
-    price: "Quote",
-    blurb:
-      "Unlimited hosted LlamaParse and ZipWiki OKF. Admin- or sales-assigned. Email sales@zipwiki.ai.",
-    cta: "Talk to sales",
-    href: SALES_HREF,
   },
 ] as const;
 

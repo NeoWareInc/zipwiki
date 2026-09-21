@@ -7,28 +7,28 @@ export default function PricingPage() {
       <Section>
         <PageHero
           kicker="Pricing"
-          title="Free to start. Credits when you need hosted parse."
-          lead="Free is the plugin plus local LiteParse and your agent’s LLM via MCP. Buy prepaid credits ($5–$10,000, 100 per dollar) for hosted LlamaParse and ZipWiki OKF. When credits run out, you soft-fall back to Free—not a hard block."
+          title="Free locally. Credits for high-quality hosted parse."
+          lead="Start with the plugin, local LiteParse, and your agent’s LLM. Add prepaid credits when documents need high-quality hosted parsing or ZipWiki OKF. About $10 covers roughly 1,000 pages of high-quality results."
         />
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+
+        <ul className="mt-10 grid gap-8 md:grid-cols-2">
           {PLANS.map((plan) => (
-            <div
-              key={plan.slug}
-              className="flex flex-col rounded-xl border border-(--border) bg-white/80 p-6 shadow-soft"
-            >
+            <li key={plan.slug} className="flex flex-col">
               <h2 className="font-display text-2xl font-semibold text-(--ink)">
                 {plan.name}
               </h2>
-              <p className="mt-1 font-display text-3xl text-(--ink)">{plan.price}</p>
+              <p className="mt-2 font-display text-3xl tracking-tight text-(--ink)">
+                {plan.price}
+              </p>
               <p className="mt-4 flex-1 text-sm leading-relaxed text-(--muted)">
                 {plan.blurb}
               </p>
               <div className="mt-6">
                 <PrimaryCta to={plan.href}>{plan.cta}</PrimaryCta>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </Section>
     </main>
   );
