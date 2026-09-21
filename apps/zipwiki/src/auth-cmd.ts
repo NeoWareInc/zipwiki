@@ -223,7 +223,7 @@ function printClientConfigSummary(cfg: ClientConfig): void {
   const fmtMax = (n: number) =>
     n >= Number.MAX_SAFE_INTEGER ? "no limit" : String(n);
   console.error(
-    `[zipwiki] Plan ${cfg.plan.slug}: LiteParse ${liteOk} ok / ${liteFail} fail, ` +
+    `[zipwiki] Credits ${cfg.creditsUnlimited || cfg.plan.slug === "unlimited" ? "unlimited" : (cfg.creditsRemaining ?? cfg.plan.maxParsesPerMonth)}: LiteParse ${liteOk} ok / ${liteFail} fail, ` +
       `LlamaParse ${cfg.usage?.parseCount ?? "?"}/${fmtMax(cfg.plan.maxParsesPerMonth)}, ` +
       `OKF ${cfg.usage?.okfCount ?? "?"}/${fmtMax(cfg.plan.maxOkfPerMonth)}`,
   );

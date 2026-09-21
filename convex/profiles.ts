@@ -11,6 +11,7 @@ import {
   bootstrapAdminEmails,
   isBootstrapAdminEmail,
 } from "./lib/adminEmails";
+import { creditSnapshot } from "./lib/credits";
 
 /** Ensure profile + free account exist for the signed-in auth user. */
 export const ensureProfileAndAccount = mutation({
@@ -52,16 +53,9 @@ export const ensureProfileAndAccount = mutation({
       .unique();
 
     if (!account) {
-      const free = await ctx.db
-        .query("plans")
-        .withIndex("by_slug", (q) => q.eq("slug", "free"))
-        .unique();
-      if (!free) throw new Error("Plans not seeded — run seedPlans");
-
       const accountId = await ctx.db.insert("accounts", {
         userId,
         name: email.split("@")[0] || "My account",
-        planId: free._id,
         status: "active",
         disabled: false,
         creditsPurchased: 0,
@@ -98,7 +92,7 @@ export const me = query({
       .unique();
     if (!account) return null;
 
-    const plan = await ctx.db.get(account.planId);
+    const credits = creditSnapshot(account);
     return {
       user: {
         id: userId,
@@ -112,16 +106,10 @@ export const me = query({
         disabled: account.disabled,
         stripeCustomerId: account.stripeCustomerId ?? null,
         stripeSubscriptionId: account.stripeSubscriptionId ?? null,
+        creditsRemaining: credits.creditsRemaining,
+        creditsUnlimited: credits.creditsUnlimited,
       },
-      plan: plan
-        ? {
-            slug: plan.slug,
-            name: plan.name,
-            maxParsesPerMonth: plan.maxParsesPerMonth,
-            maxOkfPerMonth: plan.maxOkfPerMonth,
-            maxPagesPerDocument: plan.maxPagesPerDocument,
-          }
-        : null,
+      plan: credits.plan,
     };
   },
 });
@@ -205,22 +193,15 @@ async function grantAdminForEmail(
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .unique();
     if (!account) {
-      const free = await ctx.db
-        .query("plans")
-        .withIndex("by_slug", (q) => q.eq("slug", "free"))
-        .unique();
-      if (free) {
-        await ctx.db.insert("accounts", {
-          userId: user._id,
-          name: email.split("@")[0] || "My account",
-          planId: free._id,
-          status: "active",
-          disabled: false,
-          creditsPurchased: 0,
-          creditsSpent: 0,
-          creditsUnlimited: false,
-        });
-      }
+      await ctx.db.insert("accounts", {
+        userId: user._id,
+        name: email.split("@")[0] || "My account",
+        status: "active",
+        disabled: false,
+        creditsPurchased: 0,
+        creditsSpent: 0,
+        creditsUnlimited: false,
+      });
     }
     return { email, ok: true, profileId: profile!._id };
   }

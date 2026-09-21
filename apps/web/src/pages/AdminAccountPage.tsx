@@ -3,7 +3,6 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { planOptionLabel, sortPlansByTier } from "../lib/plan-labels";
 
 export default function AdminAccountPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,8 +12,6 @@ export default function AdminAccountPage() {
     api.admin.accountDetail,
     id ? { id: id as Id<"accounts"> } : "skip",
   );
-  const plans = useQuery(api.plans.listPlans);
-  const setPlan = useMutation(api.admin.setPlan);
   const grantCredits = useMutation(api.admin.grantCredits);
   const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
   const setRole = useMutation(api.admin.setRole);
@@ -29,7 +26,6 @@ export default function AdminAccountPage() {
   }
 
   const a = data.account;
-  const planOptions = sortPlansByTier(plans ?? []);
 
   async function run(fn: () => Promise<unknown>) {
     setError("");
@@ -110,33 +106,6 @@ export default function AdminAccountPage() {
           >
             {a.creditsUnlimited ? "Clear unlimited" : "Set unlimited"}
           </button>
-          <p>
-            Plan row:{" "}
-            <strong>
-              {a.plan.slug === "custom" ? "Unlimited" : a.plan.name}
-            </strong>
-          </p>
-          <label className="block space-y-1 text-sm">
-            <span className="font-medium">Assign plan row (legacy)</span>
-            <select
-              value={a.plan.slug}
-              onChange={(e) =>
-                void run(() =>
-                  setPlan({
-                    id: a.id as Id<"accounts">,
-                    planSlug: e.target.value,
-                  }),
-                )
-              }
-              className="w-full rounded-md border border-(--border) bg-white px-3 py-2 text-sm"
-            >
-              {planOptions.map((p) => (
-                <option key={p.slug} value={p.slug}>
-                  {planOptionLabel(p)}
-                </option>
-              ))}
-            </select>
-          </label>
           <p className="text-xs text-(--muted)">
             Billing is prepaid credits. Unlimited is admin/sales assigned.
           </p>

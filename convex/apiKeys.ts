@@ -2,6 +2,7 @@ import { internalMutation, internalQuery, mutation, query } from "./_generated/s
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { generateApiKey, hashApiKey } from "./lib/crypto";
+import { creditSnapshot } from "./lib/credits";
 import type { Id } from "./_generated/dataModel";
 
 export type ApiKeyContext = {
@@ -14,6 +15,8 @@ export type ApiKeyContext = {
     maxPagesPerDocument: number | null;
   };
   accountStatus: string;
+  creditsRemaining: number;
+  creditsUnlimited: boolean;
   accountDisabled: boolean;
 };
 
@@ -29,18 +32,14 @@ export const resolveByToken = internalQuery({
 
     const account = await ctx.db.get(key.accountId);
     if (!account) return null;
-    const plan = await ctx.db.get(account.planId);
-    if (!plan) return null;
+    const credits = creditSnapshot(account);
 
     return {
       apiKeyId: key._id,
       accountId: account._id,
-      plan: {
-        slug: plan.slug,
-        maxParsesPerMonth: plan.maxParsesPerMonth,
-        maxOkfPerMonth: plan.maxOkfPerMonth,
-        maxPagesPerDocument: plan.maxPagesPerDocument,
-      },
+      plan: credits.plan,
+      creditsRemaining: credits.creditsRemaining,
+      creditsUnlimited: credits.creditsUnlimited,
       accountStatus: account.status,
       accountDisabled: account.disabled,
     };

@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./lib/admin";
 import { startOfMonthMs } from "./lib/crypto";
+import { creditSnapshot } from "./lib/credits";
 
 export const summary = query({
   args: {},
@@ -43,7 +44,7 @@ export const listAccounts = query({
       ) {
         continue;
       }
-      const plan = await ctx.db.get(account.planId);
+      const credits = creditSnapshot(account);
       const period = await ctx.db
         .query("usagePeriods")
         .withIndex("by_account_period", (qq) =>
@@ -60,19 +61,12 @@ export const listAccounts = query({
         status: account.status,
         disabled: account.disabled,
         createdAt: new Date(account._creationTime).toISOString(),
-        plan: {
-          slug: plan?.slug ?? "unknown",
-          name: plan?.name ?? "Unknown",
-        },
         usage: {
           parseCount: period?.parseCount ?? 0,
           okfCount: period?.okfCount ?? 0,
         },
-        creditsRemaining: Math.max(
-          0,
-          (account.creditsPurchased ?? 0) - (account.creditsSpent ?? 0),
-        ),
-        creditsUnlimited: account.creditsUnlimited === true,
+        creditsRemaining: credits.creditsRemaining,
+        creditsUnlimited: credits.creditsUnlimited,
       });
     }
     return out;
@@ -89,7 +83,7 @@ export const accountDetail = query({
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", account.userId))
       .unique();
-    const plan = await ctx.db.get(account.planId);
+    const credits = creditSnapshot(account);
     const keys = await ctx.db
       .query("apiKeys")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
@@ -116,20 +110,10 @@ export const accountDetail = query({
         disabled: account.disabled,
         stripeCustomerId: account.stripeCustomerId ?? null,
         createdAt: new Date(account._creationTime).toISOString(),
-        plan: {
-          slug: plan?.slug ?? "unknown",
-          name: plan?.name ?? "Unknown",
-          maxParses: plan?.maxParsesPerMonth ?? 0,
-          maxOkf: plan?.maxOkfPerMonth ?? 0,
-          maxPagesPerDocument: plan?.maxPagesPerDocument ?? null,
-        },
-        creditsPurchased: account.creditsPurchased ?? 0,
-        creditsSpent: account.creditsSpent ?? 0,
-        creditsRemaining: Math.max(
-          0,
-          (account.creditsPurchased ?? 0) - (account.creditsSpent ?? 0),
-        ),
-        creditsUnlimited: account.creditsUnlimited === true,
+        creditsPurchased: credits.creditsPurchased,
+        creditsSpent: credits.creditsSpent,
+        creditsRemaining: credits.creditsRemaining,
+        creditsUnlimited: credits.creditsUnlimited,
       },
       keys: keys.map((k) => ({
         id: k._id,
@@ -162,24 +146,6 @@ export const setDisabled = mutation({
     await requireAdmin(ctx);
     await ctx.db.patch(id, { disabled });
     return { ok: true };
-  },
-});
-
-export const setPlan = mutation({
-  args: { id: v.id("accounts"), planSlug: v.string() },
-  handler: async (ctx, { id, planSlug }) => {
-    await requireAdmin(ctx);
-    const plan = await ctx.db
-      .query("plans")
-      .withIndex("by_slug", (q) => q.eq("slug", planSlug))
-      .unique();
-    if (!plan) throw new Error("Unknown plan");
-    await ctx.db.patch(id, {
-      planId: plan._id,
-      // Custom/unlimited plan also flips creditsUnlimited for gating.
-      creditsUnlimited: planSlug === "custom",
-    });
-    return { ok: true, plan: plan.slug };
   },
 });
 

@@ -208,6 +208,8 @@ http.route({
       ok: true,
       account_id: keyCtx.accountId,
       plan: keyCtx.plan,
+      credits_remaining: keyCtx.creditsRemaining,
+      credits_unlimited: keyCtx.creditsUnlimited,
       account_status: keyCtx.accountStatus,
       account_disabled: keyCtx.accountDisabled,
       ...(entitlement

@@ -20,7 +20,6 @@ export default function SignupPage() {
   const navigate = useNavigate();
   const { signIn } = useAuthActions();
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
-  const seed = useMutation(api.plans.seedPlansIfEmpty);
   const createKey = useMutation(api.apiKeys.createMine);
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -30,7 +29,6 @@ export default function SignupPage() {
   const [pending, setPending] = useState(false);
 
   async function afterAuth() {
-    await seed({});
     await ensure({});
     const key = await createKey({ name: "Default" });
     setApiKey(key.apiKey);

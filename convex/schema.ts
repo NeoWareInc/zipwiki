@@ -4,7 +4,7 @@ import { authTables } from "@convex-dev/auth/server";
 
 /**
  * ZipWiki SaaS schema (replaces Neon product tables).
- * Auth tables come from @convex-dev/auth; app tables hold accounts/plans/keys/usage.
+ * Auth tables come from @convex-dev/auth; app tables hold accounts/keys/usage/credits.
  */
 export default defineSchema({
   ...authTables,
@@ -20,19 +20,9 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_googleId", ["googleId"]),
 
-  plans: defineTable({
-    slug: v.string(),
-    name: v.string(),
-    maxParsesPerMonth: v.number(),
-    maxOkfPerMonth: v.number(),
-    maxPagesPerDocument: v.union(v.number(), v.null()),
-    stripePriceId: v.optional(v.union(v.string(), v.null())),
-  }).index("by_slug", ["slug"]),
-
   accounts: defineTable({
     userId: v.id("users"),
     name: v.string(),
-    planId: v.id("plans"),
     stripeCustomerId: v.optional(v.union(v.string(), v.null())),
     stripeSubscriptionId: v.optional(v.union(v.string(), v.null())),
     status: v.string(), // active | past_due | canceled

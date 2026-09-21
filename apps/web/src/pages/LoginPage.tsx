@@ -36,7 +36,6 @@ export default function LoginPage() {
   const location = useLocation();
   const { signIn } = useAuthActions();
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
-  const seed = useMutation(api.plans.seedPlansIfEmpty);
   const [params] = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
@@ -51,7 +50,6 @@ export default function LoginPage() {
 
   async function finishSignIn() {
     sessionStorage.removeItem("zipwiki.auth.next");
-    await seed({});
     await ensure({});
     navigate(safeFrom);
   }

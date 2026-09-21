@@ -6,5 +6,6 @@
       "@convex/*": ["../../convex/*"]
     }
   },
-  "include": ["src", "../../convex"]
+  "include": ["src", "../../convex"],
+  "exclude": ["../../convex/**/*.test.ts"]
 }

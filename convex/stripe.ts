@@ -73,10 +73,6 @@ export const handleWebhook = internalAction({
         stripeCustomerId: customerId,
         stripeSubscriptionId: sub.id,
         status: sub.status,
-        priceId:
-          typeof sub.items.data[0]?.price?.id === "string"
-            ? sub.items.data[0].price.id
-            : null,
       });
     }
 

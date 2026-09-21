@@ -37,3 +37,32 @@ export function isLowCredits(remaining: number, unlimited?: boolean): boolean {
   if (unlimited) return false;
   return remaining <= LOW_CREDITS_THRESHOLD;
 }
+
+export type CreditAccountFields = {
+  creditsPurchased?: number;
+  creditsSpent?: number;
+  creditsUnlimited?: boolean;
+};
+
+/** Prepaid-credit view plus a synthetic `plan` for older CLI/config clients. */
+export function creditSnapshot(account: CreditAccountFields) {
+  const unlimited = account.creditsUnlimited === true;
+  const remaining = remainingCredits(account);
+  return {
+    creditsPurchased: account.creditsPurchased ?? 0,
+    creditsSpent: account.creditsSpent ?? 0,
+    creditsRemaining: remaining,
+    creditsUnlimited: unlimited,
+    plan: {
+      slug: unlimited ? "unlimited" : remaining > 0 ? "credits" : "free",
+      name: unlimited
+        ? "Unlimited"
+        : remaining > 0
+          ? "Prepaid credits"
+          : "Free",
+      maxParsesPerMonth: unlimited ? Number.MAX_SAFE_INTEGER : remaining,
+      maxOkfPerMonth: unlimited ? Number.MAX_SAFE_INTEGER : remaining,
+      maxPagesPerDocument: null as number | null,
+    },
+  };
+}

@@ -1,6 +1,6 @@
 # Convex (ZipWiki SaaS backend)
 
-Convex holds users, accounts, plans, API keys, usage, device auth, and
+Convex holds users, accounts, API keys, prepaid credits, usage, device auth, and
 **account settings** (the portal at `/dashboard/settings`).
 
 This is a **new** Convex project — do not reuse zipcodex.ai deployments.
@@ -18,7 +18,6 @@ Settings store **preferences**, never provider secrets.
 ```bash
 npx convex dev
 npx @convex-dev/auth
-npx convex run plans:seedPlans
 ```
 
 Web env (repo-root `.env.local`):

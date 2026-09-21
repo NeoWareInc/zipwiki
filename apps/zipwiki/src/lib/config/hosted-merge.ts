@@ -15,9 +15,9 @@ import {
 
 export type HostedClientConfigResult = {
   config: ClientConfig;
-  /** True when near monthly LlamaParse or ZipWiki OKF quota (≥80%). */
+  /** True when prepaid credits are running low. */
   nearQuota: boolean;
-  /** Forced Free-path LiteParse (plan free or LlamaParse exhausted). */
+  /** Forced LiteParse (no hosted parse credits). */
   liteparseFallback: boolean;
   /** ZipWiki hosted OKF not billable — use host LLM / skip. */
   okfHostFallback: boolean;
@@ -27,6 +27,18 @@ function formatQuota(used: number, max: number): string {
   if (max <= 0) return `${used}/0 (none)`;
   if (max >= Number.MAX_SAFE_INTEGER) return `${used}/no limit`;
   return `${used}/${max} (remaining ${Math.max(0, max - used)})`;
+}
+
+function creditBalance(config: ClientConfig) {
+  return {
+    creditsRemaining:
+      config.creditsRemaining ??
+      (config.plan.slug === "unlimited"
+        ? Number.MAX_SAFE_INTEGER
+        : config.plan.maxParsesPerMonth),
+    creditsUnlimited:
+      config.creditsUnlimited === true || config.plan.slug === "unlimited",
+  };
 }
 
 function usageSlice(config: ClientConfig) {
@@ -45,8 +57,12 @@ export function formatClientUsageSummary(
   previous?: ClientConfig | null,
 ): string {
   const cur = usageSlice(config);
+  const balance = creditBalance(config);
+  const creditLabel = balance.creditsUnlimited
+    ? "unlimited"
+    : String(balance.creditsRemaining);
   let line =
-    `[zipwiki] ${label} plan=${config.plan.slug} ` +
+    `[zipwiki] ${label} credits=${creditLabel} ` +
     `LiteParse ${cur.liteOk} ok / ${cur.liteFail} fail · ` +
     `LlamaParse ${formatQuota(cur.parse, config.plan.maxParsesPerMonth)} · ` +
     `ZipWiki OKF ${formatQuota(cur.okf, config.plan.maxOkfPerMonth)}`;
@@ -127,8 +143,9 @@ export async function applyHostedClientConfig(
     return null;
   }
 
-  const liteparseFallback = !hasLlamaParseQuota(config.plan, config.usage);
-  const okfHostFallback = !hasZipcodexOkfQuota(config.plan, config.usage);
+  const balance = creditBalance(config);
+  const liteparseFallback = !hasLlamaParseQuota(balance);
+  const okfHostFallback = !hasZipcodexOkfQuota(balance);
 
   if (!opts?.quiet) {
     printClientUsageSummary(config, "start");
@@ -139,11 +156,9 @@ export async function applyHostedClientConfig(
     project.parser.mode = "fixed";
     project.parser.escalate.enabled = false;
     if (!opts?.quiet) {
-      const reason =
-        config.plan.slug === "free" || config.plan.maxParsesPerMonth <= 0
-          ? "Free plan — using LiteParse (unlimited, not billed)"
-          : "LlamaParse quota used; falling back to LiteParse (Free)";
-      console.error(`[zipwiki] ${reason}`);
+      console.error(
+        "[zipwiki] No hosted parse credits — using LiteParse (unlimited, not billed)",
+      );
     }
   } else {
     // Fill omitted engine/mode from server defaults when still entitled
@@ -176,26 +191,18 @@ export async function applyHostedClientConfig(
   }
 
   let nearQuota = false;
-  if (config.usage && !liteparseFallback) {
-    const parseRatio =
-      config.plan.maxParsesPerMonth > 0
-        ? config.usage.parseCount / config.plan.maxParsesPerMonth
-        : 0;
-    const okfRatio =
-      config.plan.maxOkfPerMonth > 0
-        ? config.usage.okfCount / config.plan.maxOkfPerMonth
-        : 0;
-    nearQuota = parseRatio >= 0.8 || okfRatio >= 0.8;
+  if (!liteparseFallback && !balance.creditsUnlimited) {
+    nearQuota = balance.creditsRemaining <= 500;
     if (nearQuota && !opts?.quiet) {
       console.error(
-        `[zipwiki] Warning: near LlamaParse/OKF limit. Extra usage falls back to Free (LiteParse + host LLM).`,
+        `[zipwiki] Warning: credits running low (${balance.creditsRemaining} remaining). Extra usage falls back to LiteParse + host LLM.`,
       );
     }
   }
 
   if (okfHostFallback && isRemoteOkfMode() && !opts?.quiet) {
     console.error(
-      "[zipwiki] ZipWiki OKF unavailable for this plan/usage — pack will skip AI OKF or use host-LLM (okf_enrich).",
+      "[zipwiki] ZipWiki OKF unavailable without credits — pack will skip AI OKF or use host-LLM (okf_enrich).",
     );
   }
 

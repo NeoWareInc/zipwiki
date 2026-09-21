@@ -33,6 +33,8 @@ export const ClientConfigSchema = z.object({
       }),
     })
     .optional(),
+  creditsRemaining: z.number().optional(),
+  creditsUnlimited: z.boolean().optional(),
   settings: z.unknown().nullable().optional(),
   setupComplete: z.boolean().optional(),
   setupUrl: z.string().nullable().optional(),

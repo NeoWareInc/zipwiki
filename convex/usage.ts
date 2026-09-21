@@ -5,6 +5,7 @@ import { startOfMonthMs } from "./lib/crypto";
 import {
   CREDIT_COST_LLM,
   CREDIT_COST_PARSE,
+  creditSnapshot,
   isLowCredits,
   remainingCredits,
 } from "./lib/credits";
@@ -215,7 +216,7 @@ export const myUsage = query({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
     if (!account) return null;
-    const plan = await ctx.db.get(account.planId);
+    const credits = creditSnapshot(account);
     const periodStart = startOfMonthMs();
     const period = await ctx.db
       .query("usagePeriods")
@@ -224,32 +225,24 @@ export const myUsage = query({
       )
       .unique();
 
-    const purchased = account.creditsPurchased ?? 0;
-    const spent = account.creditsSpent ?? 0;
-    const unlimited = account.creditsUnlimited === true;
-    const remaining = remainingCredits(account);
-
     return {
       parseCount: period?.parseCount ?? 0,
       okfCount: period?.okfCount ?? 0,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,
       liteparseFailCount: period?.liteparseFailCount ?? 0,
-      maxParses: unlimited ? Number.MAX_SAFE_INTEGER : remaining,
-      maxOkf: unlimited ? Number.MAX_SAFE_INTEGER : remaining,
+      maxParses: credits.plan.maxParsesPerMonth,
+      maxOkf: credits.plan.maxOkfPerMonth,
       maxPagesPerDocument: null,
       periodStart: new Date(periodStart).toISOString(),
-      creditsPurchased: purchased,
-      creditsSpent: spent,
-      creditsRemaining: remaining,
-      creditsUnlimited: unlimited,
-      lowCredits: isLowCredits(remaining, unlimited),
-      plan: plan
-        ? {
-            slug: plan.slug,
-            maxParsesPerMonth: plan.maxParsesPerMonth,
-            maxOkfPerMonth: plan.maxOkfPerMonth,
-          }
-        : null,
+      creditsPurchased: credits.creditsPurchased,
+      creditsSpent: credits.creditsSpent,
+      creditsRemaining: credits.creditsRemaining,
+      creditsUnlimited: credits.creditsUnlimited,
+      lowCredits: isLowCredits(
+        credits.creditsRemaining,
+        credits.creditsUnlimited,
+      ),
+      plan: credits.plan,
     };
   },
 });

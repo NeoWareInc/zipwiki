@@ -8,19 +8,17 @@ import { AuthBusy } from "./AuthSession";
 
 function EnsureProfile() {
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
-  const seed = useMutation(api.plans.seedPlansIfEmpty);
   const me = useQuery(api.profiles.me);
 
   useEffect(() => {
     void (async () => {
       try {
-        await seed({});
         await ensure({});
       } catch {
         /* profile may already exist */
       }
     })();
-  }, [ensure, seed]);
+  }, [ensure]);
 
   if (me === undefined) {
     return <AuthBusy label="Loading…" />;

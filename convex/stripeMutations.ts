@@ -38,7 +38,6 @@ export const syncFromSubscription = internalMutation({
     stripeCustomerId: v.string(),
     stripeSubscriptionId: v.string(),
     status: v.string(),
-    priceId: v.union(v.string(), v.null()),
   },
   handler: async (ctx, args) => {
     const account = await ctx.db
@@ -48,13 +47,6 @@ export const syncFromSubscription = internalMutation({
       )
       .unique();
     if (!account) return { ok: false };
-
-    let planId = account.planId;
-    if (args.priceId) {
-      const plans = await ctx.db.query("plans").collect();
-      const match = plans.find((p) => p.stripePriceId === args.priceId);
-      if (match) planId = match._id;
-    }
 
     const status =
       args.status === "active" || args.status === "trialing"
@@ -66,7 +58,6 @@ export const syncFromSubscription = internalMutation({
             : account.status;
 
     await ctx.db.patch(account._id, {
-      planId,
       stripeSubscriptionId: args.stripeSubscriptionId,
       status,
     });
@@ -84,13 +75,7 @@ export const downgradeToFree = internalMutation({
       )
       .unique();
     if (!account) return { ok: false };
-    const free = await ctx.db
-      .query("plans")
-      .withIndex("by_slug", (q) => q.eq("slug", "free"))
-      .unique();
-    if (!free) return { ok: false };
     await ctx.db.patch(account._id, {
-      planId: free._id,
       stripeSubscriptionId: null,
       status: "canceled",
     });

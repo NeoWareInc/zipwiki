@@ -3,21 +3,17 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { planOptionLabel, sortPlansByTier } from "../lib/plan-labels";
 
 export default function AdminPage() {
   const [search, setSearch] = useState("");
-  const [planError, setPlanError] = useState("");
+  const [actionError, setActionError] = useState("");
   const accounts = useQuery(api.admin.listAccounts, {
     search: search || undefined,
   });
-  const plans = useQuery(api.plans.listPlans);
   const summary = useQuery(api.admin.summary);
   const setDisabled = useMutation(api.admin.setDisabled);
   const setRole = useMutation(api.admin.setRole);
-  const setPlan = useMutation(api.admin.setPlan);
-
-  const planOptions = sortPlansByTier(plans ?? []);
+  const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
 
   const list = (accounts ?? []) as Array<{
     id: string;
@@ -26,18 +22,24 @@ export default function AdminPage() {
     role: string;
     status: string;
     disabled: boolean;
-    plan: { slug: string; name: string };
     usage: { parseCount: number; okfCount: number };
+    creditsRemaining?: number;
+    creditsUnlimited?: boolean;
   }>;
   const admins = list.filter((a) => a.role === "admin");
   const customers = list.filter((a) => a.role !== "admin");
 
-  async function changePlan(accountId: string, planSlug: string) {
-    setPlanError("");
+  async function toggleUnlimited(accountId: string, unlimited: boolean) {
+    setActionError("");
     try {
-      await setPlan({ id: accountId as Id<"accounts">, planSlug });
+      await setCreditsUnlimited({
+        id: accountId as Id<"accounts">,
+        unlimited,
+      });
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : "Failed to set plan");
+      setActionError(
+        err instanceof Error ? err.message : "Failed to update credits",
+      );
     }
   }
 
@@ -46,7 +48,7 @@ export default function AdminPage() {
       <div>
         <h1 className="font-display text-3xl font-semibold">Users</h1>
         <p className="mt-1 text-sm text-(--muted)">
-          Manage accounts, roles, plans, and access. Only visible to admins.
+          Manage accounts, roles, credits, and access. Only visible to admins.
         </p>
       </div>
 
@@ -60,7 +62,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {planError && <p className="text-sm text-red-600">{planError}</p>}
+      {actionError && <p className="text-sm text-red-600">{actionError}</p>}
 
       <input
         type="search"
@@ -74,27 +76,25 @@ export default function AdminPage() {
         title="Admins"
         rows={admins}
         emptyLabel="No admins found."
-        planOptions={planOptions}
         onDisable={(id, disabled) =>
           void setDisabled({ id: id as Id<"accounts">, disabled })
         }
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
         }
-        onSetPlan={(id, planSlug) => void changePlan(id, planSlug)}
+        onSetUnlimited={(id, unlimited) => void toggleUnlimited(id, unlimited)}
       />
       <AccountTable
         title="Customers"
         rows={customers}
         emptyLabel="No customers found."
-        planOptions={planOptions}
         onDisable={(id, disabled) =>
           void setDisabled({ id: id as Id<"accounts">, disabled })
         }
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
         }
-        onSetPlan={(id, planSlug) => void changePlan(id, planSlug)}
+        onSetUnlimited={(id, unlimited) => void toggleUnlimited(id, unlimited)}
       />
     </div>
   );
@@ -113,10 +113,9 @@ function AccountTable({
   title,
   rows,
   emptyLabel,
-  planOptions,
   onDisable,
   onSetRole,
-  onSetPlan,
+  onSetUnlimited,
 }: {
   title: string;
   rows: Array<{
@@ -126,21 +125,14 @@ function AccountTable({
     role: string;
     status: string;
     disabled: boolean;
-    plan: { slug: string; name: string };
     usage: { parseCount: number; okfCount: number };
     creditsRemaining?: number;
     creditsUnlimited?: boolean;
   }>;
   emptyLabel: string;
-  planOptions: Array<{
-    slug: string;
-    name: string;
-    maxParsesPerMonth: number;
-    maxOkfPerMonth: number;
-  }>;
   onDisable: (id: string, disabled: boolean) => void;
   onSetRole: (id: string, role: "admin" | "customer") => void;
-  onSetPlan: (id: string, planSlug: string) => void;
+  onSetUnlimited: (id: string, unlimited: boolean) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -150,7 +142,6 @@ function AccountTable({
           <thead className="border-b border-(--border) bg-(--paper)">
             <tr>
               <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">Credits</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3" />
@@ -168,27 +159,20 @@ function AccountTable({
                   </Link>
                   <div className="text-xs text-(--muted)">{a.name}</div>
                 </td>
-                <td className="px-4 py-3">
-                  <select
-                    aria-label={`Plan for ${a.email}`}
-                    value={a.plan.slug}
-                    onChange={(e) => onSetPlan(a.id, e.target.value)}
-                    className="max-w-44 rounded-md border border-(--border) bg-white px-2 py-1 text-sm"
-                  >
-                    {!planOptions.some((p) => p.slug === a.plan.slug) && (
-                      <option value={a.plan.slug}>{a.plan.name}</option>
-                    )}
-                    {planOptions.map((p) => (
-                      <option key={p.slug} value={p.slug}>
-                        {planOptionLabel(p)}
-                      </option>
-                    ))}
-                  </select>
-                </td>
                 <td className="px-4 py-3 text-(--muted) tabular-nums">
-                  {a.creditsUnlimited
-                    ? "Unlimited"
-                    : (a.creditsRemaining ?? 0).toLocaleString()}
+                  <label className="flex items-center gap-2 text-(--ink)">
+                    <input
+                      type="checkbox"
+                      checked={a.creditsUnlimited === true}
+                      onChange={(e) => onSetUnlimited(a.id, e.target.checked)}
+                      aria-label={`Unlimited credits for ${a.email}`}
+                    />
+                    <span>
+                      {a.creditsUnlimited
+                        ? "Unlimited"
+                        : (a.creditsRemaining ?? 0).toLocaleString()}
+                    </span>
+                  </label>
                   <div className="text-xs">
                     {a.usage.parseCount}p / {a.usage.okfCount}okf
                   </div>
@@ -221,7 +205,7 @@ function AccountTable({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-(--muted)">
+                <td colSpan={4} className="px-4 py-8 text-center text-(--muted)">
                   {emptyLabel}
                 </td>
               </tr>

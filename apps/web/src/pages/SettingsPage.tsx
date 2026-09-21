@@ -106,9 +106,9 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
         <h2 className="font-display text-xl font-semibold">Parse source</h2>
         {isFreePlan && (
           <p className="rounded-lg border border-(--border) bg-(--paper) p-3 text-sm text-(--muted)">
-            Free plan uses local LiteParse only (not billed).{" "}
+            Without credits, pack uses local LiteParse only (not billed).{" "}
             <a className="text-(--accent) hover:underline" href="/dashboard/billing">
-              Upgrade
+              Buy credits
             </a>{" "}
             for hosted LlamaParse.
           </p>
@@ -205,9 +205,8 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">OKF source</h2>
         <p className="text-sm text-(--muted)">
-          MCP pack defaults to skip AI OKF and use the host agent LLM via{" "}
-          <code className="text-xs">okf_enrich</code>. ZipWiki hosted OKF
-          is available on Standard/Pro; Free uses host-LLM only.
+          ZipWiki hosted OKF uses prepaid credits. Without credits, pack uses
+          host-LLM only.
         </p>
         <Select
           label="Where OKF enrichment comes from (CLI / optional MCP useZipcodexOkf)"

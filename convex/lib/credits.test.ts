@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   clampUsdCents,
+  creditSnapshot,
   creditsForUsdCents,
   isLowCredits,
   remainingCredits,
@@ -9,7 +10,7 @@ import {
   MIN_USD_CENTS,
   MAX_USD_CENTS,
   LOW_CREDITS_THRESHOLD,
-} from "./credits.ts";
+} from "./credits.js";
 
 describe("credits", () => {
   it("clamps to $5–$10,000", () => {
@@ -39,5 +40,17 @@ describe("credits", () => {
     assert.equal(isLowCredits(LOW_CREDITS_THRESHOLD), true);
     assert.equal(isLowCredits(501), false);
     assert.equal(isLowCredits(0, true), false);
+  });
+
+  it("synthesizes a plan slug from prepaid credits", () => {
+    assert.equal(creditSnapshot({ creditsPurchased: 0 }).plan.slug, "free");
+    assert.equal(
+      creditSnapshot({ creditsPurchased: 10 }).plan.slug,
+      "credits",
+    );
+    assert.equal(
+      creditSnapshot({ creditsUnlimited: true }).plan.slug,
+      "unlimited",
+    );
   });
 });
