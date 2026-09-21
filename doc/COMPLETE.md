@@ -34,6 +34,11 @@ Need `npx convex dev` (new ZipWiki project) before settings persist.
 - [format/NEOZIP_APPNOTE.md](format/NEOZIP_APPNOTE.md) — internal parent spec
 - [CONVEX.md](CONVEX.md) — portal settings / accounts (new project)
 
+## Packaging
+
+- [ ] Ship LiteParse notices with the distributed app — [DISTRIBUTION.md](DISTRIBUTION.md)
+- [ ] CLI update reminder against `latest.json` — [DISTRIBUTION.md](DISTRIBUTION.md)
+
 ## Later gates
 
 **Phase 1b — server:** `GET /health` on Fly (`zipwiki-api-dev` /

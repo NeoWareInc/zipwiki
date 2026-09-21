@@ -10,6 +10,7 @@ GitHub markdown is the docs host for Phase 1. A `docs.zipwiki.ai` site is later.
 4. [CLI.md](CLI.md) — command reference
 5. [COMPLETE.md](COMPLETE.md) — release checklist
 6. [HOSTED-API.md](HOSTED-API.md) — Fly health host (`api.zipwiki.ai`)
+7. [DISTRIBUTION.md](DISTRIBUTION.md) — third-party notices before packaging
 
 Phase 2 CLIs: `pnpm zipwiki` / `pnpm zipaccess` / `@zipwiki/mcp`.
 Portal settings: [CONVEX.md](CONVEX.md) + `/dashboard/settings`.
