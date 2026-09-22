@@ -52,6 +52,14 @@ export const AccountOkfSchema = z
   })
   .strict();
 
+/** Which bring-your-own providers are configured on this machine. Secrets stay off the account. */
+export const AccountByoSchema = z
+  .object({
+    llama: z.boolean().optional(),
+    anthropic: z.boolean().optional(),
+  })
+  .strict();
+
 export const AccountPackSchema = z
   .object({
     noOcr: z.boolean().optional(),
@@ -72,6 +80,7 @@ export const AccountSettingsBodySchema = z
     parser: AccountParserSchema.default({}),
     okf: AccountOkfSchema.default({}),
     pack: AccountPackSchema.default({}),
+    byo: AccountByoSchema.optional(),
   })
   .strict();
 
@@ -170,5 +179,9 @@ export function mergeAccountSettings(
     },
     okf: { ...base.okf, ...parsedPatch.okf },
     pack: { ...base.pack, ...parsedPatch.pack },
+    byo:
+      base.byo || parsedPatch.byo
+        ? { ...base.byo, ...parsedPatch.byo }
+        : undefined,
   });
 }

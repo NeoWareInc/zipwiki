@@ -28,4 +28,13 @@ describe("AccountSettings", () => {
     assert.equal(merged.parser.liteparse?.maxPages, 42);
     assert.equal(merged.parser.engine, "liteparse");
   });
+
+  it("merges bring-your-own flags without requiring them", () => {
+    const merged = mergeAccountSettings(DEFAULT_ACCOUNT_SETTINGS, {
+      byo: { llama: true },
+    });
+    assert.equal(merged.byo?.llama, true);
+    assert.equal(merged.byo?.anthropic, undefined);
+    assert.equal(AccountSettingsBodySchema.parse({}).byo, undefined);
+  });
 });

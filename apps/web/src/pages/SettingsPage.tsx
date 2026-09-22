@@ -34,9 +34,15 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
 
   useEffect(() => {
     if (data?.settings && typeof data.settings === "object") {
+      const saved = data.settings as AccountSettingsBody;
       setForm({
         ...structuredClone(DEFAULT_ACCOUNT_SETTINGS),
-        ...(data.settings as AccountSettingsBody),
+        ...saved,
+        byo: {
+          llama: saved.byo?.llama === true || saved.parseCredential === "llama",
+          anthropic:
+            saved.byo?.anthropic === true || saved.okfCredential === "anthropic",
+        },
       });
     }
   }, [data]);
@@ -96,8 +102,8 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
       {onboarding && (
         <p className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted)">
           Complete these preferences once. zipwiki downloads them when you pack.
-          Provider API keys (Anthropic, Llama) stay on your machine if you choose
-          BYO.
+          A bring-your-own Llama or Anthropic key stays on this machine and is
+          turned on under Advanced settings.
         </p>
       )}
       {saveError && <FormError message={saveError} />}
@@ -135,8 +141,10 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
             ...(isFreePlan
               ? []
               : [{ value: "zipwiki", label: "ZipWiki hosted LlamaParse" }]),
-            { value: "llama", label: "LlamaParse (BYO key on this machine)" },
             { value: "local", label: "Local LiteParse" },
+            ...(form.byo?.llama
+              ? [{ value: "llama", label: "LlamaParse (your key)" }]
+              : []),
           ]}
         />
         {form.parseCredential === "local" && (
@@ -191,12 +199,6 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
             </p>
           </>
         )}
-        {form.parseCredential === "llama" && (
-          <ByoHint
-            env="LLAMA_CLOUD_API_KEY"
-            cmd='zipwiki config api-key llama <key>'
-          />
-        )}
       </section>
 
       <section className="space-y-3">
@@ -226,16 +228,12 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
             ...(isFreePlan
               ? []
               : [{ value: "zipwiki", label: "ZipWiki hosted API" }]),
-            { value: "anthropic", label: "Anthropic (BYO key on this machine)" },
             { value: "local", label: "Skip AI OKF (host LLM / MCP)" },
+            ...(form.byo?.anthropic
+              ? [{ value: "anthropic", label: "Anthropic (your key)" }]
+              : []),
           ]}
         />
-        {form.okfCredential === "anthropic" && (
-          <ByoHint
-            env="ANTHROPIC_API_KEY"
-            cmd='zipwiki config api-key anthropic <key>'
-          />
-        )}
       </section>
 
       <section className="space-y-3">
@@ -302,12 +300,69 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
           className="text-sm text-(--accent) underline"
           onClick={() => setAdvanced((a) => !a)}
         >
-          {advanced ? "Hide" : "Show"} advanced parser options
+          {advanced ? "Hide" : "Show"} advanced settings
         </button>
       </div>
 
       {advanced && (
-        <section className="space-y-3 rounded-lg border border-(--border) p-4">
+        <section className="space-y-4 rounded-lg border border-(--border) p-4">
+          <div className="space-y-3">
+            <h2 className="font-display text-lg font-semibold">
+              Bring your own keys
+            </h2>
+            <p className="text-sm text-(--muted)">
+              Keys stay on this machine. Turn one on here, then it can be
+              selected under Parse source or OKF source.
+            </p>
+            <Checkbox
+              label="LlamaParse key on this machine"
+              checked={form.byo?.llama === true}
+              onChange={(checked) =>
+                setForm((f) => ({
+                  ...f,
+                  byo: { ...f.byo, llama: checked },
+                  ...(checked || f.parseCredential !== "llama"
+                    ? {}
+                    : {
+                        parseCredential: "local" as const,
+                        parser: {
+                          ...f.parser,
+                          engine: "liteparse" as const,
+                          mode: "fixed" as const,
+                        },
+                      }),
+                }))
+              }
+            />
+            {form.byo?.llama && (
+              <ByoHint
+                env="LLAMA_CLOUD_API_KEY"
+                cmd="zipwiki config api-key llama <key>"
+              />
+            )}
+            <Checkbox
+              label="Anthropic key on this machine"
+              checked={form.byo?.anthropic === true}
+              onChange={(checked) =>
+                setForm((f) => ({
+                  ...f,
+                  byo: { ...f.byo, anthropic: checked },
+                  ...(checked || f.okfCredential !== "anthropic"
+                    ? {}
+                    : {
+                        okfCredential: "local" as const,
+                        okf: { ...f.okf, useAi: false },
+                      }),
+                }))
+              }
+            />
+            {form.byo?.anthropic && (
+              <ByoHint
+                env="ANTHROPIC_API_KEY"
+                cmd="zipwiki config api-key anthropic <key>"
+              />
+            )}
+          </div>
           <label className="block text-sm">
             <span className="font-medium">LiteParse max pages</span>
             <input
