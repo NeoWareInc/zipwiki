@@ -211,7 +211,6 @@ export const createCreditCheckout = action({
       cancel_url: `${webOrigin()}/dashboard/billing?checkout=cancel`,
       payment_intent_data: {
         setup_future_usage: "off_session",
-        receipt_email: account.email,
         metadata: {
           accountId: account.accountId,
           usdCents: String(cents),
@@ -326,7 +325,6 @@ export const maybeAutoReload = internalAction({
           payment_method: account.stripePaymentMethodId,
           off_session: true,
           confirm: true,
-          receipt_email: account.email,
           metadata: {
             accountId,
             usdCents: String(cents),

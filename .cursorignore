@@ -1,0 +1,11 @@
+# Secrets. Do not index these or send them to the model.
+.env
+.env.*
+!.env.example
+deploy/.env
+deploy/.env.*
+!deploy/env.dev.example
+!deploy/env.prod.example
+!deploy/env.example
+!deploy/env.convex.dev.example
+!deploy/env.convex.prod.example

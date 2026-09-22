@@ -19,6 +19,8 @@
     "deploy:fly:prod": "fly deploy . --config deploy/fly/fly.prod.toml",
     "secrets:fly:dev": "./deploy/fly/set-secrets.sh dev",
     "secrets:fly:prod": "./deploy/fly/set-secrets.sh prod",
+    "secrets:convex:dev": "./deploy/convex/set-env.sh dev",
+    "secrets:convex:prod": "./deploy/convex/set-env.sh prod",
     "check:fly": "./deploy/fly/check.sh",
     "check:fly:dev": "./deploy/fly/check.sh dev",
     "check:fly:prod": "./deploy/fly/check.sh prod",

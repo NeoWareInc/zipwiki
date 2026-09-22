@@ -20,7 +20,7 @@ kill_timeout = 30
   NODE_ENV = "production"
   HOST = "0.0.0.0"
   PORT = "3001"
-  WEB_ORIGIN = "https://zipwiki.ai,https://www.zipwiki.ai"
+  WEB_ORIGIN = "https://zipwiki-web.vercel.app"
 
 [processes]
   app = "node dist/index.js"

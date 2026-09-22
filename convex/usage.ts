@@ -355,7 +355,7 @@ export const myUsage = query({
       ),
       plan: credits.plan,
       autoReloadEnabled: account.autoReloadEnabled === true,
-      autoReloadThresholdCredits: account.autoReloadThresholdCredits ?? 500,
+      autoReloadThresholdCredits: account.autoReloadThresholdCredits ?? 100,
       autoReloadUsdCents: account.autoReloadUsdCents ?? 1000,
       autoReloadLastError: account.autoReloadLastError || null,
       hasPaymentMethod: Boolean(account.stripePaymentMethodId),

@@ -20,7 +20,7 @@ export default function BillingPage() {
   const [usd, setUsd] = useState(DEFAULT_USD);
   const [custom, setCustom] = useState(String(DEFAULT_USD));
   const [reloadOn, setReloadOn] = useState(false);
-  const [reloadThreshold, setReloadThreshold] = useState("500");
+  const [reloadThreshold, setReloadThreshold] = useState("100");
   const [reloadUsd, setReloadUsd] = useState("10");
   const [reloadReady, setReloadReady] = useState(false);
   const me = useQuery(api.profiles.me);
