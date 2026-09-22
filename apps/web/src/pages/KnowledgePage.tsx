@@ -1,5 +1,7 @@
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { PromptSection } from "../components/ZipWikiPrompts";
+import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
   openNzip,
   zipMethodLabel,
@@ -70,8 +72,8 @@ export default function KnowledgePage() {
       <div>
         <h1 className="font-display text-3xl font-semibold">Knowledge</h1>
         <p className="mt-1 text-(--muted)">
-          Open a local <code className="text-xs">.nzip</code> to inspect the
-          package and contents. AI query comes next.{" "}
+          Open a local <code className="text-xs">.zipwiki</code> to inspect the
+          package, or copy a query prompt for an agent with ZipWiki MCP.{" "}
           <Link
             to="/dashboard/knowledge/create"
             className="text-(--accent) hover:underline"
@@ -114,7 +116,7 @@ export default function KnowledgePage() {
         }`}
       >
         <p className="text-sm text-[var(--ink)]">
-          Drop a <strong>.nzip</strong> here, or
+          Drop a <strong>.zipwiki</strong> here, or
         </p>
         <label
           htmlFor={inputId}
@@ -329,21 +331,7 @@ export default function KnowledgePage() {
         </>
       )}
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--paper)] p-5 opacity-80">
-        <h2 className="font-display text-lg font-semibold text-[var(--ink)]">
-          Ask (coming soon)
-        </h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          AI query over this package will land here — search OKF and parsed
-          wiki without unpacking the whole archive.
-        </p>
-        <input
-          type="text"
-          disabled
-          placeholder="Ask a question about this knowledge base…"
-          className="mt-4 w-full cursor-not-allowed rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm text-[var(--muted)]"
-        />
-      </section>
+      <PromptSection title="Query examples" prompts={QUERY_PROMPTS} />
     </div>
   );
 }

@@ -39,8 +39,8 @@ coverage/
 sample-output/
 sample-output/**
 !sample-output/.gitkeep
-samples/.stage/
-samples/.output/
+knowledge/.stage/
+knowledge/.output/
 
 # OS / editor
 .DS_Store

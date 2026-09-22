@@ -11,14 +11,24 @@ export type ZipWikiPrompt = {
 /** Create a .zipwiki — one sentence; agent AI OKF via okf_enrich (MCP). */
 export const CREATE_PROMPTS: ZipWikiPrompt[] = [
   {
-    id: "sample-docs",
-    title: "Sample docs",
+    id: "test1",
+    title: "Office docs (test1)",
     description:
-      "Pack this repo’s sample-docs folder and enrich OKF with the agent LLM.",
+      "Pack knowledge/test1 (Gettysburg and the Bill of Rights) and enrich OKF with the agent LLM.",
     prompt:
-      'Using ZipWiki MCP, pack "sample-docs" into ./knowledge/sample-docs.zipwiki, enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
+      'Using ZipWiki MCP, pack "./knowledge/test1" into ./knowledge/test1.zipwiki, enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "mkdir -p knowledge && pnpm zipwiki -- pack sample-docs -o ./knowledge/sample-docs.zipwiki --no-ai-okf",
+      "pnpm zipwiki -- pack knowledge/test1 -o ./knowledge/test1.zipwiki --no-ai-okf --parser liteparse",
+  },
+  {
+    id: "sample-docs",
+    title: "Mixed docs (test2)",
+    description:
+      "Pack knowledge/test2 (PDFs, office files, and fax images) and enrich OKF with the agent LLM.",
+    prompt:
+      'Using ZipWiki MCP, pack "./knowledge/test2" into ./knowledge/sample-docs.zipwiki, enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
+    debugCli:
+      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse",
   },
   {
     id: "folder",
@@ -43,13 +53,20 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
 /** Query an existing .zipwiki — one sentence each. */
 export const QUERY_PROMPTS: ZipWikiPrompt[] = [
   {
+    id: "open-test1",
+    title: "Open office sample",
+    description: "Summarize the packed test1 package.",
+    prompt:
+      "Using ZipWiki MCP, open ./knowledge/test1.zipwiki and summarize the package (manifest, OKF, primaries).",
+    debugCli: "pnpm zipwiki -- list ./knowledge/test1.zipwiki",
+  },
+  {
     id: "open",
     title: "Open package",
     description: "Summarize what’s inside a .zipwiki.",
     prompt:
       "Using ZipWiki MCP, open ./knowledge/sample-docs.zipwiki and summarize the package (manifest, OKF, primaries).",
-    debugCli:
-      "pnpm zipwiki -- list ./knowledge/sample-docs.zipwiki",
+    debugCli: "pnpm zipwiki -- list ./knowledge/sample-docs.zipwiki",
   },
   {
     id: "search",

@@ -11,6 +11,7 @@ import {
   MAX_USD_CENTS,
   MIN_USD_CENTS,
 } from "./lib/credits";
+import { resolveAuthRedirect } from "./authRedirects";
 
 function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
@@ -25,6 +26,13 @@ function webOrigin(): string {
     .split(",")[0]!
     .trim()
     .replace(/\/+$/, "");
+}
+
+/** Dashboard on the site the buyer started from, when that origin is allowed. */
+function dashboardUrl(returnOrigin?: string): string {
+  const origin = returnOrigin?.trim().replace(/\/+$/, "");
+  if (origin) return resolveAuthRedirect(`${origin}/dashboard`);
+  return `${webOrigin()}/dashboard`;
 }
 
 export const handleWebhook = internalAction({
@@ -143,10 +151,10 @@ export const handleWebhook = internalAction({
 
 /** One-time prepaid credit purchase ($5–$10,000). */
 export const createCreditCheckout = action({
-  args: { usdCents: v.number() },
+  args: { usdCents: v.number(), returnOrigin: v.optional(v.string()) },
   handler: async (
     ctx,
-    { usdCents },
+    { usdCents, returnOrigin },
   ): Promise<{ url: string; via: "checkout" }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
@@ -203,12 +211,15 @@ export const createCreditCheckout = action({
             product_data: {
               name: "ZipWiki credits",
               description: `${credits.toLocaleString()} credits ($${dollars})`,
+              // Managed Payments requires an eligible tax code. Credits pay for
+              // hosted cloud AI (parse and LLM), not a download.
+              tax_code: "txcd_10105001",
             },
           },
         },
       ],
-      success_url: `${webOrigin()}/dashboard/billing?checkout=success`,
-      cancel_url: `${webOrigin()}/dashboard/billing?checkout=cancel`,
+      success_url: `${dashboardUrl(returnOrigin)}?checkout=success`,
+      cancel_url: `${dashboardUrl(returnOrigin)}?checkout=cancel`,
       payment_intent_data: {
         setup_future_usage: "off_session",
         metadata: {
@@ -240,8 +251,8 @@ export const createCheckout = action({
 });
 
 export const createBillingPortal = action({
-  args: {},
-  handler: async (ctx): Promise<{ url: string }> => {
+  args: { returnOrigin: v.optional(v.string()) },
+  handler: async (ctx, { returnOrigin }): Promise<{ url: string }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
     const stripe = getStripe();
@@ -256,7 +267,7 @@ export const createBillingPortal = action({
 
     const portal = await stripe.billingPortal.sessions.create({
       customer: account.stripeCustomerId,
-      return_url: `${webOrigin()}/dashboard/billing`,
+      return_url: dashboardUrl(returnOrigin),
     });
     return { url: portal.url };
   },

@@ -1,4 +1,4 @@
-# samples/
+# knowledge/
 
 Source corpora for pack / zipaccess smoke.
 
@@ -6,7 +6,9 @@ Source corpora for pack / zipaccess smoke.
 | --- | --- |
 | `test1/` | Office docs (docx / odt / pptx / xlsx) — Gettysburg + Bill of Rights |
 | `test1-update/` | Replacement `gettysburg-address.docx` for `update:test1:update` |
+| `test1.zipwiki` | Packed test1 example (`pnpm sample-zipwiki:test1`, gitignored) |
 | `test2/` | Mixed PDFs, ODT, DOCX, fax images (includes `property-deed.pdf`) |
+| `sample-docs.zipwiki` | Packed test2 example (`pnpm sample-zipwiki`, gitignored) |
 | `fax/` | Extra junk-fax images |
 | `florida-laws.zipwiki-origins.json` | Origin pattern for the Florida Laws pack |
 | `florida-laws-of-florida.zipwiki` | Local Florida Laws package (gitignored) |
@@ -17,6 +19,7 @@ Phase 2 smoke (no login, LiteParse):
 
 ```bash
 pnpm sample-zipwiki
+pnpm sample-zipwiki:test1
 pnpm smoke:zipaccess
 ```
 
@@ -37,7 +40,7 @@ pnpm read:test1
 pnpm origin:test2
 ```
 
-Florida Laws — local package is `samples/florida-laws-of-florida.zipwiki`
+Florida Laws — local package is `knowledge/florida-laws-of-florida.zipwiki`
 (not committed). Source PDFs for a rebuild live at
 `$HOME/Documents/Florida-Laws-of-Florida/2025-pdf`. Extracts go to
 `.output/florida-laws/`.

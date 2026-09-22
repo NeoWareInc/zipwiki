@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "@convex/_generated/api";
 
 function CreditBar({
@@ -52,6 +52,7 @@ function CreditBar({
 }
 
 export default function DashboardPage() {
+  const [params] = useSearchParams();
   const me = useQuery(api.profiles.me);
   const usage = useQuery(api.usage.myUsage);
 
@@ -66,6 +67,17 @@ export default function DashboardPage() {
           Account: <strong>{me?.account.status ?? "—"}</strong>
         </p>
       </div>
+
+      {params.get("checkout") === "success" && (
+        <p className="rounded-md bg-green-50 px-4 py-3 text-sm text-green-800">
+          Payment received — credits will appear in a few seconds.
+        </p>
+      )}
+      {params.get("checkout") === "cancel" && (
+        <p className="rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Checkout canceled — no credits were purchased.
+        </p>
+      )}
 
       {low && !unlimited && (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

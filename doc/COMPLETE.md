@@ -18,7 +18,7 @@ This is the public-repo gate, not a lab workplan.
 
 - [x] `@zipwiki/zipwiki` pack / zipaccess (LiteParse + `--no-ai-okf`, no login)
 - [x] `@zipwiki/mcp` stdio (`open` / `search` / `read`)
-- [x] Smoke: `pack samples/test2` → `zipaccess open` → `search deed`
+- [x] Smoke: `pack knowledge/test2` → `zipaccess open` → `search deed`
 - [x] Portal routes in `apps/web` (`/dashboard/settings` + Convex functions)
 
 Need `npx convex dev` (new ZipWiki project) before settings persist.
@@ -45,7 +45,7 @@ Need `npx convex dev` (new ZipWiki project) before settings persist.
 `zipwiki-api-prod`). Certs wait on Squarespace CNAMEs for `api*.zipwiki.ai`.
 New Convex/Stripe projects later — not zipcodex.ai credentials.
 
-**Phase 2 — TypeScript engine (done):** `pnpm zipwiki -- pack samples/test2
+**Phase 2 — TypeScript engine (done):** `pnpm zipwiki -- pack knowledge/test2
 -o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse`; then
 `pnpm smoke:zipaccess`. MCP handlers `open` / `search` / `read_okf` /
 `read_parsed`.

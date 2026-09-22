@@ -117,7 +117,7 @@ export default function BillingPage() {
             type="button"
             onClick={() => {
               setPending(true);
-              void portal({})
+              void portal({ returnOrigin: window.location.origin })
                 .then((res) => {
                   if (res.url) window.location.href = res.url;
                 })
@@ -255,7 +255,10 @@ export default function BillingPage() {
           onClick={() => {
             setPending(true);
             const cents = Math.round(clampUsd(usd) * 100);
-            void checkout({ usdCents: cents })
+            void checkout({
+              usdCents: cents,
+              returnOrigin: window.location.origin,
+            })
               .then((res) => {
                 if (res.url) window.location.href = res.url;
               })
