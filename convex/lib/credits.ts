@@ -7,6 +7,19 @@ export const DEFAULT_USD_CENTS = 1_000; // $10.00
 export const LOW_CREDITS_THRESHOLD = 500; // $5 equivalent
 export const CREDIT_COST_PARSE = 1;
 export const CREDIT_COST_LLM = 1;
+/** LlamaParse overage price: $1.25 per 1,000 Llama credits. */
+export const LLAMA_USD_PER_1000_CREDITS = 1.25;
+
+/**
+ * ZipWiki credits to debit for one LlamaParse job.
+ * $1.25 / 1,000 Llama credits, sold at 100 ZipWiki credits per dollar.
+ * Any job Llama billed costs at least 1 ZipWiki credit.
+ */
+export function zipwikiCreditsForLlamaCredits(llamaCredits: number): number {
+  if (!Number.isFinite(llamaCredits) || llamaCredits <= 0) return 0;
+  const raw = (llamaCredits * LLAMA_USD_PER_1000_CREDITS * CREDITS_PER_DOLLAR) / 1000;
+  return Math.max(1, Math.ceil(raw - 1e-9));
+}
 
 export const CREDIT_PRESETS_USD = [5, 10, 25, 50, 100] as const;
 

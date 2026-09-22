@@ -72,6 +72,7 @@ export function createConvexGateway(options?: {
         output_tokens: args.usage.outputTokens,
         bytes: args.usage.bytes,
         engine: args.usage.engine,
+        llama_credits: args.usage.llamaCredits,
       });
       const data = (await res.json().catch(() => ({}))) as RecordResult & {
         error?: string;

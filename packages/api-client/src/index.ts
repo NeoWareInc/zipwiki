@@ -17,6 +17,7 @@ export {
   waitForDeviceApproval,
 } from "./device-auth.js";
 export { reportLiteParseTelemetry } from "./liteparse-telemetry.js";
+export { reportLlamaParseUsage } from "./llama-usage.js";
 export {
   AccountSettingsBodySchema,
   AccountSettingsResponseSchema,

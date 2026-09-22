@@ -8,6 +8,8 @@ export type UsageMeta = {
   outputTokens?: number;
   bytes?: number;
   engine?: string;
+  /** LlamaParse `job.usage.credits` for this document. */
+  llamaCredits?: number;
 };
 
 export type ValidateResult =

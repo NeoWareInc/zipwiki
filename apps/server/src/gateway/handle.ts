@@ -71,6 +71,9 @@ export async function handleParse(
         engine: "llamaparse",
         pages: parsed.pageCount,
         bytes: args.bytes.byteLength,
+        ...(parsed.llamaCredits != null
+          ? { llamaCredits: parsed.llamaCredits }
+          : {}),
       },
     });
   } catch (err) {

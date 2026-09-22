@@ -20,6 +20,7 @@ import {
   type NeoZipAiParser,
 } from "../lib/archive/index.js";
 import {
+  maybeReportLlamaParseUsage,
   maybeReportLocalLiteParse,
   resolveOmitOriginalDocuments,
   type ResolvedZipwikiConfig,
@@ -145,6 +146,12 @@ export async function parseOneFile(
   const classification = classifyDocument({
     fileName: originalName,
     text: parsed.text,
+  });
+  await maybeReportLlamaParseUsage({
+    engine: parsed.engine,
+    llamaCredits: parsed.llamaCredits,
+    pages: parsed.pages?.length,
+    quiet: opts.quiet,
   });
   return {
     markdown: parsed.text,

@@ -4,6 +4,7 @@ import {
   clampUsdCents,
   creditSnapshot,
   creditsForUsdCents,
+  zipwikiCreditsForLlamaCredits,
   crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
@@ -19,6 +20,15 @@ describe("credits", () => {
     assert.equal(clampUsdCents(100), MIN_USD_CENTS);
     assert.equal(clampUsdCents(DEFAULT_USD_CENTS), DEFAULT_USD_CENTS);
     assert.equal(clampUsdCents(2_000_000), MAX_USD_CENTS);
+  });
+
+  it("converts LlamaParse job credits at $1.25 per 1,000", () => {
+    assert.equal(zipwikiCreditsForLlamaCredits(0), 0);
+    assert.equal(zipwikiCreditsForLlamaCredits(1), 1);
+    assert.equal(zipwikiCreditsForLlamaCredits(8), 1);
+    assert.equal(zipwikiCreditsForLlamaCredits(10), 2);
+    assert.equal(zipwikiCreditsForLlamaCredits(80), 10);
+    assert.equal(zipwikiCreditsForLlamaCredits(100), 13);
   });
 
   it("grants 100 credits per dollar", () => {

@@ -7,6 +7,7 @@ import {
   CREDIT_COST_LLM,
   CREDIT_COST_PARSE,
   creditSnapshot,
+  zipwikiCreditsForLlamaCredits,
   crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
@@ -117,6 +118,8 @@ export const recordUsage = internalMutation({
     pages: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
+    /** LlamaParse `job.usage.credits` for this document. */
+    llamaCredits: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const {
@@ -130,7 +133,14 @@ export const recordUsage = internalMutation({
       pages,
       inputTokens,
       outputTokens,
+      llamaCredits,
     } = args;
+    const creditCost =
+      kind === "parse"
+        ? llamaCredits != null
+          ? zipwikiCreditsForLlamaCredits(llamaCredits)
+          : CREDIT_COST_PARSE
+        : CREDIT_COST_LLM;
     const periodStart = startOfMonthMs();
     let period = await ctx.db
       .query("usagePeriods")
@@ -147,12 +157,20 @@ export const recordUsage = internalMutation({
         okfCount: kind === "okf" ? 1 : 0,
         liteparseSuccessCount: 0,
         liteparseFailCount: 0,
+        llamaCredits: kind === "parse" ? (llamaCredits ?? 0) : 0,
+        parseCreditsSpent: kind === "parse" ? creditCost : 0,
       });
       period = (await ctx.db.get(id))!;
     } else {
       await ctx.db.patch(period._id, {
         parseCount: period.parseCount + (kind === "parse" ? 1 : 0),
         okfCount: period.okfCount + (kind === "okf" ? 1 : 0),
+        llamaCredits:
+          (period.llamaCredits ?? 0) +
+          (kind === "parse" ? (llamaCredits ?? 0) : 0),
+        parseCreditsSpent:
+          (period.parseCreditsSpent ?? 0) +
+          (kind === "parse" ? creditCost : 0),
       });
     }
 
@@ -166,6 +184,8 @@ export const recordUsage = internalMutation({
       pages,
       inputTokens,
       outputTokens,
+      llamaCredits,
+      creditCost,
     });
 
     const providerSlug =
@@ -206,15 +226,18 @@ export const recordUsage = internalMutation({
       };
     }
 
-    const cost = kind === "parse" ? CREDIT_COST_PARSE : CREDIT_COST_LLM;
-    const before = remainingCredits(account);
-    if (before < cost) {
+    const cost = creditCost;
+    if (cost <= 0) {
       return {
-        creditsRemaining: before,
-        lowCredits: isLowCredits(before, false),
+        creditsRemaining: remainingCredits(account),
+        lowCredits: isLowCredits(
+          remainingCredits(account),
+          account.creditsUnlimited,
+        ),
         autoReload: false,
       };
     }
+    const before = remainingCredits(account);
 
     const spent = (account.creditsSpent ?? 0) + cost;
     const after = Math.max(0, (account.creditsPurchased ?? 0) - spent);
@@ -255,6 +278,7 @@ export const recordUsage = internalMutation({
       pages,
       inputTokens,
       outputTokens,
+      llamaCredits,
     });
 
     if (notify) {
@@ -339,6 +363,8 @@ export const myUsage = query({
     return {
       parseCount: period?.parseCount ?? 0,
       okfCount: period?.okfCount ?? 0,
+      llamaCredits: period?.llamaCredits ?? 0,
+      parseCreditsSpent: period?.parseCreditsSpent ?? 0,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,
       liteparseFailCount: period?.liteparseFailCount ?? 0,
       maxParses: credits.plan.maxParsesPerMonth,

@@ -103,9 +103,15 @@ export default function DashboardPage() {
 
           <div className="grid gap-4 md:grid-cols-2 text-sm">
             <div className="rounded-lg border border-(--border) bg-(--paper) p-4">
-              <p className="font-medium">Hosted LlamaParse (1 credit each)</p>
+              <p className="font-medium">LlamaParse</p>
               <p className="mt-1 text-(--muted) tabular-nums">
-                {usage.parseCount.toLocaleString()} this month
+                {(usage.llamaCredits ?? 0).toLocaleString()} Llama credits ·{" "}
+                {(usage.parseCreditsSpent ?? 0).toLocaleString()} ZipWiki credits
+              </p>
+              <p className="mt-1 text-xs text-(--muted)">
+                {usage.parseCount.toLocaleString()} documents this month. LlamaParse
+                bills per page; ZipWiki charges that dollar cost ($1.25 per 1,000
+                Llama credits).
               </p>
             </div>
             <div className="rounded-lg border border-(--border) bg-(--paper) p-4">

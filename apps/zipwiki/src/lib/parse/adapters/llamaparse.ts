@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { isLlamaCloudConfigured } from "../../config/index.js";
+import {
+  jobIdFromPayload,
+  llamaCreditsFromPayload,
+} from "../llama-credits.js";
 import { llamaparseEngineVersion } from "../parse-quality.js";
 import { resolveParseOcrEnabled } from "../parse-header.js";
 import type {
@@ -20,6 +24,7 @@ type LlamaParseResult = {
     pages?: LlamaMarkdownPage[];
   };
   markdown_full?: string | null;
+  job?: { id?: string; usage?: { credits?: number | null } };
 };
 
 /** Minimal surface we need from `@llamaindex/llama-cloud`. */
@@ -72,7 +77,9 @@ export class LlamaParseAdapter implements DocumentParser {
       ? this.clientFactory()
       : await createDefaultClient();
 
-    const expand = lp.expand.length > 0 ? lp.expand : ["markdown"];
+    const expand = Array.from(
+      new Set([...(lp.expand.length > 0 ? lp.expand : ["markdown"]), "usage"]),
+    );
     const bytes = readFileSync(path);
     const upload_file = new File([bytes], basename(path));
     const ocrWanted = resolveParseOcrEnabled(opts.cli, opts.project);
@@ -108,13 +115,47 @@ export class LlamaParseAdapter implements DocumentParser {
       throw new Error(`LlamaParse returned empty markdown for ${path}`);
     }
 
+    let llamaCredits = llamaCreditsFromPayload(result);
+    const jobId = jobIdFromPayload(result);
+    const apiKey = process.env.LLAMA_CLOUD_API_KEY?.trim();
+    if (llamaCredits == null && jobId && apiKey) {
+      llamaCredits = await pollLlamaJobCredits(jobId, apiKey);
+    }
+
     const engineVersion = llamaparseEngineVersion();
     return {
       engine: "llamaparse",
       ...(engineVersion ? { engineVersion } : {}),
       text,
       pages: pages.length > 0 ? pages : undefined,
+      ...(llamaCredits != null ? { llamaCredits } : {}),
       raw: result,
     };
   }
+}
+
+/** Billing can trail job completion. Poll until LlamaParse records credits. */
+async function pollLlamaJobCredits(
+  jobId: string,
+  apiKey: string,
+): Promise<number | null> {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const res = await fetch(
+      `https://api.cloud.llamaindex.ai/api/v2/parse/${jobId}?expand=usage`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          Accept: "application/json",
+        },
+      },
+    );
+    if (res.ok) {
+      const credits = llamaCreditsFromPayload(await res.json());
+      if (credits != null) return credits;
+    }
+    if (attempt < 3) {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+    }
+  }
+  return null;
 }

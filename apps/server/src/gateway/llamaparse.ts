@@ -1,3 +1,5 @@
+import { llamaCreditsFromPayload } from "./llama-credits.js";
+
 const LLAMA_BASE = "https://api.cloud.llamaindex.ai";
 
 export type LlamaParseRequest = {
@@ -10,6 +12,9 @@ export type LlamaParseOutput = {
   text: string;
   pageCount: number;
   pages: Array<{ pageNum: number; markdown: string }>;
+  /** LlamaParse `job.usage.credits`, once billing has recorded the job. */
+  llamaCredits: number | null;
+  jobId?: string;
 };
 
 type LlamaJob = { id?: string; status?: string };
@@ -85,5 +90,37 @@ export async function invokeLlamaParse(
     json.markdown ||
     "";
   if (!text.trim()) throw new Error("LlamaParse returned empty markdown");
-  return { text, pageCount: pages.length, pages };
+  const llamaCredits = await readLlamaJobCredits(
+    job.id,
+    apiKey,
+    fetchImpl,
+    sleep,
+  );
+  return { text, pageCount: pages.length, pages, llamaCredits, jobId: job.id };
+}
+
+/** Poll v2 usage until LlamaParse records the credits for this job. */
+async function readLlamaJobCredits(
+  jobId: string,
+  apiKey: string,
+  fetchImpl: typeof fetch,
+  sleep: (ms: number) => Promise<void>,
+): Promise<number | null> {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const res = await fetchImpl(
+      `${LLAMA_BASE}/api/v2/parse/${jobId}?expand=usage`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          Accept: "application/json",
+        },
+      },
+    );
+    if (res.ok) {
+      const credits = llamaCreditsFromPayload(await res.json());
+      if (credits != null) return credits;
+    }
+    if (attempt < 3) await sleep(750);
+  }
+  return null;
 }

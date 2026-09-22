@@ -68,6 +68,7 @@ export default defineSchema({
     pages: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
+    llamaCredits: v.optional(v.number()),
   })
     .index("by_accountId", ["accountId"])
     .index("by_stripeSessionId", ["stripeSessionId"])
@@ -91,6 +92,10 @@ export default defineSchema({
     okfCount: v.number(),
     liteparseSuccessCount: v.number(),
     liteparseFailCount: v.number(),
+    /** Sum of LlamaParse `job.usage.credits` this month. */
+    llamaCredits: v.optional(v.number()),
+    /** ZipWiki credits debited for those LlamaParse jobs. */
+    parseCreditsSpent: v.optional(v.number()),
   }).index("by_account_period", ["accountId", "periodStart"]),
 
   usageEvents: defineTable({
@@ -104,6 +109,10 @@ export default defineSchema({
     pages: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
+    /** LlamaParse credits billed for this job (`job.usage.credits`). */
+    llamaCredits: v.optional(v.number()),
+    /** ZipWiki credits debited for this event. */
+    creditCost: v.optional(v.number()),
   }).index("by_accountId", ["accountId"]),
 
   /** Master vendor float. The API key itself stays a Fly secret named by `secretEnv`. */

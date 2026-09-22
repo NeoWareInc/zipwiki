@@ -45,8 +45,12 @@ describe("hosted gateway", () => {
     assert.equal(body.forcedEngine, "liteparse");
   });
 
-  it("debits one parse after LlamaParse succeeds", async () => {
-    const recorded: Array<{ provider?: string; pages?: number }> = [];
+  it("debits the LlamaParse job credits after a successful parse", async () => {
+    const recorded: Array<{
+      provider?: string;
+      pages?: number;
+      llamaCredits?: number;
+    }> = [];
     const result = await handleParse(
       {
         convex: convex({
@@ -68,6 +72,9 @@ describe("hosted gateway", () => {
           if (href.endsWith("/job/job1")) {
             return json({ id: "job1", status: "SUCCESS" });
           }
+          if (href.includes("expand=usage")) {
+            return json({ job: { id: "job1", usage: { credits: 20 } } });
+          }
           return json({
             pages: [{ page: 1, md: "# Deed" }, { page: 2, md: "Grantor" }],
           });
@@ -81,6 +88,7 @@ describe("hosted gateway", () => {
     assert.match(body.text, /Deed/);
     assert.equal(recorded[0]?.provider, "llamaparse");
     assert.equal(recorded[0]?.pages, 2);
+    assert.equal(recorded[0]?.llamaCredits, 20);
   });
 
   it("returns okf_fallback_host_llm without calling Claude", async () => {

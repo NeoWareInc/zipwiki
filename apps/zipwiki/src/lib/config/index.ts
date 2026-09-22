@@ -107,7 +107,10 @@ export {
   type ClientPlanCaps,
   type ClientUsage,
 } from "./entitlements.js";
-export { maybeReportLocalLiteParse } from "./liteparse-telemetry.js";
+export {
+  maybeReportLlamaParseUsage,
+  maybeReportLocalLiteParse,
+} from "./liteparse-telemetry.js";
 export {
   applyAccountSettingsToEnv,
   isZipwikiAccountConnected,

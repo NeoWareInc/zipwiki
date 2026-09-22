@@ -24,6 +24,8 @@ export type DocumentParseResult = {
   complexity?: NeoZipParseComplexity;
   ocrConfidence?: NeoZipOcrConfidence;
   route?: NeoZipAiParser["route"];
+  /** LlamaParse `job.usage.credits` when the job has been billed. */
+  llamaCredits?: number;
   raw?: unknown;
 };
 

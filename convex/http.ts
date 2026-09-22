@@ -245,6 +245,7 @@ http.route({
         pages?: number;
         input_tokens?: number;
         output_tokens?: number;
+        llama_credits?: number;
       };
       if (!body.account_id || !body.kind) {
         return json({ error: "invalid_request" }, 400);
@@ -260,6 +261,7 @@ http.route({
         pages: body.pages,
         inputTokens: body.input_tokens,
         outputTokens: body.output_tokens,
+        llamaCredits: body.llama_credits,
       });
       return json({ ok: true, ...result });
     } catch {
