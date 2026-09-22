@@ -111,3 +111,22 @@ export function loadEnvFiles(startDir: string = process.cwd()): string[] {
   loadedRoots.add(root);
   return loaded;
 }
+
+/**
+ * Fill `LLAMA_CLOUD_API_KEY` from this repo's deploy env when the CLI has none.
+ * Shell, project `.env`, and `~/.zipwiki/.env` win. Other deploy secrets are ignored.
+ * `deploy/.env.prod` is not read.
+ */
+export function loadRepoLlamaCloudKey(startDir: string = process.cwd()): boolean {
+  if (process.env.LLAMA_CLOUD_API_KEY?.trim()) return true;
+  const root = findEnvRoot(startDir);
+  for (const rel of ["deploy/.env", "deploy/.env.dev"]) {
+    const path = join(root, rel);
+    if (!existsSync(path)) continue;
+    const value = parseEnvFile(readFileSync(path, "utf-8")).LLAMA_CLOUD_API_KEY?.trim();
+    if (!value) continue;
+    process.env.LLAMA_CLOUD_API_KEY = value;
+    return true;
+  }
+  return false;
+}

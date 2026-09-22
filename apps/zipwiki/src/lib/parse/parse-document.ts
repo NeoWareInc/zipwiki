@@ -27,58 +27,36 @@ function errMessage(err: unknown): string {
 }
 
 /**
- * Prefer LlamaParse when a cloud client/key is available; otherwise LiteParse.
- * When `onMissingApiKey` is `error`, missing key / LlamaParse failures throw.
+ * Fixed LlamaParse. A missing key or a LlamaParse error is reported.
+ * LiteParse is not substituted after the plan already says LlamaParse.
  */
-async function parseLlamaPreferLite(
+async function parseFixedLlama(
   path: string,
   runtime: ParseRuntimeOptions,
-  lite: LiteParseAdapter,
   llama: LlamaParseAdapter,
   options: ParseDocumentOptions,
 ): Promise<DocumentParseResult> {
-  const onMissing = runtime.project.parser.escalate.onMissingApiKey;
   const canLlama =
     isLlamaCloudConfigured() || Boolean(options.llamaparse);
 
   if (!canLlama) {
-    if (onMissing === "error") {
-      throw new Error(
-        "LlamaParse requires LLAMA_CLOUD_API_KEY (or an injected LlamaCloud client).",
-      );
-    }
-    const probe = await lite.parse(path, runtime);
-    return {
-      ...probe,
-      route: {
-        mode: "fixed",
-        reason: "llamaparse unavailable (no API key); using liteparse",
-      },
-    };
+    throw new Error(
+      "LlamaParse is selected, but LLAMA_CLOUD_API_KEY is not set. ZipWiki will not switch to LiteParse.\n" +
+        "  Hosted LlamaParse: zipwiki auth login\n" +
+        "  This machine: zipwiki config api-key llama <LLAMA_CLOUD_API_KEY>",
+    );
   }
 
-  try {
-    return await llama.parse(path, runtime);
-  } catch (err) {
-    if (onMissing === "error") throw err;
-    const probe = await lite.parse(path, runtime);
-    return {
-      ...probe,
-      route: {
-        mode: "fixed",
-        reason: `llamaparse unavailable (${errMessage(err)}); using liteparse`,
-      },
-    };
-  }
+  return llama.parse(path, runtime);
 }
 
 /**
  * Parse a document with the configured engine (`fixed`) or auto-escalate
  * from LiteParse → LlamaParse when complexity thresholds fire.
  *
- * Fixed `llamaparse` (the default): try LlamaParse when available, else
- * LiteParse. Fixed `liteparse`: always local. Auto: probe LiteParse, escalate
- * when thresholds fire.
+ * Fixed `llamaparse`: LlamaParse only. Fixed `liteparse`: always local.
+ * Auto: probe LiteParse, escalate when thresholds fire, and fall back to
+ * LiteParse only when escalation was not required.
  *
  * When `ZIPWIKI_PARSE_MODE=remote` (or `remoteParse: true`), delegates to
  * the ZipWiki parse API server.
@@ -119,7 +97,7 @@ export async function parseDocument(
 
   if (mode !== "auto") {
     if (engine === "llamaparse") {
-      return parseLlamaPreferLite(path, runtime, lite, llama, options);
+      return parseFixedLlama(path, runtime, llama, options);
     }
     return lite.parse(path, runtime);
   }

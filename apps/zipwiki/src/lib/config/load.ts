@@ -173,6 +173,13 @@ function resolveFromPartials(
     cli as unknown as Record<string, unknown>,
   ) as ResolvedZipwikiConfig;
 
+  // The website/account parser choice beats a project file. `--parser` is in
+  // `cli` and was merged last, so re-apply it after the account engine.
+  if (account.parser?.engine) merged.parser.engine = account.parser.engine;
+  if (account.parser?.mode) merged.parser.mode = account.parser.mode;
+  if (cli.parser?.engine) merged.parser.engine = cli.parser.engine;
+  if (cli.parser?.mode) merged.parser.mode = cli.parser.mode;
+
   // Re-apply nested defaults for partially specified sections.
   merged.parser = {
     ...DEFAULT_ZIPWIKI_CONFIG.parser,
@@ -205,7 +212,8 @@ function resolveFromPartials(
 
 /**
  * Load ZipWiki config.
- * Precedence (later wins): defaults → account settings → project file → env → CLI.
+ * Precedence (later wins): defaults → project file → account parser → env → CLI.
+ * Pack compression in a project file still beats the account. Parser engine does not.
  * Loads `.env` / `.env.local` from the project root before reading env.
  */
 export function loadZipwikiConfig(
@@ -232,10 +240,11 @@ export function loadZipwikiConfig(
 
   const accountLayer = overrides.accountOverlay ?? {};
 
-  // When account settings drive prefs, skip env overlay for parser/okf so
-  // stale home ZIPWIKI_PARSER* do not beat the account+project merge.
-  // Shell env still applies when no account overlay is provided.
-  const useEnvOverlay = !overrides.accountOverlay;
+  // A real account overlay skips home ZIPWIKI_PARSER so a stale local value
+  // does not beat the website. An empty overlay (no login) still honors it.
+  const useEnvOverlay =
+    !overrides.accountOverlay ||
+    Object.keys(overrides.accountOverlay).length === 0;
 
   const config = resolveFromPartials(
     accountLayer,

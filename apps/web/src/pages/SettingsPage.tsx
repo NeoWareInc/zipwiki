@@ -125,12 +125,9 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
               parser: {
                 ...f.parser,
                 engine:
-                  parseCredential === "llama"
-                    ? "llamaparse"
-                    : parseCredential === "local"
-                      ? "liteparse"
-                      : f.parser.engine,
-                mode: parseCredential === "llama" ? "fixed" : f.parser.mode,
+                  parseCredential === "local" ? "liteparse" : "llamaparse",
+                mode:
+                  parseCredential === "local" ? f.parser.mode : "fixed",
               },
             }));
           }}

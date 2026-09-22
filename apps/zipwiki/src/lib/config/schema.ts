@@ -140,7 +140,7 @@ export type ResolvedZipwikiConfig = {
 
 export const DEFAULT_ZIPWIKI_CONFIG: ResolvedZipwikiConfig = {
   parser: {
-    // Prefer LlamaParse when LLAMA_CLOUD_API_KEY is set; otherwise LiteParse.
+    // LlamaParse when a key or hosted account is available. Fixed mode does not switch to LiteParse.
     engine: "llamaparse",
     mode: "fixed",
     liteparse: {

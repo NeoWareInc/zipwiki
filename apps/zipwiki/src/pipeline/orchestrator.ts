@@ -22,6 +22,7 @@ import {
 } from "../lib/config/index.js";
 import { accountSettingsToConfigInput } from "../lib/config/account-settings-overlay.js";
 import {
+  isZipwikiAccountConnected,
   requireAccountForHostedCredential,
   syncAccountSettingsForPack,
 } from "../lib/config/account-settings-cache.js";
@@ -34,6 +35,15 @@ import {
 } from "../lib/parse/index.js";
 import { ensureCredentialsOrFail } from "../interactive/wizard.js";
 import { isInteractiveTty } from "../interactive/tty.js";
+import {
+  fileBytes,
+  formatPackPlan,
+  packOkfMode,
+  PackAbortedError,
+  runPackConfirmLoop,
+  shouldConfirmPack,
+  type PackPlanSettings,
+} from "./pack-confirm.js";
 import { runListCommand, runTestCommand } from "../inspect-cmd.js";
 import { discoverInputs } from "./discover.js";
 import {
@@ -156,9 +166,12 @@ export async function runStage(
         quiet: opts.quiet,
       });
     }
-    const accountOverlay = accountSettingsToConfigInput(
-      accountSettings.settings,
-    );
+    // Logged-out packs must not inject the LiteParse account default over the
+    // user's CLI parser choice. Website settings apply only after login.
+    const accountOverlay =
+      opts.skipAccountSync || !isZipwikiAccountConnected()
+        ? undefined
+        : accountSettingsToConfigInput(accountSettings.settings);
 
     const parseCredential = resolveParseCredentialSource();
     const okfCredential = resolveOkfCredentialSource();
@@ -181,7 +194,7 @@ export async function runStage(
       accountOverlay,
     });
 
-    if (parseCredential === "llama") {
+    if (parseCredential === "llama" || parseCredential === "zipwiki") {
       project.parser.engine = "llamaparse";
     }
 
@@ -189,11 +202,16 @@ export async function runStage(
       quiet: opts.quiet,
     });
 
-    // Free / exhausted LlamaParse: never escalate to Llama locally either.
-    if (hosted?.liteparseFallback) {
+    // BYO LlamaParse stays on LlamaParse. Hosted parse falls back to
+    // LiteParse only when the account has no parse credits.
+    if (parseCredential === "llama") {
+      project.parser.engine = "llamaparse";
+    } else if (hosted?.liteparseFallback) {
       project.parser.engine = "liteparse";
       project.parser.mode = "fixed";
       project.parser.escalate.enabled = false;
+    } else if (parseCredential === "zipwiki") {
+      project.parser.engine = "llamaparse";
     }
 
     if (!opts.quiet && configPath) {
@@ -239,16 +257,18 @@ export async function runStage(
       }
     }
 
-    const recurse =
+    let recurse =
       opts.recurse === true ||
       accountSettings.settings.pack.recurse === true ||
       (!accountSettings.setupComplete && onboarding.recurse === true) ||
       false;
-    const expanded = discoverInputs(files, {
-      recurse,
-      include: opts.include,
-      exclude: opts.exclude,
-    });
+    const discover = () =>
+      discoverInputs(files, {
+        recurse,
+        include: opts.include,
+        exclude: opts.exclude,
+      });
+    let expanded = discover();
     if (expanded.length === 0) {
       throw new Error("No files specified after filters");
     }
@@ -278,20 +298,14 @@ export async function runStage(
       };
     }
 
-    const { stageDir, ephemeral } = resolveStageDir(opts, phase);
-    ensureStageDirs(stageDir);
-    const keepStage =
-      !ephemeral ||
-      opts.keepStageDir === true ||
-      opts.keepWikiDir === true ||
-      Boolean(opts.stageDir?.trim() || opts.wikiDir?.trim());
-
     const ocrEnabled = resolveParseOcrEnabled(
       { noOcr: opts.noOcr, ocr: opts.ocr },
       project,
     );
 
-    if (!opts.quiet && (phase === "parse" || phase === "all")) {
+    let showedHeader = false;
+    const printSessionHeader = () => {
+      showedHeader = true;
       const engineLabel =
         project.parser.mode === "auto" ? "auto" : project.parser.engine;
       printParseHeader({
@@ -317,6 +331,97 @@ export async function runStage(
           phase,
         },
       });
+    };
+
+    if (
+      shouldConfirmPack({
+        phase,
+        noZip: opts.noZip,
+        dryRun: opts.dryRun,
+        yes: opts.yes,
+      })
+    ) {
+      const currentSettings = (): PackPlanSettings => ({
+        output: opts.output,
+        recurse,
+        omitOriginalDocuments: resolveOmitOriginalDocuments({
+          cli: opts.omitOriginalDocuments,
+          onboarding,
+          pack: project.pack,
+        }),
+        okf: packOkfMode(opts, useAi),
+        compression: opts.compression ?? project.pack.compression,
+        parser: project.parser.engine === "llamaparse" ? "llamaparse" : "liteparse",
+      });
+      await runPackConfirmLoop({
+        printPlan: () => {
+          printSessionHeader();
+          let outputPath: string | undefined;
+          try {
+            outputPath = resolveOutputPath(expanded, opts);
+          } catch {
+            outputPath = undefined;
+          }
+          const settings = currentSettings();
+          console.error(
+            formatPackPlan({
+              ...settings,
+              outputPath,
+              files: expanded,
+              fileBytes: fileBytes(expanded),
+              level: opts.level ?? project.pack.level,
+              phase,
+            }),
+          );
+        },
+        current: currentSettings,
+        apply: async (next) => {
+          if (next.okf === "ai") {
+            await ensureCredentialsOrFail({ useAi: true, interactive: true });
+            if (needsCredentialSetup({ useAi: true }).needsSetup) {
+              throw new Error(
+                formatNonInteractiveSetupError(needsCredentialSetup({ useAi: true })),
+              );
+            }
+          }
+          opts.output = next.output;
+          opts.omitOriginalDocuments = next.omitOriginalDocuments;
+          opts.compression = next.compression;
+          opts.parser = next.parser;
+          project.parser.engine = next.parser;
+          recurse = next.recurse;
+          opts.recurse = next.recurse;
+          if (next.okf === "off") {
+            opts.noOkf = true;
+            opts.noAiOkf = true;
+            useAi = false;
+          } else if (next.okf === "fallback") {
+            opts.noOkf = false;
+            opts.noAiOkf = true;
+            useAi = false;
+          } else {
+            opts.noOkf = false;
+            opts.noAiOkf = false;
+            useAi = true;
+          }
+          expanded = discover();
+          if (expanded.length === 0) {
+            throw new Error("No files specified after filters");
+          }
+        },
+      });
+    }
+
+    const { stageDir, ephemeral } = resolveStageDir(opts, phase);
+    ensureStageDirs(stageDir);
+    const keepStage =
+      !ephemeral ||
+      opts.keepStageDir === true ||
+      opts.keepWikiDir === true ||
+      Boolean(opts.stageDir?.trim() || opts.wikiDir?.trim());
+
+    if (!opts.quiet && !showedHeader && (phase === "parse" || phase === "all")) {
+      printSessionHeader();
     }
 
     const phasesRun: PipelinePhase[] = [];
@@ -512,6 +617,15 @@ export async function runStage(
       }
     }
   } catch (err) {
+    if (err instanceof PackAbortedError) {
+      console.error(err.message);
+      return {
+        stageDir: "(aborted)",
+        members: [],
+        phasesRun: [],
+        errors: 0,
+      };
+    }
     fail(err);
   }
 }

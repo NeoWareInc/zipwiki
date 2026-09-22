@@ -25,6 +25,7 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 | Flag | Effect |
 | --- | --- |
 | `-o, --output` | Output `.zipwiki` path |
+| `-y, --yes` | Skip the proceed / change settings / abort prompt. The prompt is the default on a terminal; scripts with no TTY skip it already |
 | `-r, --recursive` | Recurse directories |
 | `--parser liteparse` | Local parse (default for Free) |
 | `--no-ai-okf` | Skip hosted/AI OKF; enrich later via MCP `okf_enrich` |

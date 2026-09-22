@@ -3,7 +3,12 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { applyEnvFile, findEnvRoot, parseEnvFile } from "./env.js";
+import {
+  applyEnvFile,
+  findEnvRoot,
+  loadRepoLlamaCloudKey,
+  parseEnvFile,
+} from "./env.js";
 
 describe("env file loading", () => {
   it("parses KEY=VALUE, exports, quotes, and comments", () => {
@@ -46,5 +51,29 @@ INVALID
     assert.equal(applyEnvFile(path), true);
     assert.equal(process.env.ZIPWIKI_ENV_TEST_KEY, "from-file");
     delete process.env.ZIPWIKI_ENV_TEST_KEY;
+  });
+
+  it("loads only LLAMA_CLOUD_API_KEY from deploy env", () => {
+    const root = mkdtempSync(join(tmpdir(), "zc-llama-key-"));
+    writeFileSync(join(root, "pnpm-workspace.yaml"), "packages:\n");
+    mkdirSync(join(root, "deploy"));
+    writeFileSync(
+      join(root, "deploy", ".env.dev"),
+      "LLAMA_CLOUD_API_KEY=llx-from-deploy\nSTRIPE_SECRET_KEY=sk_should_not_load\n",
+    );
+    const prev = process.env.LLAMA_CLOUD_API_KEY;
+    const prevStripe = process.env.STRIPE_SECRET_KEY;
+    delete process.env.LLAMA_CLOUD_API_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+    try {
+      assert.equal(loadRepoLlamaCloudKey(root), true);
+      assert.equal(process.env.LLAMA_CLOUD_API_KEY, "llx-from-deploy");
+      assert.equal(process.env.STRIPE_SECRET_KEY, undefined);
+    } finally {
+      if (prev !== undefined) process.env.LLAMA_CLOUD_API_KEY = prev;
+      else delete process.env.LLAMA_CLOUD_API_KEY;
+      if (prevStripe !== undefined) process.env.STRIPE_SECRET_KEY = prevStripe;
+      else delete process.env.STRIPE_SECRET_KEY;
+    }
   });
 });

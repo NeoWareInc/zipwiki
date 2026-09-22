@@ -181,15 +181,13 @@ export async function syncAccountSettingsForPack(opts?: {
   quiet?: boolean;
 }): Promise<AccountSettingsResponse> {
   if (!isZipwikiAccountConnected()) {
-    const fallback = offlineLocalSettingsResponse();
-    applyAccountSettingsToEnv(fallback.settings);
     if (!opts?.quiet) {
       console.error(
-        "[zipwiki] No ZipWiki account — packing with local defaults (LiteParse, no AI OKF).\n" +
-          "  Hosted parse/OKF and account settings: zipwiki auth login",
+        "[zipwiki] No ZipWiki account — dashboard parser settings are not loaded.\n" +
+          "  Hosted parse/OKF and website settings: zipwiki auth login",
       );
     }
-    return fallback;
+    return offlineLocalSettingsResponse();
   }
 
   try {

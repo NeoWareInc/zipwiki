@@ -103,6 +103,7 @@ export function stageOptionsFromCli(
     sha256Extra: opts.sha256 === true,
     originSha256: opts.originSha256 === true,
     dryRun: opts.dryRun === true,
+    yes: opts.yes === true,
     testIntegrity: opts.testIntegrity === true,
     showFiles: opts.showFiles === true || opts.list === true,
     verbose: opts.verbose === true,

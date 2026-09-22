@@ -1,8 +1,4 @@
 {
-  "parser": {
-    "engine": "liteparse",
-    "mode": "fixed"
-  },
   "okf": {
     "useAi": true
   },

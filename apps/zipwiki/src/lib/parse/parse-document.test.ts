@@ -204,7 +204,7 @@ describe("parseDocument router", () => {
     }
   });
 
-  it("fixed llamaparse falls back to liteparse when key missing", async () => {
+  it("fixed llamaparse errors when the key is missing", async () => {
     const { loadEnvFiles } = await import("../config/index.js");
     loadEnvFiles();
     const prev = process.env.LLAMA_CLOUD_API_KEY;
@@ -214,22 +214,23 @@ describe("parseDocument router", () => {
         id: "liteparse" as const,
         parse: async () => fakeLiteResult({ text: "from-lite-fallback" }),
       };
-      const result = await parseDocument("/tmp/doc.pdf", {
-        project: project({
-          engine: "llamaparse",
-          mode: "fixed",
-          escalate: {
-            enabled: false,
-            minNeedsOcrRatio: 0.25,
-            minLayoutComplexRatio: 0.5,
-            onMissingApiKey: "fallback",
-          },
-        }),
-        liteparse: lite as LiteParseAdapter,
-      });
-      assert.equal(result.engine, "liteparse");
-      assert.equal(result.text, "from-lite-fallback");
-      assert.match(result.route?.reason ?? "", /no API key/);
+      await assert.rejects(
+        () =>
+          parseDocument("/tmp/doc.pdf", {
+            project: project({
+              engine: "llamaparse",
+              mode: "fixed",
+              escalate: {
+                enabled: false,
+                minNeedsOcrRatio: 0.25,
+                minLayoutComplexRatio: 0.5,
+                onMissingApiKey: "fallback",
+              },
+            }),
+            liteparse: lite as LiteParseAdapter,
+          }),
+        /LLAMA_CLOUD_API_KEY/,
+      );
     } finally {
       if (prev !== undefined) process.env.LLAMA_CLOUD_API_KEY = prev;
       else delete process.env.LLAMA_CLOUD_API_KEY;
@@ -258,7 +259,7 @@ describe("parseDocument router", () => {
     assert.equal(result.text, "from-cloud");
   });
 
-  it("fixed llamaparse falls back when llama throws", async () => {
+  it("fixed llamaparse reports a LlamaParse error", async () => {
     const lite = {
       id: "liteparse" as const,
       parse: async () => fakeLiteResult({ text: "from-lite-after-error" }),
@@ -269,22 +270,24 @@ describe("parseDocument router", () => {
         throw new Error("cloud down");
       },
     };
-    const result = await parseDocument("/tmp/doc.pdf", {
-      project: project({
-        engine: "llamaparse",
-        mode: "fixed",
-        escalate: {
-          enabled: false,
-          minNeedsOcrRatio: 0.25,
-          minLayoutComplexRatio: 0.5,
-          onMissingApiKey: "fallback",
-        },
-      }),
-      liteparse: lite as LiteParseAdapter,
-      llamaparse: llama as LlamaParseAdapter,
-    });
-    assert.equal(result.engine, "liteparse");
-    assert.match(result.route?.reason ?? "", /cloud down/);
+    await assert.rejects(
+      () =>
+        parseDocument("/tmp/doc.pdf", {
+          project: project({
+            engine: "llamaparse",
+            mode: "fixed",
+            escalate: {
+              enabled: false,
+              minNeedsOcrRatio: 0.25,
+              minLayoutComplexRatio: 0.5,
+              onMissingApiKey: "fallback",
+            },
+          }),
+          liteparse: lite as LiteParseAdapter,
+          llamaparse: llama as LlamaParseAdapter,
+        }),
+      /cloud down/,
+    );
   });
 });
 

@@ -91,6 +91,11 @@ export type StageOptions = CliParseOptions & {
    */
   originSha256?: boolean;
   dryRun?: boolean;
+  /**
+   * Skip the proceed / change settings / abort prompt.
+   * Non-interactive runs skip it already; `--yes` skips it on a TTY.
+   */
+  yes?: boolean;
   testIntegrity?: boolean;
   showFiles?: boolean;
   verbose?: boolean;

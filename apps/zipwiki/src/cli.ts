@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { DOCUMENT_TYPES } from "./lib/archive/index.js";
-import { loadEnvFiles, loadZipwikiHomeEnv } from "./lib/config/index.js";
+import {
+  loadEnvFiles,
+  loadRepoLlamaCloudKey,
+  loadZipwikiHomeEnv,
+} from "./lib/config/index.js";
 import {
   runIsComplex,
   runParseFile,
@@ -56,6 +60,7 @@ import { AccessError } from "./lib/access/resolve.js";
 // Load `.env` / `.env.local` before any command reads process.env.
 loadEnvFiles(REPO_ROOT);
 loadZipwikiHomeEnv();
+loadRepoLlamaCloudKey(REPO_ROOT);
 const CATEGORY_LIST = DOCUMENT_TYPES.join("|");
 
 const program = new Command();
@@ -130,7 +135,7 @@ function withPipelineFlags(cmd: Command): Command {
     )
     .option(
       "--parser <engine>",
-      "Document parser: liteparse|llamaparse (default: llamaparse → LiteParse fallback)",
+      "Document parser: liteparse|llamaparse (default: llamaparse)",
     )
     .option(
       "--parser-mode <mode>",
@@ -238,6 +243,10 @@ function withPipelineFlags(cmd: Command): Command {
       "Include SHA-256 of original primary bytes in Extra Field 0x014F (omit CRC-32)",
     )
     .option("--dry-run", "Plan discover only; do not parse or write")
+    .option(
+      "-y, --yes",
+      "Create the .zipwiki without asking to proceed (for scripts). A non-interactive terminal skips the prompt already.",
+    )
     .option("-T, --test-integrity", "Test archive after create")
     .option(
       "-sf, --show-files",
@@ -351,13 +360,13 @@ withDocParse(
   program
     .command("parse-file")
     .description(
-      "Parse a single document (LlamaParse if available, else LiteParse; stdout or -o)",
+      "Parse a single document (stdout or -o)",
     )
     .argument("<file>", "Path to the document file (or - for stdin)")
     .option("-o, --output <file>", "Output file path")
     .option(
       "--parser <engine>",
-      "Document parser: liteparse|llamaparse (default: llamaparse, falls back to liteparse)",
+      "Document parser: liteparse|llamaparse (default: llamaparse)",
     )
     .option(
       "--parser-mode <mode>",

@@ -151,7 +151,7 @@ export async function applyHostedClientConfig(
     printClientUsageSummary(config, "start");
   }
 
-  if (liteparseFallback) {
+  if (liteparseFallback && project.parser.engine !== "llamaparse") {
     project.parser.engine = "liteparse";
     project.parser.mode = "fixed";
     project.parser.escalate.enabled = false;
@@ -160,21 +160,10 @@ export async function applyHostedClientConfig(
         "[zipwiki] No hosted parse credits — using LiteParse (unlimited, not billed)",
       );
     }
-  } else {
-    // Fill omitted engine/mode from server defaults when still entitled
-    const eng = config.parse.defaults.engine;
-    if (eng === "liteparse" || eng === "llamaparse") {
-      if (!process.env.ZIPWIKI_PARSER?.trim()) {
-        project.parser.engine = eng;
-      }
-    }
-    const mode = config.parse.defaults.mode;
-    if (
-      (mode === "fixed" || mode === "auto") &&
-      !process.env.ZIPWIKI_PARSER_MODE?.trim()
-    ) {
-      project.parser.mode = mode;
-    }
+  } else if (liteparseFallback && !opts?.quiet) {
+    console.error(
+      "[zipwiki] No hosted parse credits — keeping LlamaParse from your settings.",
+    );
   }
 
   if (!process.env.ZIPWIKI_OKF_MODEL?.trim() && config.okf.model) {

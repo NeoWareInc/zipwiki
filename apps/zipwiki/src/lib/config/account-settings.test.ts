@@ -56,6 +56,41 @@ describe("account settings merge", () => {
     assert.equal(config.pack.omitOriginalDocuments, false);
   });
 
+  it("account LlamaParse wins over a project file that pins LiteParse", () => {
+    const dir = mkdtempSync(join(tmpdir(), "zipwiki-cfg-parser-"));
+    writeFileSync(
+      join(dir, "zipwiki.config.json"),
+      JSON.stringify({ parser: { engine: "liteparse", mode: "fixed" } }),
+    );
+    const account = accountSettingsToConfigInput({
+      ...DEFAULT_ACCOUNT_SETTINGS,
+      parseCredential: "llama",
+      parser: {
+        ...DEFAULT_ACCOUNT_SETTINGS.parser,
+        engine: "llamaparse",
+        mode: "fixed",
+      },
+    });
+    const fromAccount = loadZipwikiConfig(
+      {
+        configPath: join(dir, "zipwiki.config.json"),
+        accountOverlay: account,
+      },
+      dir,
+    );
+    assert.equal(fromAccount.config.parser.engine, "llamaparse");
+
+    const fromFlag = loadZipwikiConfig(
+      {
+        configPath: join(dir, "zipwiki.config.json"),
+        accountOverlay: account,
+        parserEngine: "liteparse",
+      },
+      dir,
+    );
+    assert.equal(fromFlag.config.parser.engine, "liteparse");
+  });
+
   it("onboardingToAccountPatch maps local defaults", () => {
     const patch = onboardingToAccountPatch({
       compression: "deflate",
