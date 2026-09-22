@@ -20,7 +20,7 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 | --- | --- | --- |
 | `open` | Catalog (same fields as `zipaccess open --json`) + manifest summary + open sequence | zipaccess lib |
 | `list` | Entry inventory (`prefix` / `limit`) | zipaccess lib |
-| `search` | Ranked OKF / parsed search (snippets + `readHints`) | zipaccess lib |
+| `search` | Ranked OKF search (snippets + `readHints`). Parsed text only when OKF misses | zipaccess lib |
 | `query` | Search plus capped top-K OKF/parsed bodies | zipaccess lib |
 | `read_okf_index` | OKF index or concept list | zipaccess lib |
 | `read_okf` | One OKF concept | zipaccess lib |

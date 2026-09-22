@@ -72,7 +72,7 @@ stdio MCP (`zipwiki-mcp`) registers **short verbs** (scoped by the server name `
 | --- | --- | --- |
 | Manifest + sequence | `open` | Always first for query; includes **`catalog`** rows |
 | Member table | `list` | Prefer `prefix` |
-| **Search** | `search` / `query` | Primary discovery; hits include **`readHints`** |
+| **Search** | `search` / `query` | OKF cards first. Parsed markdown is a fallback when no card matches (`evidence: true`). Pass `in=okf,parsed` to search both. Hits include **`readHints`**. |
 | OKF index | `read_okf_index` | |
 | One concept | `read_okf` | |
 | Parsed markdown | `read_parsed` | Size-capped (`maxBytes`); includes `origin` (0x014F) when present |

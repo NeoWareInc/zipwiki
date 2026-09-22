@@ -17,14 +17,11 @@ import {
   buildOkfDocument,
   buildZipWikiOkfSources,
   conceptFileNameFor,
-  indexEntryFromConceptMarkdown,
+  finalizeOkfDirectory,
   isAiOkfConfigured,
   OKF_INDEX_NAME,
-  OKF_LOG_NAME,
-  renderOkfIndex,
   resolveOkfModel,
   resolveOkfProvider,
-  type OkfIndexEntry,
 } from "./lib/okf/index.js";
 import {
   SUPPORTED_EXTENSIONS,
@@ -101,19 +98,7 @@ function clearOkfOutputDir(outputDir: string): number {
 
 /** Write bundle-root `index.md` from concept files already on disk. */
 function writeOkfIndex(outputDir: string): number {
-  const entries: OkfIndexEntry[] = [];
-  if (!existsSync(outputDir)) return 0;
-  for (const name of readdirSync(outputDir).sort()) {
-    if (!name.endsWith(".md")) continue;
-    if (name === OKF_INDEX_NAME || name === OKF_LOG_NAME) continue;
-    const path = join(outputDir, name);
-    if (!statSync(path).isFile()) continue;
-    entries.push(
-      indexEntryFromConceptMarkdown(name, readFileSync(path, "utf-8")),
-    );
-  }
-  writeFileSync(join(outputDir, OKF_INDEX_NAME), renderOkfIndex(entries), "utf-8");
-  return entries.length;
+  return finalizeOkfDirectory(outputDir);
 }
 
 /**

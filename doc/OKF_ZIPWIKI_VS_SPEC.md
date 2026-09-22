@@ -29,9 +29,9 @@ workflows).
 
 | Spec (§3, §8–§9) | ZipWiki |
 | --- | --- |
-| Arbitrary directory tree of concepts | Package: flat `{aiRoot}/okf/` (typically one `document.md` + `index.md`). Standalone: flat `sample-output/wiki/okf/{stem}.md` plus bundle-root `index.md` |
-| `index.md` optional at any level | **Emitted** at bundle root with `okf_version: "0.2"` and a `# Files` listing (title + description); never used as a concept |
-| `log.md` optional | **Not emitted** |
+| Arbitrary directory tree of concepts | Per-file cards at `{aiRoot}/okf/{stem}.md`. Shared tags also produce a capped set of `{aiRoot}/okf/topics/{tag}.md` pages, rebuilt on add, update, and delete |
+| `index.md` optional at any level | **Emitted** at bundle root with `okf_version: "0.2"`, a `# Files` list, and a `# Topics` list when topic pages exist; never used as a concept |
+| `log.md` optional | **Appended** on pack and update (`wiki/okf/log.md`); never a concept |
 | Bundle-root `index.md` MAY carry `okf_version` (§12) | Yes — also advertised via `manifest.json` → `ai.okf.version` / `ai.okf.index` |
 | `references/` convention (§6.3) | Unused |
 
@@ -185,7 +185,7 @@ Package: included when packing with OKF enabled (`--no-ai-okf` skips LLM only).
 | Claim | Status |
 | --- | --- |
 | Emitted concepts are OKF v0.2–shaped (frontmatter + `type`) | **Yes** |
-| Optional `index.md` / `log.md` | `index.md` emitted; `log.md` omitted |
+| Optional `index.md` / `log.md` | `index.md` emitted; `log.md` appended on pack and update |
 | Empty body | Allowed without AI; AI emits thin `# Key facts` / `# Contents` |
 | Full v0.2 feature surface (attestation, credibility signals, `verified`, rich bodies, multi-concept graphs) | **Not implemented** as a producer |
 | Language extensions | Soft: `sources[].description` instead of / in addition to `title` |

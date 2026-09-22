@@ -28,11 +28,7 @@ import {
   buildOkfDocument,
   buildZipWikiOkfSources,
   conceptFileNameFor,
-  indexEntryFromConceptMarkdown,
-  OKF_INDEX_NAME,
-  OKF_LOG_NAME,
-  renderOkfIndex,
-  type OkfIndexEntry,
+  finalizeOkfDirectory,
 } from "../lib/okf/index.js";
 import {
   assessParseYield,
@@ -91,19 +87,23 @@ function clearOkfOutputDir(outputDir: string): number {
 }
 
 export function writeOkfIndex(outputDir: string): number {
-  const entries: OkfIndexEntry[] = [];
-  if (!existsSync(outputDir)) return 0;
-  for (const name of readdirSync(outputDir).sort()) {
+  return finalizeOkfDirectory(outputDir);
+}
+
+function collectOkfFiles(dir: string, prefix = ""): { name: string; data: string }[] {
+  if (!existsSync(dir)) return [];
+  const out: { name: string; data: string }[] = [];
+  for (const name of readdirSync(dir).sort()) {
+    const path = join(dir, name);
+    const rel = prefix ? `${prefix}/${name}` : name;
+    if (statSync(path).isDirectory()) {
+      out.push(...collectOkfFiles(path, rel));
+      continue;
+    }
     if (!name.endsWith(".md")) continue;
-    if (name === OKF_INDEX_NAME || name === OKF_LOG_NAME) continue;
-    const path = join(outputDir, name);
-    if (!statSync(path).isFile()) continue;
-    entries.push(
-      indexEntryFromConceptMarkdown(name, readFileSync(path, "utf-8")),
-    );
+    out.push({ name: rel, data: readFileSync(path, "utf-8") });
   }
-  writeFileSync(join(outputDir, OKF_INDEX_NAME), renderOkfIndex(entries), "utf-8");
-  return entries.length;
+  return out;
 }
 
 export type ParseFileResult = {
@@ -624,12 +624,7 @@ export function runCompressPhase(input: {
   const { okfDir } = stagePaths(input.stageDir);
   const okfFiles: { name: string; data: string }[] = [];
   if (input.opts.noOkf !== true && existsSync(okfDir)) {
-    for (const name of readdirSync(okfDir).sort()) {
-      if (!name.endsWith(".md")) continue;
-      const path = join(okfDir, name);
-      if (!statSync(path).isFile()) continue;
-      okfFiles.push({ name, data: readFileSync(path, "utf-8") });
-    }
+    okfFiles.push(...collectOkfFiles(okfDir));
   } else if (input.opts.noOkf === true && existsSync(okfDir)) {
     clearOkfOutputDir(okfDir);
   }

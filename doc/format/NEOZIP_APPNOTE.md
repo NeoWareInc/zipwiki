@@ -659,7 +659,7 @@ markdown files. ZipWiki writers **SHOULD** emit:
 | `wiki/okf/index.md` | Bundle listing + `okf_version: "0.2"` and a `# Files` list (OKF §8 / §12) |
 | `wiki/okf/{stem}.md` | **One concept per primary** (stem = primary basename without extension) |
 | `wiki/okf/document.md` | Legacy package-level concept; accepted, not preferred for new multi-primary packs |
-| `wiki/okf/log.md` | Optional change history (ZipWiki does not emit by default) |
+| `wiki/okf/log.md` | Append-only change history (pack and update). Not a concept |
 
 Consumers **MUST NOT** reject a bundle for missing `index.md` (OKF §11).
 

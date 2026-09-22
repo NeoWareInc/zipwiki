@@ -24,8 +24,12 @@ export const OKF_VERSION = "0.2" as const;
 export const OKF_DOCUMENT_NAME = "document.md" as const;
 /** Bundle-root index (OKF §8); ZipWiki emits this with `okf_version`. */
 export const OKF_INDEX_NAME = "index.md" as const;
-/** Optional reserved name (OKF §9); ZipWiki does not emit this by default. */
+/** Optional reserved name (OKF §9). Append-only change history, never a concept. */
 export const OKF_LOG_NAME = "log.md" as const;
+/** Cross-document pages live under `wiki/okf/topics/`. */
+export const OKF_TOPICS_DIR = "topics" as const;
+/** Cap shared topic pages so the catalog stays short. */
+export const TOPIC_PAGE_CAP = 8 as const;
 
 /** One entry in a generated OKF `index.md` Files section. */
 export type OkfIndexEntry = {
@@ -44,10 +48,25 @@ function escapeMdLinkLabel(text: string): string {
  * Render a bundle-root `index.md` (OKF §8 / §12).
  * Carries `okf_version: "0.2"` and a `# Files` listing of concept pages.
  */
-export function renderOkfIndex(entries: OkfIndexEntry[]): string {
+function renderIndexBullets(entries: OkfIndexEntry[]): string[] {
   const sorted = [...entries].sort((a, b) =>
     a.href.localeCompare(b.href, "en"),
   );
+  if (sorted.length === 0) return ["* *(none)*"];
+  return sorted.map((e) => {
+    const label = escapeMdLinkLabel(e.title.trim() || e.href);
+    const href = e.href.replace(/\\/g, "/");
+    const desc = e.description?.trim();
+    return desc
+      ? `* [${label}](${href}) - ${desc}`
+      : `* [${label}](${href})`;
+  });
+}
+
+export function renderOkfIndex(
+  entries: OkfIndexEntry[],
+  topics: OkfIndexEntry[] = [],
+): string {
   const lines: string[] = [
     "---",
     `okf_version: "${OKF_VERSION}"`,
@@ -55,21 +74,12 @@ export function renderOkfIndex(entries: OkfIndexEntry[]): string {
     "",
     "# Files",
     "",
+    ...renderIndexBullets(entries),
+    "",
   ];
-  for (const e of sorted) {
-    const label = escapeMdLinkLabel(e.title.trim() || e.href);
-    const href = e.href.replace(/\\/g, "/");
-    const desc = e.description?.trim();
-    lines.push(
-      desc
-        ? `* [${label}](${href}) - ${desc}`
-        : `* [${label}](${href})`,
-    );
+  if (topics.length > 0) {
+    lines.push("# Topics", "", ...renderIndexBullets(topics), "");
   }
-  if (sorted.length === 0) {
-    lines.push("* *(no concepts)*");
-  }
-  lines.push("");
   return lines.join("\n");
 }
 

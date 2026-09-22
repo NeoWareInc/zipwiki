@@ -11,7 +11,9 @@ export {
   OKF_DOCUMENT_NAME,
   OKF_INDEX_NAME,
   OKF_LOG_NAME,
+  OKF_TOPICS_DIR,
   OKF_VERSION,
+  TOPIC_PAGE_CAP,
   conceptFileNameFor,
   defaultConceptType,
   extractFrontmatterType,
@@ -26,6 +28,22 @@ export {
   stripLeadingFrontmatter,
   type OkfIndexEntry,
 } from "./render.js";
+export {
+  appendLogMarkdown,
+  buildTopicFiles,
+  conceptFiles,
+  danglingSourcePaths,
+  finalizeOkfDirectory,
+  formatLogLine,
+  isReservedOkfHref,
+  isTopicHref,
+  logHeader,
+  renderBundleIndex,
+  resolveOkfResource,
+  syncOkfArchive,
+  type OkfArchiveChange,
+  type OkfMarkdownFile,
+} from "./bundle.js";
 export {
   DEFAULT_OKF_PROVIDER,
   OKF_PROVIDERS,

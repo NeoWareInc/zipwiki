@@ -167,6 +167,7 @@ function buildCatalogLoaded(path: string): CatalogResult {
       n.startsWith(inv.okfRoot) &&
       n.endsWith(".md") &&
       !n.endsWith("index.md") &&
+      !n.endsWith("/log.md") &&
       !n.endsWith("/"),
   ).length;
   const okfPresent =
@@ -320,6 +321,7 @@ export type SearchHitWithHints = {
   title?: string;
   snippet: string;
   sources?: string[];
+  evidence?: boolean;
   readHints: CatalogReadHints;
 };
 
@@ -340,7 +342,8 @@ export function formatSearchText(args: {
   }
   for (const [i, h] of args.hits.entries()) {
     const title = h.title ? ` — ${h.title}` : "";
-    lines.push(`${i + 1}. [${h.kind}] ${h.path}${title}  (score ${h.score.toFixed(1)})`);
+    const role = h.evidence ? "evidence" : h.kind;
+    lines.push(`${i + 1}. [${role}] ${h.path}${title}  (score ${h.score.toFixed(1)})`);
     lines.push(`   ${h.snippet.replace(/\s+/g, " ").trim()}`);
     lines.push(`   → ${h.readHints.next.join("  |  ")}`);
     lines.push("");

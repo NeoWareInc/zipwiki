@@ -54,10 +54,7 @@ import {
   renderConceptMarkdown,
   splitFrontmatter,
 } from "../okf/frontmatter.js";
-import {
-  indexEntryFromConceptMarkdown,
-  renderOkfIndex,
-} from "../okf/render.js";
+import { formatLogLine, syncOkfArchive } from "../okf/bundle.js";
 import { parseOneFile, okfOneFile } from "../../pipeline/phases.js";
 import {
   loadZipwikiConfig,
@@ -189,25 +186,6 @@ export function parseUpdateSpecs(specs: string[] | undefined): UpdateSpec[] {
   return (specs ?? []).map(parseUpdateSpec);
 }
 
-function rebuildOkfIndex(
-  entries: ZipArchiveEntry[],
-  okfRoot: string,
-): string {
-  const indexEntries = entries
-    .filter(
-      (e) =>
-        e.name.startsWith(okfRoot) &&
-        e.name.endsWith(".md") &&
-        !e.name.endsWith("index.md") &&
-        !e.name.endsWith("/log.md"),
-    )
-    .map((e) => {
-      const href = e.name.slice(okfRoot.length);
-      return indexEntryFromConceptMarkdown(href, e.data.toString("utf8"));
-    });
-  return renderOkfIndex(indexEntries);
-}
-
 function citesPrimary(
   resource: string,
   primaryPath: string,
@@ -295,6 +273,7 @@ async function ingestFile(input: {
   zipPath: string;
   entries: ZipArchiveEntry[];
   primary: NeoZipAiPrimary;
+  okfMode: "ai" | "fallback" | "skipped";
 }> {
   const { abs, zipPath, inventory, omitOriginal, noOkf, noAiOkf, opts, project } =
     input;
@@ -346,6 +325,7 @@ async function ingestFile(input: {
   entries.push(parseEntry);
 
   const okfPath = `${inventory.okfRoot}${conceptFileNameFor(zipPath)}`;
+  let okfMode: "ai" | "fallback" | "skipped" = "skipped";
   const stemOwners = [...inventory.primaries.values()]
     .filter((s) => s.okfPath === okfPath)
     .map((s) => s.path);
@@ -374,6 +354,7 @@ async function ingestFile(input: {
         includeSha256:
           input.originSha256 === true || opts.sha256Extra === true,
       });
+      okfMode = okf.mode;
       entries.push({
         name: okfPath,
         data: readFileSync(okf.path),
@@ -394,7 +375,7 @@ async function ingestFile(input: {
     hasParsed: true,
     ...(omit ? { sourceIncluded: false } : {}),
   };
-  return { zipPath, entries, primary };
+  return { zipPath, entries, primary, okfMode };
 }
 
 function patchManifest(
@@ -430,7 +411,8 @@ function patchManifest(
     (n) =>
       n.startsWith(inventory.okfRoot) &&
       n.endsWith(".md") &&
-      !n.endsWith("index.md"),
+      !n.endsWith("index.md") &&
+      !n.endsWith("/log.md"),
   );
   const hasIndex = map.has(`${inventory.okfRoot}index.md`);
   if (okfNames.length > 0 || hasIndex) {
@@ -548,6 +530,7 @@ export async function updatePackage(
   const removed: string[] = [];
   const updated: string[] = [];
   const added: string[] = [];
+  const logLines: string[] = [];
 
   const pathsNow = () => [...inventory.primaries.keys()];
 
@@ -558,6 +541,13 @@ export async function updatePackage(
     logUpdate(quiet, `del ${p}`);
     removeMemberGraph(map, p, inventory, warnings);
     removed.push(p);
+    logLines.push(
+      formatLogLine({
+        action: "del",
+        primary: p,
+        detail: "concept removed",
+      }),
+    );
   }
 
   for (const spec of updateSpecs) {
@@ -581,6 +571,13 @@ export async function updatePackage(
     for (const e of ingested.entries) map.set(e.name, e);
     rememberPrimary(inventory, p, ingested.primary);
     updated.push(p);
+    logLines.push(
+      formatLogLine({
+        action: "update",
+        primary: p,
+        detail: `${conceptFileNameFor(p)} ${ingested.okfMode}`,
+      }),
+    );
     logUpdate(quiet, `updated ${p}`);
   }
 
@@ -605,25 +602,38 @@ export async function updatePackage(
     for (const e of ingested.entries) map.set(e.name, e);
     rememberPrimary(inventory, p, ingested.primary);
     added.push(p);
+    logLines.push(
+      formatLogLine({
+        action: "add",
+        primary: p,
+        detail: `${conceptFileNameFor(p)} ${ingested.okfMode}`,
+      }),
+    );
     logUpdate(quiet, `added ${p}`);
   }
 
   logUpdate(quiet, "rebuild OKF index + manifest");
 
-  const okfConcepts = [...map.keys()].filter(
-    (n) =>
-      n.startsWith(inventory.okfRoot) &&
-      n.endsWith(".md") &&
-      !n.endsWith("index.md"),
-  );
-  if (okfConcepts.length > 0) {
-    const indexMd = rebuildOkfIndex([...map.values()], inventory.okfRoot);
-    map.set(`${inventory.okfRoot}index.md`, {
-      name: `${inventory.okfRoot}index.md`,
-      data: Buffer.from(indexMd, "utf8"),
-    });
-  } else {
-    map.delete(`${inventory.okfRoot}index.md`);
+  const synced = syncOkfArchive({
+    okfRoot: inventory.okfRoot,
+    files: [...map.values()]
+      .filter((e) => e.name.startsWith(inventory.okfRoot) && e.name.endsWith(".md"))
+      .map((e) => ({ name: e.name, data: e.data.toString("utf8") })),
+    entryNames: map.keys(),
+    logLines,
+    allowedMissing: [...inventory.primaries.values()]
+      .filter((slot) => !slot.sourceIncluded)
+      .map((slot) => slot.path),
+  });
+  if (synced.dangling.length > 0) {
+    throw new AccessError(
+      `OKF still cites a missing member: ${synced.dangling.join("; ")}`,
+      "invalid_package",
+    );
+  }
+  for (const name of synced.delete) map.delete(name);
+  for (const file of synced.put) {
+    map.set(file.name, { name: file.name, data: Buffer.from(file.data, "utf8") });
   }
 
   const primaries: NeoZipAiPrimary[] = [...inventory.primaries.values()].map(

@@ -71,14 +71,14 @@ export function registerTools(server: McpServer): void {
     "search",
     {
       description:
-        "Ranked search over OKF concepts (preferred) and optional parsed markdown. Returns paths, snippets, and readHints (e.g. read --okf <stem>).",
+        "Ranked search over OKF concept cards. Parsed markdown is searched only when no OKF card matches, and those hits are marked evidence. Pass in=okf,parsed to search both. Returns paths, snippets, and readHints.",
       inputSchema: {
         package: packageArg,
         query: z.string().describe("Search query"),
         in: z
           .enum(["okf", "parsed", "okf,parsed"])
           .optional()
-          .describe("Default okf,parsed"),
+          .describe("Default okf, with a parsed fallback when OKF misses. okf,parsed searches both."),
         limit: z.number().int().positive().max(25).optional(),
         snippetChars: z.number().int().positive().optional(),
       },
@@ -97,7 +97,7 @@ export function registerTools(server: McpServer): void {
         in: z
           .enum(["okf", "parsed", "okf,parsed"])
           .optional()
-          .describe("Default okf,parsed"),
+          .describe("Default okf, with a parsed fallback when OKF misses. okf,parsed searches both."),
         limit: z.number().int().positive().max(25).optional(),
         snippetChars: z.number().int().positive().optional(),
         readTopK: z

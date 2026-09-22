@@ -365,6 +365,116 @@ describe("updatePackage", () => {
     assert.ok(names.includes("wiki/parsed/combo-add.txt.md"));
     assert.ok(!names.includes("drop.txt"));
   });
+
+  it("rebuilds topic pages and appends the log when a primary is removed", async () => {
+    const alpha = join(dir, "alpha.txt");
+    const beta = join(dir, "beta.txt");
+    const gamma = join(dir, "gamma.txt");
+    writeFileSync(alpha, "alpha\n");
+    writeFileSync(beta, "beta\n");
+    writeFileSync(gamma, "gamma\n");
+    const out = join(dir, "topics.zipwiki");
+    const card = (title: string, file: string) =>
+      [
+        "---",
+        "type: Document",
+        `title: ${title}`,
+        "description: shared warehouse note",
+        "tags: [warehouse]",
+        "sources:",
+        `  - resource: "../../${file}"`,
+        "    description: primary",
+        "---",
+        "",
+      ].join("\n");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        { originalPath: alpha, originalName: "alpha.txt", structuredMarkdown: "# alpha\n" },
+        { originalPath: beta, originalName: "beta.txt", structuredMarkdown: "# beta\n" },
+        { originalPath: gamma, originalName: "gamma.txt", structuredMarkdown: "# gamma\n" },
+      ],
+      okf: {
+        files: [
+          { name: "alpha.md", data: card("Alpha", "alpha.txt") },
+          { name: "beta.md", data: card("Beta", "beta.txt") },
+          { name: "gamma.md", data: card("Gamma", "gamma.txt") },
+        ],
+      },
+    });
+    await updatePackage({
+      package: out,
+      quiet: true,
+      del: ["gamma.txt"],
+      noAiOkf: true,
+      noOkf: true,
+    });
+    const after = loadCopyableArchive(out);
+    const names = after.entries.map((e) => e.name);
+    assert.ok(!names.includes("gamma.txt"));
+    assert.ok(!names.includes("wiki/okf/gamma.md"));
+    assert.ok(names.includes("wiki/okf/topics/warehouse.md"));
+    const topic = after.entries.find((e) => e.name === "wiki/okf/topics/warehouse.md")!;
+    const topicMd = topic.data.toString("utf8");
+    assert.match(topicMd, /\]\(\.\.\/alpha\.md\)/);
+    assert.match(topicMd, /\]\(\.\.\/beta\.md\)/);
+    assert.doesNotMatch(topicMd, /gamma/);
+    const index = after.entries.find((e) => e.name === "wiki/okf/index.md")!;
+    const indexMd = index.data.toString("utf8");
+    assert.match(indexMd, /# Topics/);
+    assert.doesNotMatch(indexMd, /gamma\.md/);
+    const log = after.entries.find((e) => e.name === "wiki/okf/log.md")!;
+    assert.match(log.data.toString("utf8"), /del gamma\.txt/);
+  });
+
+  it("refuses to seal when a remaining concept cites a missing primary", async () => {
+    const keep = join(dir, "cite-keep.txt");
+    const gone = join(dir, "cite-gone.txt");
+    writeFileSync(keep, "keep\n");
+    writeFileSync(gone, "gone\n");
+    const out = join(dir, "dangling.zipwiki");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        { originalPath: keep, originalName: "cite-keep.txt", structuredMarkdown: "# keep\n" },
+        { originalPath: gone, originalName: "cite-gone.txt", structuredMarkdown: "# gone\n" },
+      ],
+      okf: {
+        files: [
+          {
+            name: "cite-keep.md",
+            data: [
+              "---",
+              "type: Document",
+              "title: Keep",
+              "description: stay",
+              "tags: []",
+              "sources:",
+              '  - resource: "../../missing.txt"',
+              "    description: absent",
+              '  - resource: "../../cite-gone.txt"',
+              "    description: other",
+              "---",
+              "",
+            ].join("\n"),
+          },
+        ],
+      },
+    });
+    await assert.rejects(
+      () =>
+        updatePackage({
+          package: out,
+          quiet: true,
+          del: ["cite-gone.txt"],
+          noAiOkf: true,
+          noOkf: true,
+        }),
+      /missing member: cite-keep\.md → missing\.txt/,
+    );
+    const names = listZipEntries(out).map((e) => e.name);
+    assert.ok(names.includes("cite-gone.txt"));
+  });
 });
 
 describe("enrichOkf preserves origins", () => {

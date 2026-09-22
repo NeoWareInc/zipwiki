@@ -65,7 +65,7 @@ program
 
 program
   .command("search")
-  .description("Search OKF / parsed text; show snippets and read hints")
+  .description("Search OKF cards first; fall back to parsed text when nothing matches")
   .argument("<package>", "Path to .zipwiki")
   .argument("<query>", "Search query")
   .option("-j, --json", "JSON output")

@@ -27,6 +27,11 @@ export type SearchHit = {
   title?: string;
   snippet: string;
   sources?: string[];
+  /**
+   * True when this hit is a parsed-markdown fallback because no OKF card matched.
+   * It is evidence, not a catalog card.
+   */
+  evidence?: boolean;
   /** CLI / MCP next-step hints (`read --okf …` / `read --parsed …`). */
   readHints?: CatalogReadHints;
 };
@@ -172,7 +177,10 @@ function searchPackageLoaded(
   query: string,
 ): SearchResult {
   const tokens = tokenizeSearchQuery(query);
-  const scope = args.in ?? "okf,parsed";
+  // Default: OKF cards only. Parsed markdown is a fallback when nothing matches,
+  // or an explicit scope (`parsed` / `okf,parsed`).
+  const fallbackToParsed = args.in === undefined;
+  const scope = args.in ?? "okf";
   const wantOkf = scope.includes("okf");
   const wantParsed = scope.includes("parsed");
   const limit = Math.min(Math.max(args.limit ?? 10, 1), 25);
@@ -248,6 +256,7 @@ function searchPackageLoaded(
                 e.name.startsWith(BUNDLE_PATHS.okfRoot) &&
                 e.name.endsWith(".md") &&
                 !e.name.endsWith("index.md") &&
+                !e.name.endsWith("/log.md") &&
                 !e.name.endsWith("/"),
             )
             .map((e) => e.name);
@@ -262,9 +271,9 @@ function searchPackageLoaded(
   }
 
   const strongOkf = hits.filter((h) => h.kind === "okf" && h.score >= 4).length;
-  const skipParsed = strongOkf >= limit;
-
-  if (wantParsed && !skipParsed) {
+  const skipParsed = wantParsed && strongOkf >= limit;
+  const okfMiss = fallbackToParsed && !hits.some((h) => h.kind === "okf");
+  if ((wantParsed && !skipParsed) || okfMiss) {
     const parsedFiles = entries
       .filter(
         (e) =>
@@ -285,6 +294,7 @@ function searchPackageLoaded(
         title: stem,
         snippet: snippetAround(text, tokens, snippetChars),
         sources: [stem],
+        ...(okfMiss ? { evidence: true } : {}),
       });
     }
   }

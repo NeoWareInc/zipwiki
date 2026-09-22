@@ -131,6 +131,15 @@ describe("zipaccess", () => {
     assert.ok(result.hits[0]!.readHints?.next.some((h) => h.includes("read --")));
   });
 
+  it("falls back to parsed evidence when OKF misses", () => {
+    const result = searchPackage({ package: out, query: "conveying" });
+    assert.ok(result.hits.length >= 1);
+    assert.equal(result.hits[0]!.kind, "parsed");
+    assert.equal(result.hits[0]!.evidence, true);
+    const cards = searchPackage({ package: out, query: "warehouse lease" });
+    assert.ok(cards.hits.every((h) => h.evidence !== true));
+  });
+
   it("enrichOkf writes host enrichment", async () => {
     const result = await enrichOkf({
       package: out,

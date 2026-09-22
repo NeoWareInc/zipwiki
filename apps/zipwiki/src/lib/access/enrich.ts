@@ -9,11 +9,9 @@ import {
 } from "../archive/index.js";
 import {
   buildOkfBundle,
-  buildWikiSearchIndex,
   conceptFileNameFor,
-  indexEntryFromConceptMarkdown,
-  renderOkfIndex,
-  serializeWikiSearchIndex,
+  formatLogLine,
+  syncOkfArchive,
   type OkfEnrichment,
   type OkfPrimaryRef,
 } from "../okf/index.js";
@@ -75,24 +73,6 @@ function loadManifestPrimaries(zipPath: string): OkfPrimaryRef[] {
   }
 }
 
-function rebuildIndexMarkdown(
-  entries: ZipArchiveEntry[],
-  okfRoot: string,
-): string {
-  const indexEntries = entries
-    .filter(
-      (e) =>
-        e.name.startsWith(okfRoot) &&
-        e.name.endsWith(".md") &&
-        !e.name.endsWith("index.md"),
-    )
-    .map((e) => {
-      const href = e.name.slice(okfRoot.length);
-      return indexEntryFromConceptMarkdown(href, e.data.toString("utf8"));
-    });
-  return renderOkfIndex(indexEntries);
-}
-
 /**
  * Apply host-LLM (or any) OKF enrichment into an existing `.nzip` via injected
  * enrichment. Rewrites the archive in place (atomic replace), copying
@@ -146,32 +126,34 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
 
   map.set(conceptZipPath, { name: conceptZipPath, data: conceptData });
 
-  const indexMd = rebuildIndexMarkdown([...map.values()], okfRoot);
   const indexPath = `${okfRoot}index.md`;
-  map.set(indexPath, {
-    name: indexPath,
-    data: Buffer.from(indexMd, "utf8"),
-  });
-
-  const searchIndex = buildWikiSearchIndex(
-    [...map.values()]
-      .filter(
-        (e) =>
-          e.name.startsWith(okfRoot) &&
-          e.name.endsWith(".md") &&
-          !e.name.endsWith("index.md"),
-      )
-      .map((e) => ({ name: e.name, data: e.data.toString("utf8") })),
+  const synced = syncOkfArchive({
     okfRoot,
-  );
-  const searchPath = `${okfRoot.replace(/okf\/?$/, "")}search.json`.replace(
-    /\/{2,}/g,
-    "/",
-  );
-  map.set(searchPath, {
-    name: searchPath,
-    data: Buffer.from(serializeWikiSearchIndex(searchIndex), "utf8"),
+    files: [...map.values()]
+      .filter((e) => e.name.startsWith(okfRoot) && e.name.endsWith(".md"))
+      .map((e) => ({ name: e.name, data: e.data.toString("utf8") })),
+    entryNames: map.keys(),
+    allowedMissing: [...inventory.primaries.values()]
+      .filter((slot) => !slot.sourceIncluded)
+      .map((slot) => slot.path),
+    logLines: [
+      formatLogLine({
+        action: "enrich",
+        primary: primaryForConcept[0]?.path ?? conceptFileName,
+        detail: `${conceptFileName} enriched`,
+      }),
+    ],
   });
+  if (synced.dangling.length > 0) {
+    throw new AccessError(
+      `OKF still cites a missing member: ${synced.dangling.join("; ")}`,
+      "invalid_package",
+    );
+  }
+  for (const name of synced.delete) map.delete(name);
+  for (const file of synced.put) {
+    map.set(file.name, { name: file.name, data: Buffer.from(file.data, "utf8") });
+  }
 
   if (map.has(BUNDLE_PATHS.manifest)) {
     try {

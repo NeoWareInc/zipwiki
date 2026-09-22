@@ -52,7 +52,7 @@ zipaccess origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pd
 | Command | Effect |
 | --- | --- |
 | `open` | Catalog + manifest summary |
-| `search` | Ranked OKF / parsed hits (snippets, not bodies) |
+| `search` | Ranked OKF hits (snippets). Parsed text only when OKF misses |
 | `read` | Stream OKF, parsed, or entry bodies |
 | `extract` | Verified write to disk |
 | `origin` | Extra Field `0x014F`; `--fetch` downloads and checks CRC-32 |

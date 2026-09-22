@@ -45,6 +45,7 @@ function okfConceptPaths(entries: ZipListEntry[]): string[] {
         e.name.startsWith(BUNDLE_PATHS.okfRoot) &&
         e.name.endsWith(".md") &&
         !e.name.endsWith("index.md") &&
+        !e.name.endsWith("/log.md") &&
         !e.name.endsWith("/"),
     )
     .map((e) => e.name);
