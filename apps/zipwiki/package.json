@@ -33,8 +33,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "zipwiki": "./dist/cli.js",
-    "zipaccess": "./dist/zipaccess-cli.js"
+    "zipwiki": "./dist/cli.js"
   },
   "scripts": {
     "dev": "tsx src/cli.ts",

@@ -42,7 +42,7 @@ Dependency today: `@llamaindex/liteparse` in `apps/zipwiki/package.json`.
 ## Update reminder
 
 The website always serves the current deploy. The reminder is for the
-installed **zipwiki** / **zipaccess** CLI (and later the Rust binary).
+installed **zipwiki** CLI (and later the Rust binary).
 
 On startup, compare the version baked into that build with a small public
 manifest you publish when you cut a release. Print one line and keep going.

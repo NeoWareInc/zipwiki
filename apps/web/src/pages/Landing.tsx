@@ -152,7 +152,7 @@ export default function Landing() {
               Advanced / CI
             </summary>
             <p className="mt-3 text-sm leading-relaxed text-(--muted)">
-              CI and scripts can call zipwiki / zipaccess. Most people
+              CI and scripts can call zipwiki. Most people
               never open a terminal. The plugin includes that CLI.
             </p>
             <pre className="mt-4 overflow-x-auto rounded-md bg-(--paper) px-3 py-2 text-xs text-(--ink)">

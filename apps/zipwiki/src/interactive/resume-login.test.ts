@@ -137,6 +137,9 @@ describe("resume login when saved portal settings exist", () => {
     assert.equal(commandSkipsLoginPrompt(["login", "auth", "zipwiki"]), true);
     assert.equal(commandSkipsLoginPrompt(["api-key", "config", "zipwiki"]), true);
     assert.equal(commandSkipsLoginPrompt(["catalog", "zipwiki"]), true);
+    assert.equal(commandSkipsLoginPrompt(["search", "zipwiki"]), true);
+    assert.equal(commandSkipsLoginPrompt(["open", "zipwiki"]), true);
+    assert.equal(commandSkipsLoginPrompt(["open", "settings", "zipwiki"]), false);
     assert.equal(commandSkipsLoginPrompt(["pack", "zipwiki"]), false);
     assert.equal(commandSkipsLoginPrompt(["show", "settings", "zipwiki"]), false);
   });

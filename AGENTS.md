@@ -5,9 +5,8 @@ Portable knowledge lives in **`.zipwiki`** packages (ZIP + `META-INF/manifest.js
 
 | Surface | Role |
 | --- | --- |
-| **zipwiki** | Create / re-pack `.zipwiki` (`pack`) |
-| **zipaccess** | Query (`open` / `search` / `read` / `origin`) |
-| **stdio MCP** | Agents on this machine → zipaccess + zipwiki |
+| **zipwiki** | Create (`pack`) and query (`open` / `search` / `read` / `origin`) |
+| **stdio MCP** | Agents on this machine → zipaccess library |
 
 ## Open sequence (always)
 
@@ -24,7 +23,7 @@ Default package: `package` tool arg, or `wiki.zipwiki` in the MCP cwd.
 Specs: [doc/ZIPWIKI_APPNOTE.md](doc/ZIPWIKI_APPNOTE.md), [doc/ZIPACCESS.md](doc/ZIPACCESS.md),
 [doc/MCP.md](doc/MCP.md), [doc/CLI.md](doc/CLI.md).
 
-This checkout includes Phase 2: `@zipwiki/zipwiki` (pack / zipaccess) and
+This checkout includes Phase 2: `@zipwiki/zipwiki` (pack and query) and
 `@zipwiki/mcp` (stdio). Local pack does not need login (`--no-ai-okf` +
 LiteParse). Home is `~/.zipwiki`. Hosted auth is Phase 3. A Rust CLI is
 Phase 4 — see [PHASES.md](PHASES.md).

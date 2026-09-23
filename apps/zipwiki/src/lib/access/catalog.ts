@@ -15,15 +15,15 @@ import {
 import { resolvePackagePath, rethrowAccess } from "./resolve.js";
 
 export type CatalogReadHints = {
-  /** Stem for `zipaccess read --okf <stem>` / MCP `read_okf` stem. */
+  /** Stem for `zipwiki read --okf <stem>` / MCP `read_okf` stem. */
   okfStem?: string;
-  /** Name for `zipaccess read --parsed <name>` / MCP `read_parsed` name. */
+  /** Name for `zipwiki read --parsed <name>` / MCP `read_parsed` name. */
   parsedName?: string;
   /** Archive entry path of the original when present. */
   originalPath?: string;
   /** Remote / file: locator from Extra Field 0x014F when original is omitted. */
   originUri?: string;
-  /** Short CLI-style hints (relative to zipaccess / zipwiki read). */
+  /** Short CLI-style hints (relative to `zipwiki read`). */
   next: string[];
 };
 
@@ -55,7 +55,7 @@ export type CatalogResult = {
   rows: CatalogRow[];
 };
 
-/** Keys on each catalog row — CLI `zipaccess open --json` and MCP `open.catalog.rows[]`. */
+/** Keys on each catalog row — CLI `zipwiki open --json` and MCP `open.catalog.rows[]`. */
 export const CATALOG_ROW_FIELDS = [
   "primary",
   "title",
@@ -70,7 +70,7 @@ export const CATALOG_ROW_FIELDS = [
   "readHints",
 ] as const satisfies readonly (keyof CatalogRow)[];
 
-/** Keys on the catalog object — CLI `zipaccess open --json` and MCP `open.catalog`. */
+/** Keys on the catalog object — CLI `zipwiki open --json` and MCP `open.catalog`. */
 export const CATALOG_RESULT_FIELDS = [
   "package",
   "digest",
@@ -279,7 +279,7 @@ export function formatCatalogText(catalog: CatalogResult): string {
   }
   lines.push("");
   lines.push(
-    "Next: zipaccess search <package> \"<query>\"  |  zipaccess read <package> --okf <stem>",
+    "Next: zipwiki search <package> \"<query>\"  |  zipwiki read <package> --okf <stem>",
   );
   return `${lines.join("\n")}\n`;
 }

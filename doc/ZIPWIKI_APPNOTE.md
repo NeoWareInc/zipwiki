@@ -11,7 +11,7 @@
 | **Related** | [OKF_SPEC.md](./OKF_SPEC.md) · [OKF producer profile](./OKF_ZIPWIKI_VS_SPEC.md) · [ZIPACCESS.md](./ZIPACCESS.md) |
 
 This file in the repository is the **ZipWiki packaging note**: how **zipwiki**
-writes (and **zipaccess** reads) AI materials inside a NeoZip archive. The
+writes (and the **zipaccess** library reads) AI materials inside a NeoZip archive. The
 parent [NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md) remains the on-wire NeoZip
 contract (integrity Extra Fields, Merkle, blockchain sidecars, encryption).
 This note **copies** those AI-root rules and **adds** producer conventions
@@ -154,7 +154,7 @@ Primary paths and AI-tree paths are case-preserving as stored.
 | **Legacy extension** | `*.nzip` — still a valid NeoZip / ZipWiki package; readers **MUST** accept it |
 | **Also valid** | `*.zip` with NeoZip Extra Fields / sidecars / `"format": "neozip"` manifest |
 
-Default package name for zipaccess / MCP when no path is given:
+Default package name for zipwiki / MCP when no path is given:
 `wiki.zipwiki` in the process working directory.
 
 Single-file pack default output: `<source-basename>.zipwiki` beside the
@@ -430,7 +430,7 @@ With defaults `root = "wiki"` and `parsedDir = "parsed"`:
 }
 ```
 
-**AI read algorithm (ZipWiki / zipaccess):**
+**AI read algorithm (zipwiki):**
 
 1. Open ZIP; parse `META-INF/manifest.json` (required for this path).
 2. If `format != "neozip"`, treat as ordinary ZIP (no AI claims).
@@ -802,7 +802,7 @@ or `--origin-file`.
 
 #### 6.7.3 Read path
 
-zipaccess / `open` **SHOULD** list original attributes found on parse
+`zipwiki open` **SHOULD** list original attributes found on parse
 members (`origins[]`: `parsedPath`, `primaryPath`, and any of `originUri`,
 `originCrc32` (8 hex digits), `originSize`, `originMtime` (Unix seconds) plus
 `originMtimeUtc` (ISO-8601), `originSha256` (64 hex digits)) and **MAY** copy those fields
@@ -810,7 +810,7 @@ onto matching `ai.primaries[]` rows for agents. The Extra Field on the parse
 entry remains authoritative; the manifest **MUST NOT** be the only copy.
 
 Agents that need original bytes: follow `originUri` (HTTP or local `file:`)
-when present. zipaccess / MCP **`origin`** (`fetch`) downloads that URI and
+when present. zipwiki / MCP **`origin`** (`fetch`) downloads that URI and
 **MUST** check a fetched payload against `originCrc32` (and `originSize` /
 `originSha256` when those tags were written). `originMtime` is advisory
 (the original’s last-modified time, not the parse member’s ZIP DOS date).
@@ -889,7 +889,7 @@ Advertised via `manifest.json` → `ai.okf` (§5.2).
 4. Follow OKF `sources` / links to primaries or `parsed/` members.
 5. Open OKF when `ai.okf.present` is true, independent of other profile flags.
 
-zipaccess prefers **search** (OKF frontmatter first, then parsed markdown at
+zipwiki prefers **search** (OKF frontmatter first, then parsed markdown at
 lower weight) before dumping full concepts. See [ZIPACCESS.md](./ZIPACCESS.md).
 
 ### 7.5 Enrichment after pack
@@ -898,7 +898,7 @@ Default MCP create sequence:
 
 1. `pack` / `zipwiki pack` with AI OKF skipped (`--no-ai-okf`).
 2. Host LLM fills title / description / type / tags / key facts.
-3. `okf_enrich` / `zipaccess okf-enrich` writes `{R}/okf/` into the
+3. `okf_enrich` writes `{R}/okf/` into the
    existing archive (no hosted OKF quota).
 
 Optional: pack with hosted / BYO OKF when the plan still has quota.
@@ -1035,11 +1035,11 @@ written.
 
 ## 12. Agent and tool sequence
 
-### 12.1 Query (zipaccess)
+### 12.1 Query (zipwiki)
 
-1. `open` / `zipaccess open` — manifest, OKF flags, primaries, optional
+1. `open` / `zipwiki open` — manifest, OKF flags, primaries, optional
    `origins[]` from Extra Field `0x014F`.
-2. Prefer `search` / `zipaccess search`; else `read_okf_index` +
+2. Prefer `search` / `zipwiki search`; else `read_okf_index` +
    `read_okf`.
 3. Follow `sources` to `read` / `read_parsed` (or originals via
    `read_entry` — stream, verified).
@@ -1100,7 +1100,7 @@ L4 never substitutes for L1–L3. A default ZipWiki package is L0 + L4.
 | Info-ZIP / Finder / Explorer | Lists/extracts content; shows `META-INF/` and `wiki/` (or other AI root) as folders; ignores Extra Field `0x014E`; cannot inflate Zstd (method 93) without a Zstd-capable reader |
 | Generic ZIP tools | Treat `wiki/` as an ordinary directory |
 | NeoZip-aware tools | L1–L3 verify without requiring ZipWiki; ignore unknown `ai` keys |
-| ZipWiki / zipaccess | Prefer `manifest.json` + `ai.root` → `parsed/` and optional `okf/`; honor `sourceIncluded: false` and Extra Field `0x014F` on parse members; accept `.zipwiki` and legacy `.nzip`. Older archives that used a different `ai.root` spelling or profile token **SHOULD** still open when the tree is otherwise valid |
+| ZipWiki | Prefer `manifest.json` + `ai.root` → `parsed/` and optional `okf/`; honor `sourceIncluded: false` and Extra Field `0x014F` on parse members; accept `.zipwiki` and legacy `.nzip`. Older archives that used a different `ai.root` spelling or profile token **SHOULD** still open when the tree is otherwise valid |
 | AI agents | Prefer `META-INF/manifest.json` when present (L4), then OKF index / per-primary concepts and/or `parsed/` as declared |
 
 ---

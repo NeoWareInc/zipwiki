@@ -12,7 +12,7 @@ GitHub markdown is the docs host for Phase 1. A `docs.zipwiki.ai` site is later.
 6. [HOSTED-API.md](HOSTED-API.md) — Fly health host (`api.zipwiki.ai`)
 7. [DISTRIBUTION.md](DISTRIBUTION.md) — third-party notices before packaging
 
-Phase 2 CLIs: `pnpm zipwiki` / `pnpm zipaccess` / `@zipwiki/mcp`.
+Phase 2: `pnpm zipwiki` (create and query) and `@zipwiki/mcp`.
 Portal settings: [CONVEX.md](CONVEX.md) + `/dashboard/settings`.
 
 User-facing name is **ZipWiki ZIP profile**. NeoZip Extra Field IDs live under

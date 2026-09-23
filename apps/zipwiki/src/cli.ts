@@ -47,21 +47,16 @@ import {
   runSettingsShow,
 } from "./settings-cmd.js";
 import {
-  runExtractCommand,
   runListCommand,
   runTestCommand,
 } from "./inspect-cmd.js";
+import { installGroupedHelp } from "./cli-help.js";
+import { registerQueryCommands } from "./query-commands.js";
 import { runUpdateCommand } from "./update-cmd.js";
 import {
-  formatReadStdout,
-  readEntries,
-  readManifest,
   buildCatalog,
   formatCatalogText,
-  fetchOrigin,
-  lookupOrigin,
 } from "./lib/access/index.js";
-import { AccessError } from "./lib/access/resolve.js";
 // Load `.env` / `.env.local` before any command reads process.env.
 loadEnvFiles(REPO_ROOT);
 loadZipwikiHomeEnv();
@@ -73,7 +68,7 @@ const program = new Command();
 program
   .name("zipwiki")
   .description(
-    "ZipWiki — create .zipwiki archives (LiteParse / LlamaParse) and document tools",
+    "ZipWiki — create a .zipwiki knowledge base, then open, search, and read it",
   )
   .version("0.1.0");
 
@@ -311,6 +306,7 @@ function withDocParse(cmd: Command): Command {
 withPipelineFlags(
   program
     .command("stage")
+    .helpGroup("Create")
     .description(
       "Run pipeline phases into a stage dir: parse | okf | manifest | compress | all",
     )
@@ -346,6 +342,7 @@ withPipelineFlags(
 withPipelineFlags(
   program
     .command("pack")
+    .helpGroup("Create")
     .description(
       "Alias for `stage --phase all`: parse → per-file OKF → manifest → .zipwiki",
     )
@@ -364,6 +361,7 @@ withPipelineFlags(
 withDocParse(
   program
     .command("parse-file")
+    .helpGroup("Create")
     .description(
       "Parse a single document (stdout or -o)",
     )
@@ -397,6 +395,7 @@ withDocParse(
 
 program
   .command("is-complex")
+  .helpGroup("Create")
   .description(
     "Check if a document is complex enough to require OCR or advanced parsing",
   )
@@ -412,6 +411,7 @@ program
 
 program
   .command("screenshot")
+  .helpGroup("Create")
   .description("Generate screenshots of document pages")
   .argument("<file>", "Path to the document file")
   .option(
@@ -432,6 +432,7 @@ program
 
 program
   .command("batch-parse")
+  .helpGroup("Create")
   .description(
     "Parse only into a stage dir (wiki/parsed); use before okf/manifest or to re-OCR",
   )
@@ -487,6 +488,7 @@ program
 
 program
   .command("okf")
+  .helpGroup("Create")
   .description(
     "Re-run OKF on an existing stage (wiki/parsed → wiki/okf); skip re-parse",
   )
@@ -530,6 +532,7 @@ program
 
 program
   .command("manifest")
+  .helpGroup("Create")
   .description(
     "Rebuild META-INF/manifest.json from an existing stage (wiki/parsed + optional OKF)",
   )
@@ -569,6 +572,7 @@ program
 
 program
   .command("init")
+  .helpGroup("Account")
   .description(
     "Open dashboard settings (pack defaults live on your ZipWiki account)",
   )
@@ -599,6 +603,7 @@ program
 
 const settingsCmd = program
   .command("settings")
+  .helpGroup("Account")
   .description("Show, refresh, or open account pack settings");
 
 settingsCmd
@@ -628,6 +633,7 @@ settingsCmd
 
 const authCmd = program
   .command("auth")
+  .helpGroup("Account")
   .description("Connect zipwiki to the ZipWiki hosted API");
 
 authCmd
@@ -671,6 +677,7 @@ authCmd
 
 const configCmd = program
   .command("config")
+  .helpGroup("Account")
   .description("Show or update ZipWiki home/project settings");
 
 configCmd
@@ -735,6 +742,7 @@ function collectFlag(value: string, prev: string[]): string[] {
 
 program
   .command("update")
+  .helpGroup("Create")
   .description(
     "Add, update, or delete primaries in a .zipwiki (full rewrite; copies unchanged compressed members)",
   )
@@ -830,6 +838,7 @@ program
 
 program
   .command("list")
+  .helpGroup("Query")
   .description("List entries in a .zipwiki / .nzip / ZIP archive")
   .argument("<archive>", "Path to archive")
   .option("-v, --verbose", "Show method and sizes")
@@ -863,23 +872,8 @@ program
   });
 
 program
-  .command("catalog")
-  .description(
-    "Print a readable primary catalog (same as `zipaccess open` / `list --catalog`)",
-  )
-  .argument("<archive>", "Path to .zipwiki")
-  .option("-j, --json", "JSON output")
-  .action((archive: string, opts: { json?: boolean }) => {
-    const catalog = buildCatalog(resolveRepoPath(archive));
-    if (opts.json) {
-      console.log(JSON.stringify(catalog, null, 2));
-      return;
-    }
-    process.stdout.write(formatCatalogText(catalog));
-  });
-
-program
   .command("test")
+  .helpGroup("Query")
   .description("Test archive integrity (inflate each entry)")
   .argument("<archive>", "Path to archive")
   .option("-v, --verbose", "Verbose")
@@ -891,200 +885,8 @@ program
     });
   });
 
-function collectPath(value: string, prev: string[]): string[] {
-  return prev.concat(value);
-}
-
-program
-  .command("read")
-  .description(
-    "Inflate entry bytes to stdout (no JSON). Repeat --path or pass multiple arguments; several files are wrapped with ===== ZIPWIKI <path> ===== markers",
-  )
-  .argument("[paths...]", "Archive entry paths")
-  .option(
-    "-p, --package <path>",
-    "Path to .zipwiki (default: wiki.zipwiki in cwd)",
-  )
-  .option(
-    "--path <path>",
-    "Entry path (repeatable)",
-    collectPath,
-    [] as string[],
-  )
-  .option("--as-binary", "Force base64 encoding")
-  .option(
-    "--origin",
-    "Print Extra Field 0x014F origin URI/CRC to stderr (body still on stdout)",
-  )
-  .option(
-    "--fetch-origin",
-    "Download originUri and verify CRC-32 against the saved tag",
-  )
-  .option(
-    "--origin-out <path>",
-    "With --fetch-origin, write the original to this path",
-  )
-  .option("--overwrite", "Overwrite origin dest if it already exists")
-  .action(
-    async (
-      positional: string[],
-      opts: {
-        package?: string;
-        path?: string[];
-        asBinary?: boolean;
-        origin?: boolean;
-        fetchOrigin?: boolean;
-        originOut?: string;
-        overwrite?: boolean;
-      },
-    ) => {
-      const fromFlag = opts.path ?? [];
-      const paths = [...positional, ...fromFlag]
-        .flatMap((p) => p.split(","))
-        .map((p) => p.trim())
-        .filter(Boolean);
-      const pkg = opts.package ? resolveRepoPath(opts.package) : opts.package;
-      const results = readEntries({
-        package: pkg,
-        paths,
-        asBinary: opts.asBinary === true,
-      });
-      for (const r of results) {
-        if (r.truncated) {
-          console.error(
-            `zipwiki: truncated ${r.path} (${r.totalBytes} bytes)`,
-          );
-        }
-        const selector = r.path ?? undefined;
-        if (opts.fetchOrigin && selector) {
-          try {
-            const fetched = await fetchOrigin({
-              package: pkg,
-              path: selector,
-              dest: opts.originOut ? resolveRepoPath(opts.originOut) : undefined,
-              write: Boolean(opts.originOut),
-              overwrite: opts.overwrite === true,
-            });
-            console.error(JSON.stringify(fetched, null, 2));
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(`zipwiki: origin fetch failed for ${selector}: ${msg}`);
-            if (err instanceof AccessError && err.code === "integrity_failed") {
-              process.exitCode = 1;
-            }
-          }
-        } else if (opts.origin && selector) {
-          try {
-            const loc = r.origin ?? lookupOrigin({ package: pkg, path: selector });
-            console.error(JSON.stringify(loc, null, 2));
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(`zipwiki: origin lookup failed for ${selector}: ${msg}`);
-          }
-        }
-      }
-      process.stdout.write(formatReadStdout(results));
-    },
-  );
-
-program
-  .command("read-manifest")
-  .description(
-    "Inflate META-INF/manifest.json to stdout (raw JSON, no wrappers)",
-  )
-  .option(
-    "-p, --package <path>",
-    "Path to .zipwiki (default: wiki.zipwiki in cwd)",
-  )
-  .action((opts: { package?: string }) => {
-    const result = readManifest({
-      package: opts.package ? resolveRepoPath(opts.package) : opts.package,
-    });
-    if (result.truncated) {
-      console.error(
-        `zipwiki: truncated ${result.path} (${result.totalBytes} bytes)`,
-      );
-    }
-    process.stdout.write(formatReadStdout([result]));
-  });
-
-program
-  .command("origin")
-  .description(
-    "Show Extra Field 0x014F origin URI; optionally download and verify CRC-32",
-  )
-  .argument("[selector]", "Parsed or primary path (or use --path / --parsed)")
-  .option(
-    "-p, --package <path>",
-    "Path to .zipwiki (default: wiki.zipwiki in cwd)",
-  )
-  .option("--parsed <name>", "Parsed primary name")
-  .option("--path <entry>", "Parsed or primary entry path")
-  .option("--fetch", "Download originUri and verify CRC-32")
-  .option("-o, --output <path>", "Write downloaded original here")
-  .option("--overwrite", "Overwrite dest if it already exists")
-  .action(
-    async (
-      selectorArg: string | undefined,
-      opts: {
-        package?: string;
-        parsed?: string;
-        path?: string;
-        fetch?: boolean;
-        output?: string;
-        overwrite?: boolean;
-      },
-    ) => {
-      const selector = opts.path ?? opts.parsed ?? selectorArg;
-      if (!selector) {
-        console.error("zipwiki origin: provide a parsed/primary path");
-        process.exit(1);
-      }
-      const pkg = opts.package ? resolveRepoPath(opts.package) : opts.package;
-      try {
-        if (opts.fetch || opts.output) {
-          const fetched = await fetchOrigin({
-            package: pkg,
-            path: selector,
-            dest: opts.output ? resolveRepoPath(opts.output) : undefined,
-            write: Boolean(opts.output),
-            overwrite: opts.overwrite === true,
-          });
-          console.log(JSON.stringify(fetched, null, 2));
-          return;
-        }
-        console.log(
-          JSON.stringify(lookupOrigin({ package: pkg, path: selector }), null, 2),
-        );
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`zipwiki: ${msg}`);
-        process.exit(1);
-      }
-    },
-  );
-
-program
-  .command("extract")
-  .description("Extract archive (overwrite-or-refuse; no freshen/update)")
-  .argument("<archive>", "Path to archive")
-  .argument("[dest]", "Destination directory", ".")
-  .option("-o, --overwrite", "Overwrite existing files")
-  .option("-n, --never", "Never overwrite")
-  .option("-d, --exdir <dir>", "Extract directory")
-  .option("-j, --junk-paths", "Flatten paths")
-  .option("-v, --verbose", "Verbose")
-  .option("-q, --quiet", "Quiet")
-  .action((archive: string, dest: string, opts) => {
-    runExtractCommand(archive, dest, {
-      overwrite: opts.overwrite === true,
-      neverOverwrite: opts.never === true,
-      exdir: opts.exdir,
-      junkPaths: opts.junkPaths === true,
-      verbose: opts.verbose === true,
-      quiet: opts.quiet === true,
-    });
-  });
+registerQueryCommands(program);
+installGroupedHelp(program);
 
 program.hook("preAction", async (_thisCommand, actionCommand) => {
   if (commandSkipsLoginPrompt(commandNames(actionCommand))) return;

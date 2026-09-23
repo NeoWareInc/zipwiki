@@ -5,8 +5,8 @@ Living plan for this product repo. `zip-codex` remains the lab.
 ## Locked names
 
 - **ZipWiki** — product
-- **zipwiki** — create CLI (`pack`)
-- **zipaccess** — query CLI (`open` / `search` / `read`)
+- **zipwiki** — the command: create (`pack`) and query (`open` / `search` / `read`)
+- **zipaccess** — query library used by `zipwiki` and MCP
 - **`.zipwiki`** — the file (legacy `.nzip` still readable, not advertised)
 - **zipwiki.ai** — public site; later `api.zipwiki.ai` / `docs.zipwiki.ai`
 
@@ -44,9 +44,9 @@ engine lands.
 `@zipwiki/api-client`). Local pack does not require login.
 
 - Create: `zipwiki pack` / `update`, LiteParse, origin Extra Field `0x014F`
-- Query: `zipaccess open` / `search` / `read` / `extract` / `origin`
+- Query: `zipwiki open` / `search` / `read` / `extract` / `origin`
 - MCP: stdio tools (`zipwiki-mcp`)
-- Sample: `pnpm sample-zipwiki` then `pnpm smoke:zipaccess` (`search deed`)
+- Sample: `pnpm sample-zipwiki` then `pnpm smoke:zipwiki` (`search deed`)
 
 Package names `@zipwiki/*`; home `~/.zipwiki`. Hosted auth is stubbed through
 for Phase 3 (`zipwiki auth login`).
@@ -66,12 +66,12 @@ login, query via MCP, and (on a paid plan) use hosted parse/OKF.
 
 ## Phase 4 — Rust runtime (after TypeScript Beta)
 
-Native `zipwiki` / `zipaccess` binaries for machines we compile for (macOS
+A native `zipwiki` binary for machines we compile for (macOS
 arm64 first; later Zip64 / large archives). TypeScript remains the everywhere
 runtime: MCP, Node, Vercel/web, JS agent hosts, and any OS without a binary.
 
 **Done when:** one compiled environment packs and catalogs a `.zipwiki` that
-TypeScript zipaccess can open.
+the TypeScript zipaccess library can open.
 
 ## Open questions
 

@@ -33,7 +33,7 @@ export const BUNDLE_PATHS = {
   okfIndex: "wiki/okf/index.md",
   okfDocument: "wiki/okf/document.md",
   okfLog: "wiki/okf/log.md",
-  /** Pack-time inverted catalog for zipaccess search. */
+  /** Pack-time inverted catalog for zipwiki search. */
   searchIndex: "wiki/search.json",
 } as const;
 

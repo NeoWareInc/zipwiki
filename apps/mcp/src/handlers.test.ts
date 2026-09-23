@@ -101,7 +101,7 @@ describe("MCP handlers", () => {
     assert.ok(row.readHints.next.some((h) => h.includes("--okf")));
   });
 
-  it("open catalog matches zipaccess buildCatalog fields", async () => {
+  it("open catalog matches zipaccess library buildCatalog fields", async () => {
     const res = await open({ package: sample });
     const body = JSON.parse(res.content[0]?.text ?? "{}") as {
       catalog: Record<string, unknown> & {

@@ -2,7 +2,7 @@
 
 Agent access to portable `.zipwiki` knowledge packages via the [Model Context Protocol](https://modelcontextprotocol.io).
 
-**v1 focus:** **stdio** MCP (`zipwiki-mcp`) over the **local filesystem** (or OS-mounted cloud drives). Read/search is the **zipaccess library** ([ZIPACCESS.md](ZIPACCESS.md)) in-process; create is **zipwiki**. Hosted HTTP `/mcp` exists but is **not** the v1 product surface for create/query.
+**v1 focus:** **stdio** MCP (`zipwiki-mcp`) over the **local filesystem** (or OS-mounted cloud drives). Read/search is the **zipaccess library** ([ZIPACCESS.md](ZIPACCESS.md)) in-process. The **zipwiki** command creates and queries. Hosted HTTP `/mcp` exists but is **not** the v1 product surface for create/query.
 
 ## Transports
 
@@ -18,7 +18,7 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 
 | Tool | Purpose | Owned by |
 | --- | --- | --- |
-| `open` | Catalog (same fields as `zipaccess open --json`) + manifest summary + open sequence | zipaccess lib |
+| `open` | Catalog (same fields as `zipwiki open --json`) + manifest summary + open sequence | zipaccess lib |
 | `list` | Entry inventory (`prefix` / `limit`) | zipaccess lib |
 | `search` | Ranked OKF search (snippets + `readHints`). Parsed text only when OKF misses | zipaccess lib |
 | `query` | Search plus capped top-K OKF/parsed bodies | zipaccess lib |

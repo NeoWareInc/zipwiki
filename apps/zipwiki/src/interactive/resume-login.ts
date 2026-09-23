@@ -13,6 +13,7 @@ const SKIP_LOGIN_PROMPT = new Set([
   "config",
   "list",
   "catalog",
+  "search",
   "test",
   "read",
   "read-manifest",
@@ -39,6 +40,10 @@ export function signedOutNeedsLogin(): boolean {
 }
 
 export function commandSkipsLoginPrompt(names: readonly string[]): boolean {
+  const [leaf, parent] = names;
+  // Top-level `open` is the catalog. `settings open` still needs an account.
+  if (leaf === "open" && parent === "settings") return false;
+  if (leaf === "open") return true;
   return names.some((name) => SKIP_LOGIN_PROMPT.has(name));
 }
 

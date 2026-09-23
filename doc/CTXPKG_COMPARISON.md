@@ -34,7 +34,7 @@ Do **not** replace `.zipwiki` with `.ctxpkg` as ZipWiki’s wire format. Treat C
 | :---- | :---- | :---- |
 | **Package shape** | ZIP archive: `META-INF/manifest.json`, `wiki/parsed/`, optional `wiki/okf/`, optional origin Extra Field `0x014F` | Single readable JSON file: `manifest` + `content.context_graph` |
 | **Knowledge model** | Document-centric: full (or best-effort) parses + OKF markdown skims (YAML frontmatter). Search prefers OKF, then parsed text | Graph-native: typed nodes (`fact`, `gotcha`, …) and edges (`elaborates`, …). No full document bodies as the primary payload |
-| **Integrity** | ZIP CRC-32; NeoZip Extra Fields / SHA-256 when present; verified reads in zipaccess | Cryptographic seals (content hashes + signature). Failed seal → reject package before load |
+| **Integrity** | ZIP CRC-32; NeoZip Extra Fields / SHA-256 when present; verified reads in the zipaccess library | Cryptographic seals (content hashes + signature). Failed seal → reject package before load |
 | **Signing** | NeoZip L1–L3 / sidecars (optional, integrity-oriented); not ZipWiki’s main marketing story | Normative ed25519-style package signatures in the standard |
 | **Merge** | `zipwiki update` (add/del/update files in one archive). No formal “disagreement” graph | Deterministic multi-package merge; conflicts recorded openly, not silently overwritten |
 | **Distribution** | File copy, backup, unzip; product portal / API later. No public package registry | Open registry protocol; public registry (ctxpkg.com) with signed publish, secret scanning, verified publishers |
@@ -79,7 +79,7 @@ These are **incremental** improvements inspired by CTXPKG — compatible with to
 
 | Idea | Why | Notes |
 | :---- | :---- | :---- |
-| **Stronger package attestation UX** | CTXPKG makes “verify before load” the default story | Surface zipaccess verify results more loudly (CRC / SHA / origin fetch). Optional NeoZip signing where already in the parent format — product copy can stress “sealed archive” without a new extension |
+| **Stronger package attestation UX** | CTXPKG makes “verify before load” the default story | Surface zipaccess library verify results more loudly (CRC / SHA / origin fetch). Optional NeoZip signing where already in the parent format — product copy can stress “sealed archive” without a new extension |
 | **Richer OKF provenance / trust fields** | OKF v0.2 already aims at provenance, trust, freshness, lifecycle | Align ZipWiki OKF producer with those frontmatter fields so skims answer “who wrote this and from what?” — closer to CTXPKG’s trust questions without a graph rewrite |
 | **Optional “session lessons” as OKF-like markdown** | Agents learn gotchas during pack/query that aren’t in the PDF | Allow a small `wiki/okf/` or sidecar set for *agent-authored* notes (facts/gotchas), still searchable like OKF — **not** a full edge graph |
 | **Light share / publish path** | CTXPKG’s registry shows demand for named, installable context | If product needs share/backup: signed upload of `.zipwiki` to user storage or a private catalog — not a public open registry in v1 |

@@ -1,16 +1,17 @@
 # CLI reference
 
-ZipWiki ships two command-line tools. Phase 2/3 (Beta) is TypeScript — it
-runs wherever Node runs. Rust binaries come after Beta (Phase 4), and only
-on machines we compile for.
+ZipWiki ships one command. Phase 2/3 (Beta) is TypeScript — it runs wherever
+Node runs. A Rust binary comes after Beta (Phase 4), and only on machines we
+compile for.
 
-| Tool | Job |
+| Command group | Job |
 | --- | --- |
-| **zipwiki** | **Create** — `pack` sources into a `.zipwiki` |
-| **zipaccess** | **Query** — `open` / `search` / `read` / `extract` / `origin` |
+| **Create** | `zipwiki pack` / `update` — build a `.zipwiki` knowledge base |
+| **Query** | `zipwiki open` / `search` / `read` / `extract` / `origin` |
 
 Agent query of a finished package is **stdio MCP** ([MCP.md](MCP.md)), backed by
-the zipaccess library ([ZIPACCESS.md](ZIPACCESS.md)).
+the zipaccess library ([ZIPACCESS.md](ZIPACCESS.md)). Query commands do not
+require a ZipWiki account. Pack and OKF can.
 
 Local pack must work **without** an account (LiteParse + `--no-ai-okf`).
 Settings home is `~/.zipwiki` (`ZIPWIKI_HOME` relocates it).
@@ -37,17 +38,15 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 `zipwiki update` rewrites an archive (`--add` / `--update` / `--del`). Unchanged
 members are copied compressed.
 
-Inspect dumps: `zipwiki list`, `zipwiki catalog`, `zipwiki test`,
-`zipwiki read`, `zipwiki read-manifest`, `zipwiki extract`.
-
-## zipaccess query
+## zipwiki query
 
 ```bash
-zipaccess open ./knowledge/docs.zipwiki
-zipaccess search ./knowledge/docs.zipwiki "deed"
-zipaccess read ./knowledge/docs.zipwiki --okf deed
-zipaccess read ./knowledge/docs.zipwiki --parsed deed.pdf
-zipaccess origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
+zipwiki open ./knowledge/docs.zipwiki
+zipwiki search ./knowledge/docs.zipwiki "deed"
+zipwiki read ./knowledge/docs.zipwiki --okf deed
+zipwiki read ./knowledge/docs.zipwiki --parsed deed.pdf
+zipwiki read -p ./knowledge/docs.zipwiki --path wiki/okf/deed.md
+zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
 ```
 
 | Command | Effect |

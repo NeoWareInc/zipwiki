@@ -230,7 +230,7 @@ export const PLUGIN_BUNDLE = [
   },
   {
     title: "CLI (bundled)",
-    body: "The same engine for CI and scripts. Most people never open a terminal. The plugin includes zipwiki (pack) and zipaccess (query).",
+    body: "The same engine for CI and scripts. Most people never open a terminal. The plugin includes the zipwiki command for pack and query.",
   },
 ] as const;
 
@@ -334,7 +334,7 @@ export const ROADMAP: Array<{
   },
   {
     title: "TypeScript pack, query, MCP",
-    why: "The Beta engine. zipwiki pack, zipaccess open/search/read, and stdio MCP run on Node, agents, and Vercel — anywhere TypeScript runs.",
+    why: "The Beta engine. zipwiki pack, zipwiki open/search/read, and stdio MCP run on Node, agents, and Vercel — anywhere TypeScript runs.",
     status: "Next",
   },
   {
@@ -354,7 +354,7 @@ export const ROADMAP: Array<{
   },
   {
     title: "Rust native CLI",
-    why: "After TypeScript Beta. zipwiki / zipaccess binaries only on machines we compile for (macOS arm64 first). TypeScript stays the everywhere runtime.",
+    why: "After TypeScript Beta. A zipwiki binary only on machines we compile for (macOS arm64 first). TypeScript stays the everywhere runtime.",
     status: "Later",
   },
   {
@@ -407,5 +407,5 @@ export const ROADMAP: Array<{
 export const ADVANCED_CLI = `zipwiki pack ./florida-laws -o knowledge/florida-laws.zipwiki \\
   --origin-pattern 'Ch_(?<year>\\d{4})-(?<chapter>\\d+)' \\
   --origin-url-template 'https://laws.flrules.org/{year}/{chapter}'
-zipaccess open knowledge/florida-laws.zipwiki
-zipaccess search knowledge/florida-laws.zipwiki "homestead exemption"`;
+zipwiki open knowledge/florida-laws.zipwiki
+zipwiki search knowledge/florida-laws.zipwiki "homestead exemption"`;

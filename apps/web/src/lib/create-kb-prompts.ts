@@ -75,7 +75,7 @@ export const QUERY_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, search ./knowledge/sample-docs.zipwiki for "lease" and show the top hits with short snippets.',
     debugCli:
-      'pnpm zipaccess -- search ./knowledge/sample-docs.zipwiki "lease"',
+      'pnpm zipwiki -- search ./knowledge/sample-docs.zipwiki "lease"',
   },
   {
     id: "read-okf",

@@ -4,9 +4,9 @@
 
 | Tool | Job |
 | --- | --- |
-| **zipwiki** | **Write** — ingest, parse, optional OKF, compress → `.zipwiki`. Test dumps: `zipwiki read` / `read-manifest`. Catalog: `zipwiki catalog` / `list --catalog` |
-| **zipaccess** | **Library** `@zipwiki/cli/access` + **query CLI** (`zipaccess open` / `search` / `read`) |
-| **stdio MCP** | Agents on this machine → zipaccess library + zipwiki |
+| **zipwiki** | **Create and query** — `pack` / `update`, then `open` / `search` / `read` / `extract` / `origin` |
+| **zipaccess** | **Library** `@zipwiki/cli/access` used by `zipwiki` query commands and MCP |
+| **stdio MCP** | Agents on this machine → zipaccess library |
 
 The `.zipwiki` file remains the unit of storage and distribution. zipaccess never requires uploading the package to a hosted API.
 
@@ -24,8 +24,8 @@ The `.zipwiki` file remains the unit of storage and distribution. zipaccess neve
 Ships **inside** the zipwiki package (TypeScript runtime, Phase 2):
 
 - Library: `@zipwiki/cli/access`
-- Query CLI: `zipaccess` (`open` / `search` / `read` / `extract` / `origin`)
-- Test dumps: `zipwiki read` / `zipwiki read-manifest` / `zipwiki catalog`
+- Query CLI: `zipwiki open` / `search` / `read` / `extract` / `origin`
+- Catalog alias: `zipwiki catalog` / `zipwiki list --catalog`
 
 stdio MCP (`zipwiki-mcp` / `apps/mcp`) calls this library in-process.
 
@@ -35,23 +35,23 @@ stdio MCP (`zipwiki-mcp` / `apps/mcp`) calls this library in-process.
 
 ```bash
 # Readable catalog (one line per primary)
-zipaccess open ./company-kb.zipwiki
+zipwiki open ./company-kb.zipwiki
 zipwiki catalog ./company-kb.zipwiki
 zipwiki list ./company-kb.zipwiki --catalog
 
 # Search with read hints
-zipaccess search ./company-kb.zipwiki "lease"
+zipwiki search ./company-kb.zipwiki "lease"
 
 # Stream bodies
-zipaccess read ./company-kb.zipwiki --okf lease
-zipaccess read ./company-kb.zipwiki --parsed lease.txt
+zipwiki read ./company-kb.zipwiki --okf lease
+zipwiki read ./company-kb.zipwiki --parsed lease.txt
 zipwiki read -p ./company-kb.zipwiki --path wiki/okf/lease.md
 zipwiki read-manifest -p ./company-kb.zipwiki
 zipwiki extract ./company-kb.zipwiki /tmp/kb-out -o
-zipaccess origin ./company-kb.zipwiki --parsed lease.txt
-zipaccess origin ./company-kb.zipwiki --parsed lease.txt --fetch -o /tmp/lease.txt
-zipaccess read ./company-kb.zipwiki --parsed lease.txt --origin
-zipaccess extract ./company-kb.zipwiki /tmp/kb-out --path wiki/parsed/lease.txt.md --fetch-origin
+zipwiki origin ./company-kb.zipwiki --parsed lease.txt
+zipwiki origin ./company-kb.zipwiki --parsed lease.txt --fetch -o /tmp/lease.txt
+zipwiki read ./company-kb.zipwiki --parsed lease.txt --origin
+zipwiki extract ./company-kb.zipwiki /tmp/kb-out --path wiki/parsed/lease.txt.md --fetch-origin
 ```
 
 Default package when omitted: `wiki.zipwiki` in the current directory.
@@ -77,10 +77,10 @@ stdio MCP (`zipwiki-mcp`) registers **short verbs** (scoped by the server name `
 | One concept | `read_okf` | |
 | Parsed markdown | `read_parsed` | Size-capped (`maxBytes`); includes `origin` (0x014F) when present |
 | Stream entry | `read_entry` | Verified inflate; JSON (UTF-8 or base64) |
-| **Origin** | `origin` / `zipaccess origin` / `zipwiki origin` | Extra Field `0x014F` URI + CRC; `--fetch` downloads and verifies CRC-32 |
+| **Origin** | `origin` / `zipwiki origin` | Extra Field `0x014F` URI + CRC; `--fetch` downloads and verifies CRC-32 |
 | **Read manifest** | `read_manifest` / `zipwiki read-manifest` | Always `META-INF/manifest.json` as raw JSON |
-| **Read to LLM** | `read` / `zipwiki read` / `zipaccess read` | Raw bodies; several paths separated by `===== ZIPWIKI <path> =====`. `--origin` prints locator; `--fetch-origin` CRC-checks the original |
-| **Catalog (human)** | `zipaccess open` / `zipwiki catalog` | Pretty one-line-per-primary table |
+| **Read to LLM** | `read` / `zipwiki read` | Raw bodies; several paths separated by `===== ZIPWIKI <path> =====`. `--origin` prints locator; `--fetch-origin` CRC-checks the original |
+| **Catalog (human)** | `zipwiki open` / `zipwiki catalog` | Pretty one-line-per-primary table |
 | **Extract** | `extract` / `zipwiki extract` | Verified write to disk (CRC + SHA-256 when present). `--fetch-origin` also downloads originals |
 | **Pack** | `pack` / `zipwiki pack` | Create `.zipwiki` (default: skip AI OKF) |
 | **Update** | `update` / `zipwiki update` | Add / update / delete primaries |
@@ -105,7 +105,7 @@ Local open/search does **not** require a hosted API connection. Pack/parse may.
 | Host | How |
 | --- | --- |
 | Claude Code / Desktop | stdio MCP backed by the **zipaccess library** + local `.zipwiki` path |
-| Human / scripts | `zipaccess open` / `search` / `read`; `zipwiki catalog` / `read` dumps |
+| Human / scripts | `zipwiki open` / `search` / `read` |
 
 Open sequence:
 
@@ -129,7 +129,7 @@ Create sequence (default):
 | `@zipwiki/cli/access` | Specified (Phase 2 runtime) |
 | MCP `search` / `query` | Specified (hits include `readHints`) |
 | MCP `open` catalog | Specified (`catalog` rows on open) |
-| `zipaccess` CLI | Specified (`open` / `search` / `read` / `extract` / `origin`) |
+| `zipwiki` query commands | Specified (`open` / `search` / `read` / `extract` / `origin`) |
 | MCP `okf_enrich` | Specified (Phase 2 runtime) |
 | MCP `origin` | Specified (`fetch` CRC-checks Extra Field 0x014F) |
 | `zipwiki read` / `read-manifest` / `origin` | Specified (test dumps) |

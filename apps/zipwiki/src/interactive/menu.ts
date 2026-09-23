@@ -62,11 +62,11 @@ export async function runMainMenu(): Promise<void> {
   if (choice === "help") {
     console.log(
       [
-        "zipwiki pack <files…>      Create .zipwiki (LiteParse works without login)",
+        "zipwiki pack <files…>      Create a .zipwiki knowledge base",
+        "zipwiki open|search|read   Query a .zipwiki already on disk",
         "zipwiki auth login         Connect account (hosted parse/OKF + settings)",
         "zipwiki settings show|pull|open",
         "zipwiki config api-key     Local BYO secrets only",
-        "zipwiki list|test|extract  Inspect archives (offline OK)",
         "",
         "Account pack defaults live on the dashboard after login; zipwiki.config.json overlays.",
       ].join("\n"),

@@ -1,6 +1,6 @@
 # knowledge/
 
-Source corpora for pack / zipaccess smoke.
+Source corpora for pack / query smoke.
 
 | Path | What |
 | --- | --- |
@@ -20,7 +20,7 @@ Phase 2 smoke (no login, LiteParse):
 ```bash
 pnpm sample-zipwiki
 pnpm sample-zipwiki:test1
-pnpm smoke:zipaccess
+pnpm smoke:zipwiki
 ```
 
 Stage / pack (writes `.output/test1/test1.zipwiki` + extract):

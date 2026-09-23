@@ -16,9 +16,9 @@ This is the public-repo gate, not a lab workplan.
 
 ## Phase 2
 
-- [x] `@zipwiki/zipwiki` pack / zipaccess (LiteParse + `--no-ai-okf`, no login)
+- [x] `@zipwiki/zipwiki` pack and query (LiteParse + `--no-ai-okf`, no login)
 - [x] `@zipwiki/mcp` stdio (`open` / `search` / `read`)
-- [x] Smoke: `pack knowledge/test2` → `zipaccess open` → `search deed`
+- [x] Smoke: `pack knowledge/test2` → `zipwiki open` → `search deed`
 - [x] Portal routes in `apps/web` (`/dashboard/settings` + Convex functions)
 
 Need `npx convex dev` (new ZipWiki project) before settings persist.
@@ -47,12 +47,12 @@ New Convex/Stripe projects later — not zipcodex.ai credentials.
 
 **Phase 2 — TypeScript engine (done):** `pnpm zipwiki -- pack knowledge/test2
 -o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse`; then
-`pnpm smoke:zipaccess`. MCP handlers `open` / `search` / `read_okf` /
+`pnpm smoke:zipwiki`. MCP handlers `open` / `search` / `read_okf` /
 `read_parsed`.
 
 **Phase 3 — TypeScript Beta:** plugin + hosted API + dashboard on zipwiki.ai.
 TypeScript only — runs wherever Node / agents / Vercel run.
 
 **Phase 4 — Rust (after Beta):** one compiled environment packs a `.zipwiki`
-that TypeScript zipaccess can open. Rust is per-machine; TypeScript stays the
+that the TypeScript zipaccess library can open. Rust is per-machine; TypeScript stays the
 everywhere runtime.
