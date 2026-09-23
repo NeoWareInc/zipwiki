@@ -18,6 +18,7 @@ export type ApiKeyContext = {
   creditsRemaining: number;
   creditsUnlimited: boolean;
   accountDisabled: boolean;
+  email: string;
 };
 
 export const resolveByToken = internalQuery({
@@ -33,6 +34,16 @@ export const resolveByToken = internalQuery({
     const account = await ctx.db.get(key.accountId);
     if (!account) return null;
     const credits = creditSnapshot(account);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", account.userId))
+      .unique();
+    const user = await ctx.db.get(account.userId);
+    const email =
+      profile?.email ||
+      (user && "email" in user && typeof user.email === "string"
+        ? user.email
+        : "");
 
     return {
       apiKeyId: key._id,
@@ -42,6 +53,7 @@ export const resolveByToken = internalQuery({
       creditsUnlimited: credits.creditsUnlimited,
       accountStatus: account.status,
       accountDisabled: account.disabled,
+      email,
     };
   },
 });

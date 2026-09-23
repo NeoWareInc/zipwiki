@@ -171,16 +171,49 @@ export function buildEffectiveConfigView(input?: {
   };
 }
 
+function cliSignedIn(env: NodeJS.ProcessEnv = process.env): boolean {
+  return Boolean(env.ZIPWIKI_API_URL?.trim() && env.ZIPWIKI_API_KEY?.trim());
+}
+
+/**
+ * Pack asked for AI OKF or hosted parse, and this process cannot do it.
+ * An unsigned CLI has not loaded the portal; do not ask for a local vendor key.
+ */
 export function formatNonInteractiveSetupError(
   status: CredentialSetupStatus = needsCredentialSetup(),
 ): string {
+  if (!cliSignedIn()) {
+    return [
+      "This CLI is not signed in, so the parser and OKF from the ZipWiki portal were not loaded.",
+      "Run: zipwiki auth login",
+      "Then pack again. Parse and AI OKF follow the portal settings.",
+    ].join("\n");
+  }
+
+  if (status.missing.includes("ANTHROPIC_API_KEY")) {
+    return [
+      "Portal OKF uses your Anthropic key, and ANTHROPIC_API_KEY is not set on this machine.",
+      "Run: zipwiki config api-key anthropic <key>",
+    ].join("\n");
+  }
+
+  if (status.missing.includes("LLAMA_CLOUD_API_KEY")) {
+    return [
+      "Portal parse uses your LlamaParse key, and LLAMA_CLOUD_API_KEY is not set on this machine.",
+      "Run: zipwiki config api-key llama <key>",
+    ].join("\n");
+  }
+
+  if (status.useAi && !status.hasOkfKey) {
+    return [
+      "AI OKF is on in the portal, and this machine has no key for that OKF source.",
+      "Hosted ZipWiki OKF applies after zipwiki auth login.",
+      "Anthropic on this machine: zipwiki config api-key anthropic <key>",
+    ].join("\n");
+  }
+
   return [
-    "OKF AI enrichment needs an API key, but none is configured.",
-    "Set ANTHROPIC_API_KEY for local OKF, LLAMA_CLOUD_API_KEY for LlamaParse,",
-    "or ZIPWIKI_API_URL for the hosted API (login via `zipwiki init` to get a key when required).",
-    "Override with ZIPWIKI_PARSE_CREDENTIAL / ZIPWIKI_OKF_CREDENTIAL",
-    "(llama | anthropic | local), or use `zipwiki config api-key`,",
-    "or pass --no-ai-okf for deterministic OKF.",
+    "Pack needs credentials that are not set on this machine.",
     status.missing.length
       ? `Missing: ${status.missing.join(", ")}`
       : undefined,

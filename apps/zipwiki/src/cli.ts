@@ -31,6 +31,11 @@ import {
 } from "./config-cmd.js";
 import { runMainMenu } from "./interactive/menu.js";
 import {
+  commandNames,
+  commandSkipsLoginPrompt,
+  resumeLoginIfSavedSettings,
+} from "./interactive/resume-login.js";
+import {
   runAuthExportEnv,
   runAuthImport,
   runAuthLogin,
@@ -673,8 +678,8 @@ configCmd
   .description("Show effective settings (secrets redacted)")
   .option("--config <file>", "Project config path")
   .option("--format <fmt>", "text|json", "text")
-  .action((opts) => {
-    runConfigShowCommand({
+  .action(async (opts) => {
+    await runConfigShowCommand({
       config: opts.config,
       format: opts.format === "json" ? "json" : "text",
     });
@@ -1080,6 +1085,18 @@ program
       quiet: opts.quiet === true,
     });
   });
+
+program.hook("preAction", async (_thisCommand, actionCommand) => {
+  if (commandSkipsLoginPrompt(commandNames(actionCommand))) return;
+  // Local scripted packs pass --no-ai-okf and do not need the portal session.
+  if (process.argv.includes("--no-ai-okf")) return;
+  try {
+    await resumeLoginIfSavedSettings();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+});
 
 const argv = process.argv.filter((arg, index) => !(index >= 2 && arg === "--"));
 if (argv.slice(2).length === 0) {

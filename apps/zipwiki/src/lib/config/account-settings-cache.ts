@@ -183,8 +183,8 @@ export async function syncAccountSettingsForPack(opts?: {
   if (!isZipwikiAccountConnected()) {
     if (!opts?.quiet) {
       console.error(
-        "[zipwiki] No ZipWiki account — dashboard parser settings are not loaded.\n" +
-          "  Hosted parse/OKF and website settings: zipwiki auth login",
+        "[zipwiki] CLI is not signed in, so portal parser and OKF settings were not loaded.\n" +
+          "  Run: zipwiki auth login",
       );
     }
     return offlineLocalSettingsResponse();

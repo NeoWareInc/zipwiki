@@ -8,36 +8,19 @@ import {
   zipwikiSettingsCachePath,
 } from "./lib/config/account-settings-cache.js";
 import {
+  dashboardSettingsUrl,
   resolveZipwikiApiUrl,
-  resolveZipwikiApiTarget,
   formatZipwikiApiTarget,
 } from "./lib/config/index.js";
 
 const execFileAsync = promisify(execFile);
 
-const DASHBOARD_SETTINGS = {
-  local: "http://localhost:5173/dashboard/settings",
-  dev: "https://zipwiki.ai/dashboard/settings",
-  production: "https://zipwiki.ai/dashboard/settings",
-} as const;
-
-function dashboardSettingsUrl(): string {
+function settingsPageUrl(): string {
   const cached = loadCachedAccountSettings();
-  const fromCache = cached?.setupUrl?.replace(/\?onboarding=1$/, "") ?? "";
-  if (
-    fromCache.startsWith("http://localhost") ||
-    fromCache.includes("zipwiki.ai")
-  ) {
-    return fromCache;
-  }
-  const target = resolveZipwikiApiTarget();
-  if (target === "production") return DASHBOARD_SETTINGS.production;
-  if (target === "dev" || target === "local") return DASHBOARD_SETTINGS.dev;
-  const api = resolveZipwikiApiUrl() ?? "";
-  if (api.includes("localhost") || api.includes("127.0.0.1")) {
-    return DASHBOARD_SETTINGS.local;
-  }
-  return DASHBOARD_SETTINGS.dev;
+  return dashboardSettingsUrl({
+    apiUrl: resolveZipwikiApiUrl(),
+    setupUrl: cached?.setupUrl,
+  });
 }
 
 export async function runSettingsShow(opts?: {
@@ -92,7 +75,7 @@ export async function runSettingsOpen(opts?: {
   noBrowser?: boolean;
 }): Promise<void> {
   requireAccountConnected();
-  const url = dashboardSettingsUrl();
+  const url = settingsPageUrl();
   console.error(`[zipwiki] Settings: ${url}`);
   if (opts?.noBrowser) return;
   try {

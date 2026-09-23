@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { after, describe, it } from "node:test";
 import {
   ZIPWIKI_HOME_ENV,
+  formatNonInteractiveSetupError,
   needsCredentialSetup,
   saveZipwikiOnboarding,
   loadZipwikiOnboarding,
@@ -59,5 +60,26 @@ describe("onboarding + credentials", () => {
       onboarding: o,
     });
     assert.equal(ok.needsSetup, false);
+  });
+
+  it("unsigned CLI asks for portal login, not a local LLM key", () => {
+    const savedUrl = process.env.ZIPWIKI_API_URL;
+    const savedKey = process.env.ZIPWIKI_API_KEY;
+    delete process.env.ZIPWIKI_API_URL;
+    delete process.env.ZIPWIKI_API_KEY;
+    try {
+      const text = formatNonInteractiveSetupError(
+        needsCredentialSetup({ useAi: true, env: process.env }),
+      );
+      assert.match(text, /zipwiki auth login/);
+      assert.doesNotMatch(text, /ANTHROPIC_API_KEY/);
+      assert.doesNotMatch(text, /OKF_API_KEY/);
+      assert.doesNotMatch(text, /No ZipWiki account/);
+    } finally {
+      if (savedUrl === undefined) delete process.env.ZIPWIKI_API_URL;
+      else process.env.ZIPWIKI_API_URL = savedUrl;
+      if (savedKey === undefined) delete process.env.ZIPWIKI_API_KEY;
+      else process.env.ZIPWIKI_API_KEY = savedKey;
+    }
   });
 });

@@ -10,6 +10,7 @@ import { REPO_ROOT } from "../lib/parse/index.js";
 import { runPack, type PackOptions } from "../pack.js";
 import { runConfigShowCommand } from "../config-cmd.js";
 import { runSettingsOpen } from "../settings-cmd.js";
+import { resumeLoginIfSavedSettings } from "./resume-login.js";
 import { isInteractiveTty } from "./tty.js";
 
 export async function runMainMenu(): Promise<void> {
@@ -17,6 +18,14 @@ export async function runMainMenu(): Promise<void> {
     console.error(
       "zipwiki: no command given. Try `zipwiki pack <files…>` or `zipwiki --help`.",
     );
+    process.exitCode = 1;
+    return;
+  }
+
+  try {
+    await resumeLoginIfSavedSettings();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
     process.exitCode = 1;
     return;
   }
@@ -47,7 +56,7 @@ export async function runMainMenu(): Promise<void> {
     return;
   }
   if (choice === "config") {
-    runConfigShowCommand({});
+    await runConfigShowCommand({});
     return;
   }
   if (choice === "help") {

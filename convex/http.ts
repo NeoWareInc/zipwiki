@@ -116,7 +116,37 @@ http.route({
       api_key: result.access_token,
       key_prefix: result.key_prefix,
       api_url: publicApiUrl(),
+      ...(result.email ? { email: result.email } : {}),
     });
+  }),
+});
+
+http.route({
+  path: "/auth/whoami",
+  method: "OPTIONS",
+  handler: httpAction(async () => corsPreflight()),
+});
+
+http.route({
+  path: "/auth/whoami",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    let token = "";
+    const header = req.headers.get("authorization") ?? "";
+    const bearer = /^Bearer\s+(.+)$/i.exec(header.trim())?.[1]?.trim() ?? "";
+    try {
+      const body = (await req.json()) as { api_key?: unknown };
+      if (typeof body.api_key === "string") token = body.api_key.trim();
+    } catch {
+      token = "";
+    }
+    token = token || bearer;
+    if (!token) return json({ error: "unauthorized" }, 401);
+    const keyCtx = await ctx.runQuery(internal.apiKeys.resolveByToken, {
+      token,
+    });
+    if (!keyCtx?.email) return json({ error: "unauthorized" }, 401);
+    return json({ email: keyCtx.email });
   }),
 });
 

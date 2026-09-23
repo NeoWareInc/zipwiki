@@ -18,7 +18,7 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, pack "./knowledge/test1" into ./knowledge/test1.zipwiki, enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "pnpm zipwiki -- pack knowledge/test1 -o ./knowledge/test1.zipwiki --no-ai-okf --parser liteparse",
+      "pnpm zipwiki -- pack knowledge/test1 -o ./knowledge/test1.zipwiki",
   },
   {
     id: "sample-docs",
@@ -28,7 +28,7 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, pack "./knowledge/test2" into ./knowledge/sample-docs.zipwiki, enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse",
+      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/sample-docs.zipwiki",
   },
   {
     id: "folder",
@@ -37,7 +37,7 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, pack "./path/to/docs" into ./knowledge/my-docs.zipwiki (recurse if needed), enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "mkdir -p knowledge && pnpm zipwiki -- pack ./path/to/docs -o ./knowledge/my-docs.zipwiki --no-ai-okf -r",
+      "mkdir -p knowledge && pnpm zipwiki -- pack ./path/to/docs -o ./knowledge/my-docs.zipwiki -r",
   },
   {
     id: "single-file",
@@ -46,7 +46,7 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, pack "./path/to/document.pdf" into ./knowledge/document.zipwiki, enrich it with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "mkdir -p knowledge && pnpm zipwiki -- pack ./path/to/document.pdf -o ./knowledge/document.zipwiki --no-ai-okf",
+      "mkdir -p knowledge && pnpm zipwiki -- pack ./path/to/document.pdf -o ./knowledge/document.zipwiki",
   },
 ];
 
@@ -58,7 +58,7 @@ export const QUERY_PROMPTS: ZipWikiPrompt[] = [
     description: "Summarize the packed test1 package.",
     prompt:
       "Using ZipWiki MCP, open ./knowledge/test1.zipwiki and summarize the package (manifest, OKF, primaries).",
-    debugCli: "pnpm zipwiki -- list ./knowledge/test1.zipwiki",
+    debugCli: "pnpm zipwiki -- catalog ./knowledge/test1.zipwiki",
   },
   {
     id: "open",
@@ -66,7 +66,7 @@ export const QUERY_PROMPTS: ZipWikiPrompt[] = [
     description: "Summarize what’s inside a .zipwiki.",
     prompt:
       "Using ZipWiki MCP, open ./knowledge/sample-docs.zipwiki and summarize the package (manifest, OKF, primaries).",
-    debugCli: "pnpm zipwiki -- list ./knowledge/sample-docs.zipwiki",
+    debugCli: "pnpm zipwiki -- catalog ./knowledge/sample-docs.zipwiki",
   },
   {
     id: "search",
@@ -75,7 +75,7 @@ export const QUERY_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, search ./knowledge/sample-docs.zipwiki for "lease" and show the top hits with short snippets.',
     debugCli:
-      'pnpm zipwiki -- read-manifest -p ./knowledge/sample-docs.zipwiki',
+      'pnpm zipaccess -- search ./knowledge/sample-docs.zipwiki "lease"',
   },
   {
     id: "read-okf",

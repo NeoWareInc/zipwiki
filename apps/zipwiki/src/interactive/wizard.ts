@@ -5,12 +5,12 @@ import pc from "picocolors";
 import {
   buildEffectiveConfigView,
   formatNonInteractiveSetupError,
-  formatZipwikiApiTarget,
   isOnboardingComplete,
   isSecretEnvConfigured,
   loadZipwikiConfig,
   loadZipwikiOnboarding,
   resolveOmitOriginalDocuments,
+  isRemoteOkfMode,
   resolveOkfCredentialSource,
   resolveParseCredentialSource,
   resolveZipwikiApiTarget,
@@ -86,7 +86,7 @@ function labelParseSummary(input: {
   const engine = `${input.parser}/${input.parserMode}`;
   switch (input.source) {
     case "zipwiki":
-      return `${heading("Document parsing")}: ZipWiki API · ${formatZipwikiApiTarget(input.apiUrl)} · ${keyStatus(input.hasKey)}`;
+      return `${heading("Document parsing")}: ZipWiki · ${keyStatus(input.hasKey)}`;
     case "llama":
       return `${heading("Document parsing")}: LlamaParse · ${keyStatus(input.hasKey)}`;
     default:
@@ -101,15 +101,15 @@ function labelOkfSummary(input: {
   apiUrl?: string;
   provider?: string;
 }): string {
-  if (!input.useAi) return `${heading("OKF (AI enrichment)")}: off`;
+  if (!input.useAi) return `${heading("OKF")}: off`;
   switch (input.source) {
     case "zipwiki":
-      return `${heading("OKF (AI enrichment)")}: ZipWiki API · ${formatZipwikiApiTarget(input.apiUrl)} · ${keyStatus(input.hasKey)}`;
+      return `${heading("OKF")}: ZipWiki · ${keyStatus(input.hasKey)}`;
     case "anthropic":
-      return `${heading("OKF (AI enrichment)")}: Anthropic · ${keyStatus(input.hasKey)}`;
+      return `${heading("OKF")}: Anthropic · ${keyStatus(input.hasKey)}`;
     default: {
       const provider = input.provider?.trim() || "local";
-      return `${heading("OKF (AI enrichment)")}: ${provider} · ${keyStatus(input.hasKey)}`;
+      return `${heading("OKF")}: ${provider} · ${keyStatus(input.hasKey)}`;
     }
   }
 }
@@ -183,7 +183,7 @@ async function configureZipwikiApi(
 
   const url = zipwikiApiUrlForTarget(target);
   updates.ZIPWIKI_API_URL = url;
-  p.log.message(`Using ${formatZipwikiApiTarget(url)}`);
+  p.log.message(`Using ${ZIPWIKI_API_PRESETS[target].label}`);
 
   let health;
   try {
@@ -708,6 +708,8 @@ export async function ensureCredentialsOrFail(input: {
   interactive: boolean;
 }): Promise<void> {
   if (!input.useAi) return;
+  // Hosted portal OKF uses the ZipWiki API, not a local LLM key.
+  if (isRemoteOkfMode()) return;
   if (isAiOkfConfigured()) return;
   void input.interactive;
   throw new Error(formatNonInteractiveSetupError());

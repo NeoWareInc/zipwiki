@@ -2,6 +2,17 @@
  * Allowed dashboard origins for Convex Auth redirects and similar links.
  * Prefer comma-separated WEB_ORIGIN; always include SITE_URL and local Vite.
  */
+/** One origin for links. Prefers a hosted https origin over localhost. */
+export function firstWebOrigin(): string {
+  const origins = allowedAuthOrigins().filter((origin) =>
+    /^https?:\/\//i.test(origin),
+  );
+  const hosted = origins.find(
+    (origin) => !/localhost|127\.0\.0\.1/i.test(origin),
+  );
+  return hosted ?? origins[0] ?? "http://localhost:5173";
+}
+
 export function allowedAuthOrigins(): string[] {
   const fromWeb = (process.env.WEB_ORIGIN ?? "")
     .split(",")

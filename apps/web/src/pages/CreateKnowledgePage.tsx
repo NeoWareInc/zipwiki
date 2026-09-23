@@ -32,11 +32,10 @@ export default function CreateKnowledgePage() {
           <li>Approve the tool call when asked.</li>
         </ol>
         <p className="text-xs text-(--muted)">
-          Create prompts always include AI OKF via the agent (
-          <code className="text-xs">okf_enrich</code>). Debug CLI runs from
-          the monorepo root (
-          <code className="text-xs">pnpm zipwiki -- … --no-ai-okf</code>
-          ) — enrich with MCP afterward.
+          Create prompts pack with your account parser, then enrich OKF with
+          the agent LLM (<code className="text-xs">okf_enrich</code>). The
+          debug command does the same pack from the monorepo root, using that
+          parser and AI OKF — it does not force LiteParse or skip OKF.
         </p>
       </section>
 

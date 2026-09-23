@@ -21,6 +21,13 @@ export type ZipwikiApiTarget = "local" | "dev" | "production";
  */
 export const ZIPWIKI_DEV_API_URL = "https://zipwiki-api-dev.fly.dev";
 
+/**
+ * Device codes are stored in Convex. The Fly dev app does not expose
+ * `POST /auth/device/code` (deployment dashing-cod-224).
+ */
+export const ZIPWIKI_DEV_DEVICE_AUTH_URL =
+  "https://dashing-cod-224.convex.site";
+
 /** URLs that mean "dev" (including legacy localhost and the custom domain). */
 export const ZIPWIKI_DEV_API_ALIASES = [
   ZIPWIKI_DEV_API_URL,
@@ -36,17 +43,17 @@ export const ZIPWIKI_API_PRESETS: Record<
   local: {
     url: ZIPWIKI_DEV_API_URL,
     label: "Dev",
-    hint: "hosted Dev API (same as --env dev; no local server)",
+    hint: "hosted Dev account",
   },
   dev: {
     url: ZIPWIKI_DEV_API_URL,
     label: "Dev",
-    hint: "hosted Dev API (zipwiki-api-dev.fly.dev)",
+    hint: "hosted Dev account",
   },
   production: {
     url: "https://api.zipwiki.ai",
     label: "Production",
-    hint: "release (api.zipwiki.ai)",
+    hint: "zipwiki.ai",
   },
 };
 
@@ -65,6 +72,96 @@ export function zipwikiApiUrlForTarget(target: ZipwikiApiTarget): string {
   return ZIPWIKI_API_PRESETS[target].url;
 }
 
+/** Where `auth login` requests and polls a device code. */
+export function zipwikiDeviceAuthUrl(target: ZipwikiApiTarget): string {
+  if (target === "local" || target === "dev") return ZIPWIKI_DEV_DEVICE_AUTH_URL;
+  return zipwikiApiUrlForTarget(target);
+}
+
+function firstHttpOrigin(value: string): string | undefined {
+  for (const part of value.split(",")) {
+    const match = part.trim().match(/^https?:\/\/[^\s,]+/i);
+    if (match) return match[0].replace(/\/+$/, "");
+  }
+  return undefined;
+}
+
+/** Browser page for approving a device code. Drops a comma-joined WEB_ORIGIN. */
+export function deviceApprovalPage(input: {
+  verificationUri: string;
+  verificationUriComplete?: string;
+  userCode: string;
+}): string {
+  const complete = input.verificationUriComplete?.trim();
+  if (complete && /^https?:\/\/[^,\s]+$/i.test(complete)) return complete;
+  const origin =
+    firstHttpOrigin(input.verificationUri) ??
+    firstHttpOrigin(complete ?? "") ??
+    "https://zipwiki.ai";
+  const base = origin.replace(/\/cli\/device.*$/i, "").replace(/\/+$/, "");
+  return `${base}/cli/device?user_code=${encodeURIComponent(input.userCode)}`;
+}
+
+const DASHBOARD_SETTINGS = {
+  local: "http://localhost:5173/dashboard/settings",
+  dev: "https://zipwiki-web-dev.vercel.app/dashboard/settings",
+  production: "https://zipwiki.ai/dashboard/settings",
+} as const;
+
+/**
+ * Dashboard settings page for the API this CLI is signed into.
+ * A cached production URL does not override a dev login.
+ */
+export function dashboardSettingsUrl(input?: {
+  apiUrl?: string;
+  setupUrl?: string | null;
+}): string {
+  const apiUrl = input?.apiUrl ?? resolveZipwikiApiUrl();
+  const target = resolveZipwikiApiTarget(apiUrl);
+  const fallback =
+    target === "production"
+      ? DASHBOARD_SETTINGS.production
+      : target === "local"
+        ? DASHBOARD_SETTINGS.local
+        : DASHBOARD_SETTINGS.dev;
+
+  const setup = input?.setupUrl?.trim();
+  if (!setup) return fallback;
+  const origin = firstHttpOrigin(setup);
+  if (!origin) return fallback;
+  const page = setup.includes(",")
+    ? `${origin.replace(/\/dashboard\/.*$/i, "").replace(/\/cli\/.*$/i, "")}/dashboard/settings`
+    : setup.replace(/\?onboarding=1$/, "");
+
+  if (target === "production") {
+    return page.startsWith("https://zipwiki.ai/") ? page : fallback;
+  }
+  if (
+    page.startsWith("https://zipwiki-web-dev.vercel.app/") ||
+    page.startsWith("http://localhost") ||
+    page.startsWith("http://127.0.0.1")
+  ) {
+    return page;
+  }
+  return fallback;
+}
+
+/**
+ * API base saved after login. A missing or local URL from Convex falls back
+ * to the Fly host for this target.
+ */
+export function accountApiUrlAfterLogin(
+  approvedUrl: string | undefined,
+  target: ZipwikiApiTarget,
+): string {
+  const fallback = zipwikiApiUrlForTarget(target);
+  const url = approvedUrl?.trim().replace(/\/+$/, "") ?? "";
+  if (!url || url.includes(",") || /localhost|127\.0\.0\.1/i.test(url)) {
+    return fallback;
+  }
+  return url;
+}
+
 /** Match a configured URL to a named target (trailing slashes ignored). */
 export function resolveZipwikiApiTarget(
   url: string | undefined = resolveZipwikiApiUrl(),
@@ -80,9 +177,8 @@ export function resolveZipwikiApiTarget(
 
 export function formatZipwikiApiTarget(url: string | undefined): string {
   const target = resolveZipwikiApiTarget(url);
-  if (!target) return url?.trim() || "(unset)";
-  const preset = ZIPWIKI_API_PRESETS[target];
-  return `${preset.label} (${preset.url})`;
+  if (!target) return "Custom";
+  return ZIPWIKI_API_PRESETS[target].label;
 }
 
 function envFlagTrue(value: string | undefined): boolean {

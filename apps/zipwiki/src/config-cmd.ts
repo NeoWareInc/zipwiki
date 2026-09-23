@@ -5,14 +5,17 @@ import {
   MANAGED_HOME_ENV_KEYS,
   buildEffectiveConfigView,
   findConfigPath,
-  formatZipwikiApiTarget,
   loadZipwikiConfig,
+  resolveZipwikiApiKey,
+  resolveZipwikiApiTarget,
   saveZipwikiHomeEnv,
   shadowedHomeEnvKeys,
   snapshotShellEnv,
+  zipwikiDeviceAuthUrl,
   zipwikiHomeDir,
   zipwikiHomeEnvPath,
   zipwikiOnboardingPath,
+  type EffectiveConfigView,
   type ManagedHomeEnvKey,
 } from "./lib/config/index.js";
 import { OKF_PROVIDERS, isOkfProviderId } from "./lib/okf/index.js";
@@ -50,34 +53,96 @@ function keyStatus(ok: boolean): string {
   return ok ? "ready" : "needs setup";
 }
 
-function formatParseConfigLine(view: ReturnType<typeof buildEffectiveConfigView>): string {
+function environmentName(url: string | undefined): string | undefined {
+  const target = resolveZipwikiApiTarget(url);
+  if (target === "production") return "Production";
+  if (target === "dev" || target === "local") return "Dev";
+  return undefined;
+}
+
+function formatParseConfigLine(view: EffectiveConfigView): string {
   const source = view.credentials.parseCredential;
-  const engine = view.project
-    ? `${view.project.parserEngine}/${view.project.parserMode}`
-    : "default";
   const key = keyStatus(view.credentials.hasParseKey);
   if (source === "zipwiki") {
-    return `${heading("Document parsing")}: ZipWiki API · ${formatZipwikiApiTarget(view.env.ZIPWIKI_API_URL)} · ${key}`;
+    return `${heading("Document parsing")}: ZipWiki · ${key}`;
   }
   if (source === "llama") {
     return `${heading("Document parsing")}: LlamaParse · ${key}`;
   }
-  return `${heading("Document parsing")}: Local LiteParse · ${engine} · ${key}`;
+  return `${heading("Document parsing")}: Local LiteParse · ${key}`;
 }
 
-function formatOkfConfigLine(view: ReturnType<typeof buildEffectiveConfigView>): string {
-  if (!view.credentials.useAi) return `${heading("OKF (AI enrichment)")}: off`;
+function formatOkfConfigLine(view: EffectiveConfigView): string {
+  if (!view.credentials.useAi) return `${heading("OKF")}: off`;
   const source = view.credentials.okfCredential;
   const key = keyStatus(view.credentials.hasOkfKey);
   if (source === "zipwiki") {
-    return `${heading("OKF (AI enrichment)")}: ZipWiki API · ${formatZipwikiApiTarget(view.env.ZIPWIKI_API_URL)} · ${key}`;
+    return `${heading("OKF")}: ZipWiki · ${key}`;
   }
   if (source === "anthropic") {
-    return `${heading("OKF (AI enrichment)")}: Anthropic · ${key}`;
+    return `${heading("OKF")}: Anthropic · ${key}`;
   }
   const provider = view.credentials.okfProvider ?? "local";
-  const model = view.credentials.okfModel ?? "default";
-  return `${heading("OKF (AI enrichment)")}: ${provider}/${model} · ${key}`;
+  return `${heading("OKF")}: ${provider} · ${key}`;
+}
+
+export function formatConfigShowText(
+  view: EffectiveConfigView,
+  email?: string,
+): string {
+  const signedIn = Boolean(view.env.ZIPWIKI_API_KEY);
+  const account =
+    email?.trim() || view.env.ZIPWIKI_ACCOUNT_EMAIL?.trim() || "";
+  const lines = [
+    `${heading("Account")}: ${
+      account || (signedIn ? "signed in" : "not signed in")
+    }`,
+  ];
+  const envName = environmentName(view.env.ZIPWIKI_API_URL);
+  if (signedIn && envName) {
+    lines.push(`${heading("Environment")}: ${envName}`);
+  }
+  lines.push(formatParseConfigLine(view), formatOkfConfigLine(view));
+  if (view.project) {
+    lines.push(
+      `${heading("Archive")}: ${
+        view.project.omitOriginalDocuments
+          ? "parsed text only"
+          : "parsed text and original files"
+      }`,
+      `${heading("Compression")}: ${view.project.packCompression} ${view.project.packLevel}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+async function lookupAccountEmail(): Promise<string | undefined> {
+  const saved = process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim();
+  if (saved) return saved;
+  const key = resolveZipwikiApiKey();
+  if (!key) return undefined;
+  const target = resolveZipwikiApiTarget() ?? "dev";
+  const base =
+    target === "production"
+      ? undefined
+      : zipwikiDeviceAuthUrl(target === "local" ? "dev" : target);
+  if (!base) return undefined;
+  try {
+    const res = await fetch(`${base}/auth/whoami`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ api_key: key }),
+    });
+    if (!res.ok) return undefined;
+    const body = (await res.json()) as { email?: unknown };
+    const email = typeof body.email === "string" ? body.email.trim() : "";
+    if (!email) return undefined;
+    saveZipwikiHomeEnv({ ZIPWIKI_ACCOUNT_EMAIL: email });
+    process.env.ZIPWIKI_ACCOUNT_EMAIL = email;
+    return email;
+  } catch {
+    return undefined;
+  }
 }
 
 export function runConfigPathCommand(opts: ConfigCommandOptions = {}): void {
@@ -106,7 +171,9 @@ export function runConfigPathCommand(opts: ConfigCommandOptions = {}): void {
   console.log(lines.join("\n"));
 }
 
-export function runConfigShowCommand(opts: ConfigCommandOptions = {}): void {
+export async function runConfigShowCommand(
+  opts: ConfigCommandOptions = {},
+): Promise<void> {
   const { config, configPath } = loadZipwikiConfig({
     configPath: opts.config,
   });
@@ -121,31 +188,8 @@ export function runConfigShowCommand(opts: ConfigCommandOptions = {}): void {
     return;
   }
 
-  const lines = [
-    `Home: ${view.homeDir}`,
-    `Env file: ${view.homeEnvPath}`,
-    `Onboarding: ${view.onboardingPath}`,
-    `Project config: ${view.projectConfigPath ?? "(none)"}`,
-    `Onboarding complete: ${view.credentials.onboardingComplete}`,
-    formatParseConfigLine(view),
-    formatOkfConfigLine(view),
-  ];
-  if (view.project) {
-    lines.push(
-      `${heading("Archive contents")}: ${
-        view.project.omitOriginalDocuments
-          ? "parsed text only"
-          : "parsed text + original files"
-      }`,
-      `${heading("Zip compression")}: ${view.project.packCompression} ${view.project.packLevel}`,
-    );
-  }
-  lines.push("", "Managed env (redacted):");
-  for (const [k, v] of Object.entries(view.env)) {
-    if (v === undefined) continue;
-    lines.push(`  ${k}=${v}`);
-  }
-  console.log(lines.join("\n"));
+  const email = await lookupAccountEmail();
+  console.log(formatConfigShowText(view, email));
 }
 
 export function runConfigSetCommand(

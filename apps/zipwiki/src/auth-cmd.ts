@@ -14,12 +14,15 @@ import {
   type ClientConfig,
 } from "@zipwiki/api-client";
 import {
+  accountApiUrlAfterLogin,
+  deviceApprovalPage,
   formatZipwikiApiTarget,
   resolveAuthLoginTarget,
   resolveZipwikiApiKey,
   resolveZipwikiApiUrl,
   saveZipwikiHomeEnv,
   zipwikiApiUrlForTarget,
+  zipwikiDeviceAuthUrl,
   zipwikiHomeEnvPath,
 } from "./lib/config/index.js";
 import {
@@ -56,13 +59,16 @@ export async function runAuthLogin(opts: {
 }): Promise<void> {
   const target = resolveAuthLoginTarget(opts.env);
   const apiUrl = zipwikiApiUrlForTarget(target);
+  const deviceAuthUrl = zipwikiDeviceAuthUrl(target);
 
   console.error(`[zipwiki] Logging in to ${formatZipwikiApiTarget(apiUrl)}…`);
 
-  const device = await requestDeviceCode(apiUrl);
-  const openUrl =
-    device.verification_uri_complete ??
-    `${device.verification_uri}?user_code=${encodeURIComponent(device.user_code)}`;
+  const device = await requestDeviceCode(deviceAuthUrl);
+  const openUrl = deviceApprovalPage({
+    verificationUri: device.verification_uri,
+    verificationUriComplete: device.verification_uri_complete,
+    userCode: device.user_code,
+  });
 
   console.error("");
   console.error(`  User code:  ${device.user_code}`);
@@ -74,17 +80,19 @@ export async function runAuthLogin(opts: {
     await openBrowser(openUrl);
   }
 
-  const approved = await waitForDeviceApproval(apiUrl, device.device_code, {
+  const approved = await waitForDeviceApproval(deviceAuthUrl, device.device_code, {
     intervalSec: device.interval,
     expiresInSec: device.expires_in,
   });
 
-  const url = (approved.api_url || apiUrl).replace(/\/+$/, "");
+  const url = accountApiUrlAfterLogin(approved.api_url, target);
   const path = saveZipwikiHomeEnv({
     ZIPWIKI_API_URL: url,
     ZIPWIKI_API_KEY: approved.api_key,
+    ...(approved.email ? { ZIPWIKI_ACCOUNT_EMAIL: approved.email } : {}),
   });
   applyConnectionToProcess(url, approved.api_key);
+  if (approved.email) process.env.ZIPWIKI_ACCOUNT_EMAIL = approved.email;
 
   console.error(`[zipwiki] Saved connection to ${path}`);
   console.error(`[zipwiki] Key prefix ${approved.key_prefix}…`);

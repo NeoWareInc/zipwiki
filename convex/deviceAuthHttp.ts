@@ -4,6 +4,7 @@
  */
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { firstWebOrigin } from "./authRedirects";
 import {
   generateApiKey,
   generateDeviceCodes,
@@ -29,8 +30,7 @@ export const requestCode = internalMutation({
       expiresAt,
     });
 
-    const webOrigin =
-      process.env.WEB_ORIGIN?.trim() || "http://localhost:5173";
+    const webOrigin = firstWebOrigin();
 
     return {
       device_code: deviceCode,
@@ -68,12 +68,29 @@ export const pollToken = internalMutation({
     const apiKey = row.apiKeyOnce;
     if (!apiKey) return { status: "pending" as const };
 
+    let email: string | undefined;
+    if (row.accountId) {
+      const account = await ctx.db.get(row.accountId);
+      if (account) {
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", account.userId))
+          .unique();
+        const user = await ctx.db.get(account.userId);
+        email =
+          profile?.email ||
+          (user && "email" in user && typeof user.email === "string"
+            ? user.email
+            : undefined);
+      }
+    }
     await ctx.db.delete(row._id);
     return {
       status: "approved" as const,
       access_token: apiKey,
       token_type: "bearer" as const,
       key_prefix: row.keyPrefix,
+      email,
     };
   },
 });

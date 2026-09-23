@@ -1,13 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  accountApiUrlAfterLogin,
+  dashboardSettingsUrl,
+  deviceApprovalPage,
   resolveAuthLoginTarget,
   resolveOkfCredentialSource,
   resolveParseCredentialSource,
   resolveZipwikiApiTarget,
   resolveZipwikiApiUrl,
   zipwikiApiUrlForTarget,
+  zipwikiDeviceAuthUrl,
   ZIPWIKI_DEV_API_URL,
+  ZIPWIKI_DEV_DEVICE_AUTH_URL,
 } from "./api.js";
 
 describe("credential source resolution", () => {
@@ -97,6 +102,54 @@ describe("credential source resolution", () => {
       () =>
         resolveAuthLoginTarget("dev", { ZIPWIKI_CLI_CHANNEL: "release" }),
       /only support --env production/,
+    );
+  });
+
+  it("sends dev device login to Convex, not Fly", () => {
+    assert.equal(zipwikiDeviceAuthUrl("dev"), ZIPWIKI_DEV_DEVICE_AUTH_URL);
+    assert.equal(zipwikiDeviceAuthUrl("local"), ZIPWIKI_DEV_DEVICE_AUTH_URL);
+    assert.equal(
+      zipwikiDeviceAuthUrl("production"),
+      "https://api.zipwiki.ai",
+    );
+  });
+
+  it("opens the first real origin when WEB_ORIGIN is a list", () => {
+    const page = deviceApprovalPage({
+      verificationUri:
+        "https://zipwiki-web-dev.vercel.app,http://localhost:5173/cli/device",
+      verificationUriComplete:
+        "https://zipwiki-web-dev.vercel.app,http://localhost:5173/cli/device?user_code=ABCD-EFGH",
+      userCode: "ABCD-EFGH",
+    });
+    assert.equal(
+      page,
+      "https://zipwiki-web-dev.vercel.app/cli/device?user_code=ABCD-EFGH",
+    );
+  });
+
+  it("opens the dev dashboard for a dev API login", () => {
+    assert.equal(
+      dashboardSettingsUrl({
+        apiUrl: ZIPWIKI_DEV_API_URL,
+        setupUrl: "https://zipwiki.ai/dashboard/settings",
+      }),
+      "https://zipwiki-web-dev.vercel.app/dashboard/settings",
+    );
+    assert.equal(
+      dashboardSettingsUrl({ apiUrl: "https://api.zipwiki.ai" }),
+      "https://zipwiki.ai/dashboard/settings",
+    );
+  });
+
+  it("keeps the Fly API URL when Convex returns localhost", () => {
+    assert.equal(
+      accountApiUrlAfterLogin("http://localhost:3001", "dev"),
+      ZIPWIKI_DEV_API_URL,
+    );
+    assert.equal(
+      accountApiUrlAfterLogin("https://zipwiki-api-dev.fly.dev", "dev"),
+      "https://zipwiki-api-dev.fly.dev",
     );
   });
 

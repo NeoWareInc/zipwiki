@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { firstWebOrigin } from "./authRedirects";
 import {
   generateApiKey,
   generateDeviceCodes,
@@ -34,8 +35,7 @@ export const requestCode = mutation({
       expiresAt,
     });
 
-    const webOrigin =
-      process.env.WEB_ORIGIN?.trim() || "http://localhost:5173";
+    const webOrigin = firstWebOrigin();
 
     return {
       device_code: deviceCode,
@@ -163,8 +163,7 @@ export const approve = mutation({
       .withIndex("by_accountId", (q) => q.eq("accountId", account._id))
       .unique();
     const setupComplete = Boolean(settings?.setupCompletedAt);
-    const webOrigin =
-      process.env.WEB_ORIGIN?.trim() || "http://localhost:5173";
+    const webOrigin = firstWebOrigin();
 
     return {
       ok: true,

@@ -84,6 +84,9 @@ export async function pollDeviceToken(
     api_key: body.api_key,
     key_prefix: body.key_prefix,
     api_url: body.api_url,
+    ...(typeof body.email === "string" && body.email.trim()
+      ? { email: body.email.trim() }
+      : {}),
   };
 }
 
