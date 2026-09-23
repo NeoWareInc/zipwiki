@@ -60,11 +60,25 @@ function environmentName(url: string | undefined): string | undefined {
   return undefined;
 }
 
+const HOSTED_OKF_MODEL = "claude-haiku-4-5";
+
+function okfModelLabel(view: EffectiveConfigView): string {
+  const openaiDefaults = new Set(["gpt-4o-mini", "gpt-4o"]);
+  for (const candidate of [
+    view.credentials.okfModel,
+    view.project?.okfModel,
+  ]) {
+    const model = candidate?.trim();
+    if (model && !openaiDefaults.has(model)) return model;
+  }
+  return HOSTED_OKF_MODEL;
+}
+
 function formatParseConfigLine(view: EffectiveConfigView): string {
   const source = view.credentials.parseCredential;
   const key = keyStatus(view.credentials.hasParseKey);
   if (source === "zipwiki") {
-    return `${heading("Document parsing")}: ZipWiki · ${key}`;
+    return `${heading("Document parsing")}: ZipWiki account · LlamaParse · ${key}`;
   }
   if (source === "llama") {
     return `${heading("Document parsing")}: LlamaParse · ${key}`;
@@ -77,10 +91,10 @@ function formatOkfConfigLine(view: EffectiveConfigView): string {
   const source = view.credentials.okfCredential;
   const key = keyStatus(view.credentials.hasOkfKey);
   if (source === "zipwiki") {
-    return `${heading("OKF")}: ZipWiki · ${key}`;
+    return `${heading("OKF")}: ZipWiki account · Anthropic ${okfModelLabel(view)} · ${key}`;
   }
   if (source === "anthropic") {
-    return `${heading("OKF")}: Anthropic · ${key}`;
+    return `${heading("OKF")}: Anthropic ${okfModelLabel(view)} · ${key}`;
   }
   const provider = view.credentials.okfProvider ?? "local";
   return `${heading("OKF")}: ${provider} · ${key}`;

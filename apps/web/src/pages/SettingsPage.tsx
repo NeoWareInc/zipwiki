@@ -101,26 +101,31 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
     <form onSubmit={onSubmit} className="space-y-8">
       {onboarding && (
         <p className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted)">
-          Complete these preferences once. zipwiki downloads them when you pack.
-          A bring-your-own Llama or Anthropic key stays on this machine and is
-          turned on under Advanced settings.
+          These choices apply when you create a ZipWiki knowledge base. The CLI
+          downloads them when you pack. A key of your own stays on this machine
+          and is turned on under Advanced settings.
         </p>
       )}
       {saveError && <FormError message={saveError} />}
 
       <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Parse source</h2>
+        <h2 className="font-display text-xl font-semibold">
+          Parse sources into the knowledge base
+        </h2>
+        <p className="text-sm text-(--muted)">
+          ZipWiki account uses LlamaParse and prepaid credits.
+        </p>
         {isFreePlan && (
           <p className="rounded-lg border border-(--border) bg-(--paper) p-3 text-sm text-(--muted)">
-            Without credits, pack uses local LiteParse only (not billed).{" "}
+            A free account parses with local LiteParse.{" "}
             <a className="text-(--accent) hover:underline" href="/dashboard/billing">
               Buy credits
             </a>{" "}
-            for hosted LlamaParse.
+            to use LlamaParse on the ZipWiki account.
           </p>
         )}
         <Select
-          label="Where parse credentials come from"
+          label="Parser for new knowledge bases"
           value={form.parseCredential}
           onChange={(v) => {
             const parseCredential = v as AccountSettingsBody["parseCredential"];
@@ -140,7 +145,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
           options={[
             ...(isFreePlan
               ? []
-              : [{ value: "zipwiki", label: "ZipWiki hosted LlamaParse" }]),
+              : [{ value: "zipwiki", label: "ZipWiki account · LlamaParse" }]),
             { value: "local", label: "Local LiteParse" },
             ...(form.byo?.llama
               ? [{ value: "llama", label: "LlamaParse (your key)" }]
@@ -202,13 +207,15 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">OKF source</h2>
+        <h2 className="font-display text-xl font-semibold">
+          OKF for the knowledge base
+        </h2>
         <p className="text-sm text-(--muted)">
-          ZipWiki hosted OKF uses prepaid credits. Without credits, pack uses
-          host-LLM only.
+          ZipWiki account uses Anthropic {hostedOkfModel(form.okf.model)} and
+          prepaid credits.
         </p>
         <Select
-          label="Where OKF enrichment comes from (CLI / optional MCP useZipcodexOkf)"
+          label="OKF writer for new knowledge bases"
           value={form.okfCredential}
           onChange={(v) => {
             const okfCredential = v as AccountSettingsBody["okfCredential"];
@@ -227,7 +234,12 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
           options={[
             ...(isFreePlan
               ? []
-              : [{ value: "zipwiki", label: "ZipWiki hosted API" }]),
+              : [
+                  {
+                    value: "zipwiki",
+                    label: `ZipWiki account · Anthropic ${hostedOkfModel(form.okf.model)}`,
+                  },
+                ]),
             { value: "local", label: "Skip AI OKF (host LLM / MCP)" },
             ...(form.byo?.anthropic
               ? [{ value: "anthropic", label: "Anthropic (your key)" }]
@@ -237,7 +249,12 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Pack defaults</h2>
+        <h2 className="font-display text-xl font-semibold">
+          Knowledge base archive
+        </h2>
+        <p className="text-sm text-(--muted)">
+          How the .zipwiki is packed when you create a knowledge base.
+        </p>
         <Select
           label="Compression"
           value={form.pack.compression ?? "zstd"}
@@ -312,7 +329,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
             </h2>
             <p className="text-sm text-(--muted)">
               Keys stay on this machine. Turn one on here, then it can be
-              selected under Parse source or OKF source.
+              selected when you create a knowledge base.
             </p>
             <Checkbox
               label="LlamaParse key on this machine"
@@ -503,13 +520,22 @@ function ByoHint({ env, cmd }: { env: string; cmd: string }) {
   );
 }
 
+function hostedOkfModel(model: string | undefined): string {
+  const value = model?.trim();
+  if (value && value !== "gpt-4o-mini" && value !== "gpt-4o") return value;
+  return "claude-haiku-4-5";
+}
+
 export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Settings</h1>
+        <h1 className="font-display text-3xl font-semibold">
+          Knowledge base settings
+        </h1>
         <p className="mt-1 text-(--muted)">
-          Pack and parse preferences for zipwiki (synced to your account).
+          These settings are for creating a ZipWiki knowledge base. The CLI
+          downloads them for each pack.
         </p>
       </div>
       <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6">

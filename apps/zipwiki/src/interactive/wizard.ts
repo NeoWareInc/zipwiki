@@ -86,7 +86,7 @@ function labelParseSummary(input: {
   const engine = `${input.parser}/${input.parserMode}`;
   switch (input.source) {
     case "zipwiki":
-      return `${heading("Document parsing")}: ZipWiki · ${keyStatus(input.hasKey)}`;
+      return `${heading("Document parsing")}: ZipWiki account · LlamaParse · ${keyStatus(input.hasKey)}`;
     case "llama":
       return `${heading("Document parsing")}: LlamaParse · ${keyStatus(input.hasKey)}`;
     default:
@@ -100,13 +100,19 @@ function labelOkfSummary(input: {
   hasKey: boolean;
   apiUrl?: string;
   provider?: string;
+  model?: string;
 }): string {
   if (!input.useAi) return `${heading("OKF")}: off`;
+  const rawModel = input.model?.trim() ?? "";
+  const model =
+    rawModel && rawModel !== "gpt-4o-mini" && rawModel !== "gpt-4o"
+      ? rawModel
+      : "claude-haiku-4-5";
   switch (input.source) {
     case "zipwiki":
-      return `${heading("OKF")}: ZipWiki · ${keyStatus(input.hasKey)}`;
+      return `${heading("OKF")}: ZipWiki account · Anthropic ${model} · ${keyStatus(input.hasKey)}`;
     case "anthropic":
-      return `${heading("OKF")}: Anthropic · ${keyStatus(input.hasKey)}`;
+      return `${heading("OKF")}: Anthropic ${model} · ${keyStatus(input.hasKey)}`;
     default: {
       const provider = input.provider?.trim() || "local";
       return `${heading("OKF")}: ${provider} · ${keyStatus(input.hasKey)}`;
@@ -357,6 +363,7 @@ export function formatInitSettingsSummary(
       hasKey: view.credentials.hasOkfKey,
       apiUrl,
       provider: view.credentials.okfProvider,
+      model: view.credentials.okfModel ?? view.project?.okfModel,
     }),
     `${heading("Archive contents")}: ${omitOriginal ? "parsed text only" : "parsed text + original files"}`,
     `${heading("Zip compression")}: ${compression} ${level} · recurse ${recurse ? "yes" : "no"}`,

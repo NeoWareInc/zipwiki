@@ -45,7 +45,8 @@ describe("config show text", () => {
     );
     assert.match(text, /Account:.*steve@neoware\.io/);
     assert.match(text, /Environment:.*Dev/);
-    assert.match(text, /Document parsing:.*ZipWiki/);
+    assert.match(text, /Document parsing:.*ZipWiki account · LlamaParse/);
+    assert.match(text, /OKF:.*ZipWiki account · Anthropic claude-haiku-4-5/);
     assert.doesNotMatch(text, /fly\.dev/);
     assert.doesNotMatch(text, /LLAMA_CLOUD_API_KEY/);
     assert.doesNotMatch(text, /\/Users\//);
