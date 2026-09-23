@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, statSync, utimesSync, writeFileS
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
 import { describe, it } from "node:test";
+import { ZipkitNode } from "neozipkit/node";
 import {
   BUNDLE_PATHS,
   NZIP_EXTENSION,
@@ -760,6 +761,32 @@ describe("multi-primary package", () => {
     assert.equal(parsed!.originMtime, mtime);
     assert.equal(parsed!.originMtimeUtc, originMtimeIso(mtime));
     assert.ok(!listing.some((e) => e.name === "Ch_2025-001.pdf"));
+  });
+
+  it("kit getMerkleRootAsync v1 matches the pack root", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "nzip-merkle-kit-"));
+    const original = join(dir, "hello.txt");
+    writeFileSync(original, "hello neo\n");
+    const out = join(dir, "hello.zipwiki");
+    const result = writeNzipCollectionBundle({
+      outputPath: out,
+      computeMerkle: true,
+      members: [
+        {
+          originalPath: original,
+          originalName: "hello.txt",
+          structuredMarkdown: "# Hello\n",
+        },
+      ],
+    });
+    const kit = new ZipkitNode();
+    await kit.loadZipFile(out);
+    try {
+      const root = await kit.getMerkleRootAsync({ algorithm: "v1" });
+      assert.equal(root, result.merkleRoot);
+    } finally {
+      await kit.closeFile();
+    }
   });
 
   it("writes 0x014F size/mtime/crc on omit-original even without a URI", () => {

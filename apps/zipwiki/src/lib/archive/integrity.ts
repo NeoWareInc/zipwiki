@@ -3,6 +3,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { crc32 as zipCrc32 } from "neozipkit/node";
 import {
   findZipEntry,
   listZipEntriesFromBuffer,
@@ -38,14 +39,7 @@ export type VerifyPayloadResult = {
 };
 
 function crc32(buf: Buffer): number {
-  let crc = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) {
-    crc ^= buf[i]!;
-    for (let j = 0; j < 8; j++) {
-      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+  return zipCrc32(buf) >>> 0;
 }
 
 export function sha256Hex(buf: Buffer): string {

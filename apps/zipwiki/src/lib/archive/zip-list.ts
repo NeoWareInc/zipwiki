@@ -6,7 +6,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { resolve } from "node:path";
-import { inflateRawSync, zstdDecompressSync } from "node:zlib";
+import { inflateZipPayloadSync } from "neozipkit/node";
 import {
   originToApiFields,
   parseOriginFromExtra,
@@ -230,18 +230,14 @@ function inflateZipPayload(
   compressed: Buffer,
   entry: ZipListEntry,
 ): Buffer {
-  if (entry.method === 0) {
-    return Buffer.from(compressed);
+  try {
+    return inflateZipPayloadSync(entry.method, compressed);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `ZIP entry "${entry.name}" uses unsupported method ${entry.method}: ${detail}`,
+    );
   }
-  if (entry.method === 8) {
-    return inflateRawSync(compressed);
-  }
-  if (entry.method === 93) {
-    return zstdDecompressSync(compressed);
-  }
-  throw new Error(
-    `ZIP entry "${entry.name}" uses unsupported method ${entry.method}`,
-  );
 }
 
 type LocalLayout = {

@@ -37,6 +37,13 @@ describe("origin lookup and fetch", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it("kit-written archive with 0x014F opens in origin lookup", () => {
+    const loc = lookupOrigin({ package: out, path: "lease.txt" });
+    assert.equal(loc.originUri, uri);
+    assert.equal(loc.parsedPath, "wiki/parsed/lease.txt.md");
+    assert.equal(loc.originCrc32, originCrc32Hex(originCrc32Of(body)));
+  });
+
   it("lookupOrigin finds 0x014F by parsed path, primary, or name", () => {
     const expectedCrc = originCrc32Of(body);
     for (const selector of [

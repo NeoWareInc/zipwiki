@@ -1,8 +1,10 @@
 /**
  * Copy-aware ZIP rewrite: emit a new archive, copying compressed payloads
- * for unchanged members (no recompress). Always rebuilds local/central/EOCD.
+ * for unchanged members (no recompress). The kit writer rebuilds local/central/EOCD.
+ * A full-file raw copy uses ZipCopyNode.
  */
 
+import { ZipCopyNode } from "neozipkit/node";
 import { renameSync, writeFileSync, readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import {
@@ -35,6 +37,19 @@ export function hasProofSidecars(entryNames: Iterable<string>): string[] {
     [...entryNames].map((n) => n.replace(/\\/g, "/").toLowerCase()),
   );
   return PROOF_SIDECAR_NAMES.filter((n) => lower.has(n.toLowerCase()));
+}
+
+/**
+ * Raw-copy every local record with ZipCopyNode, then rebuild the central
+ * directory. Unchanged compressed bytes (and 0x014F on the local header) are
+ * not recompressed. Unknown extra ids are kept on the rebuilt central header.
+ */
+export async function copyArchiveWithZipCopyNode(
+  sourcePath: string,
+  destPath: string,
+): Promise<void> {
+  const zipCopy = new ZipCopyNode();
+  await zipCopy.copyZipFile(sourcePath, destPath, { preserveComments: false });
 }
 
 /** Slice compressed bytes + extras from an existing archive member. */

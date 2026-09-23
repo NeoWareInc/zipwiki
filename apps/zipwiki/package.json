@@ -53,7 +53,8 @@
     "commander": "^12.1.0",
     "picocolors": "^1.1.1",
     "zod": "^3.25.0",
-    "@zipwiki/api-client": "workspace:*"
+    "@zipwiki/api-client": "workspace:*",
+    "neozipkit": "file:../../../neozipkit/packages/neozipkit"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

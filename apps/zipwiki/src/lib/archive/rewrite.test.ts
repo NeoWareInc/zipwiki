@@ -12,6 +12,7 @@ import {
   writeZipBuffer,
 } from "./index.js";
 import {
+  copyArchiveWithZipCopyNode,
   copyZipMember,
   hasProofSidecars,
   loadCopyableArchive,
@@ -127,6 +128,35 @@ describe("rewrite helpers", () => {
     const loc = parseOriginFromExtra(extra1);
     assert.equal(loc?.uri, "https://example.com/keep.pdf");
     assert.equal(loc?.size, data.length);
+  });
+
+  it("ZipCopyNode keeps 0x014F without recompressing", async () => {
+    const data = Buffer.alloc(4000, 0x42);
+    const origin = originLocatorFromOriginal({
+      data,
+      mtime: new Date("2020-06-15T12:30:00"),
+      uri: "https://example.com/copied.pdf",
+    });
+    const source = join(dir, "copy-source.zipwiki");
+    const dest = join(dir, "copy-dest.zipwiki");
+    writeFileSync(
+      source,
+      writeZipBuffer([{ name: "keep.pdf", data, origin }], { compression: "zstd" }),
+    );
+    const before = listZipEntriesFromBuffer(readFileSync(source)).find(
+      (e) => e.name === "keep.pdf",
+    )!;
+    await copyArchiveWithZipCopyNode(source, dest);
+    const after = listZipEntriesFromBuffer(readFileSync(dest)).find(
+      (e) => e.name === "keep.pdf",
+    )!;
+    assert.equal(after.method, before.method);
+    assert.equal(after.crc32, before.crc32);
+    assert.equal(after.originUri, "https://example.com/copied.pdf");
+    assert.deepEqual(
+      readCompressedPayload(readFileSync(dest), after),
+      readCompressedPayload(readFileSync(source), before),
+    );
   });
 
   it("copyZipMember keeps precompressed slice", () => {

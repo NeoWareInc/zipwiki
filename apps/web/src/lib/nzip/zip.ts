@@ -1,3 +1,5 @@
+import { inflateZipPayload } from "neozipkit/browser";
+
 /** Canonical .nzip paths (APPNOTE 0.2) — mirrored for browser use. */
 export const BUNDLE_PATHS = {
   metaInf: "META-INF/",
@@ -217,16 +219,8 @@ export async function readZipEntryPayload(
     dataStart + entry.compressedSize,
   );
 
-  if (entry.method === 0) {
-    return compressed.slice();
-  }
-  if (entry.method === 8) {
-    const { inflateSync } = await import("fflate");
-    return inflateSync(compressed);
-  }
-  if (entry.method === 93) {
-    const { decompress } = await import("fzstd");
-    return decompress(compressed);
+  if (entry.method === 0 || entry.method === 8 || entry.method === 93) {
+    return inflateZipPayload(entry.method, compressed);
   }
   throw new Error(
     `Entry "${entry.name}" uses unsupported compression method ${entry.method}`,

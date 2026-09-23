@@ -21,14 +21,14 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
+import { ZipkitNode, buildZipBufferSync, type ZipBufferMember } from "neozipkit/node";
 import {
-  compressZipPayload,
+  resolveCompressionAlg,
   type CompressOptions,
   type ZipCompressionAlg,
 } from "./compress.js";
 import { contentMerkleRoot, isMetaInfPath } from "./merkle.js";
 import {
-  concatExtraFields,
   makeOriginExtra,
   originLocatorFromOriginal,
   originLocatorPresent,
@@ -46,8 +46,6 @@ export const DEFAULT_OKF_DIR = "okf" as const;
 export const DEFAULT_OKF_VERSION = "0.2" as const;
 
 const MANIFEST_ENTRY = "META-INF/manifest.json";
-/** NeoZip Extra Field ID: SHA-256 of uncompressed payload (APPNOTE §7.1). */
-const EF_NZIP_SHA256 = 0x014e;
 
 export type AiRootName = "wiki" | "codex" | "ai" | "context";
 
@@ -308,23 +306,8 @@ export type BundleWriteResult = {
   size: number;
 };
 
-function crc32(buf: Buffer): number {
-  let crc = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) {
-    crc ^= buf[i]!;
-    for (let j = 0; j < 8; j++) {
-      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function sha256Digest(buf: Buffer): Buffer {
-  return createHash("sha256").update(buf).digest();
-}
-
 function sha256Hex(buf: Buffer): string {
-  return sha256Digest(buf).toString("hex");
+  return createHash("sha256").update(buf).digest("hex");
 }
 
 export type ZipArchiveEntry = {
@@ -554,26 +537,55 @@ export function assignContentPaths(names: string[]): string[] {
   return out;
 }
 
-function makeSha256Extra(digest: Buffer): Buffer {
-  if (digest.length !== 32) {
-    throw new Error("0x014E requires a 32-byte SHA-256 digest");
-  }
-  const extra = Buffer.alloc(4 + 32);
-  extra.writeUInt16LE(EF_NZIP_SHA256, 0);
-  extra.writeUInt16LE(32, 2);
-  digest.copy(extra, 4);
-  return extra;
+function kitMethod(alg: ZipCompressionAlg): 0 | 8 | 93 {
+  if (alg === "store") return 0;
+  if (alg === "deflate") return 8;
+  return 93;
 }
 
-/** Build local/central Extra Field blob: optional 0x014E, optional 0x014F. */
-function makeEntryExtra(
-  digest: Buffer | undefined,
-  origin?: OriginLocator,
-): Buffer {
-  const parts: Buffer[] = [];
-  if (digest) parts.push(makeSha256Extra(digest));
-  if (originLocatorPresent(origin)) parts.push(makeOriginExtra(origin));
-  return concatExtraFields(...parts);
+function toKitMembers(
+  entries: ZipEntry[],
+  compressOpts: WriteZipOptions,
+): ZipBufferMember[] {
+  const packTime = new Date();
+  const level = compressOpts.level ?? 7;
+  return entries.map((entry) => {
+    const copied = entry.precompressed;
+    if (copied) {
+      return {
+        name: entry.name,
+        data: entry.data,
+        dosTime: copied.dosTime,
+        dosDate: copied.dosDate,
+        precompressed: {
+          method: copied.method,
+          data: copied.data,
+          crc32: copied.crc32 >>> 0,
+          uncompressedSize: copied.uncompressedSize,
+          ...(copied.extra.length > 0 ? { extra: copied.extra } : {}),
+        },
+      };
+    }
+    const alg = resolveCompressionAlg({
+      ...compressOpts,
+      level,
+      entryName: entry.name,
+    });
+    const originExtra = originLocatorPresent(entry.origin)
+      ? makeOriginExtra(entry.origin)
+      : undefined;
+    return {
+      name: entry.name,
+      data: entry.data,
+      mtime: entry.mtime ?? packTime,
+      level,
+      method: kitMethod(alg),
+      useSHA256: compressOpts.sha256Extra === true,
+      ...(originExtra && originExtra.length > 0
+        ? { additionalExtra: originExtra }
+        : {}),
+    };
+  });
 }
 
 function buildAiParser(
@@ -884,7 +896,7 @@ export function writeNzipCollectionBundle(
     }
 
     mkdirSync(dirname(input.outputPath), { recursive: true });
-    const zip = buildZip(entries, {
+    const kitMembers = toKitMembers(entries, {
       compression: input.compression,
       level: input.level,
       deflate: input.deflate,
@@ -892,11 +904,11 @@ export function writeNzipCollectionBundle(
       storeSuffixes: input.storeSuffixes,
       sha256Extra: input.sha256Extra === true,
     });
-    writeFileSync(input.outputPath, zip);
+    new ZipkitNode().writeMembersSync(input.outputPath, kitMembers);
     return {
       bundlePath: input.outputPath,
       ...(merkleRoot ? { merkleRoot } : {}),
-      size: zip.length,
+      size: statSync(input.outputPath).size,
       memberPaths: includedPrimaries.map((m) => m.path),
       ...(keepWiki ? { wikiDir: wikiRoot } : {}),
     };
@@ -921,102 +933,5 @@ export function writeZipBuffer(
   entries: ZipArchiveEntry[],
   compressOpts: WriteZipOptions = {},
 ): Buffer {
-  return buildZip(entries, compressOpts);
-}
-
-function buildZip(
-  entries: ZipEntry[],
-  compressOpts: WriteZipOptions = {},
-): Buffer {
-  const localParts: Buffer[] = [];
-  const centralParts: Buffer[] = [];
-  let offset = 0;
-  const packTime = new Date();
-
-  for (const entry of entries) {
-    const nameBuf = Buffer.from(entry.name, "utf-8");
-    const copied = entry.precompressed;
-    const uncompressed = entry.data;
-    const crc = copied ? copied.crc32 >>> 0 : crc32(uncompressed);
-    const extra = copied
-      ? copied.extra
-      : makeEntryExtra(
-          compressOpts.sha256Extra === true
-            ? sha256Digest(uncompressed)
-            : undefined,
-          entry.origin,
-        );
-    const extraLen = extra.length;
-    const { time: dosTime, date: dosDate } = copied
-      ? { time: copied.dosTime, date: copied.dosDate }
-      : toDosDateTime(entry.mtime ?? packTime);
-
-    const payload = copied
-      ? {
-          method: copied.method,
-          data: copied.data,
-          compressedSize: copied.data.length,
-          uncompressedSize: copied.uncompressedSize,
-        }
-      : compressZipPayload(uncompressed, {
-          ...compressOpts,
-          entryName: entry.name,
-        });
-    const method = payload.method;
-    const versionNeeded = method === 93 ? 63 : 20;
-
-    const local = Buffer.alloc(30 + nameBuf.length + extraLen);
-    local.writeUInt32LE(0x04034b50, 0);
-    local.writeUInt16LE(versionNeeded, 4);
-    local.writeUInt16LE(0, 6); // flags
-    local.writeUInt16LE(method, 8);
-    local.writeUInt16LE(dosTime, 10);
-    local.writeUInt16LE(dosDate, 12);
-    local.writeUInt32LE(crc, 14);
-    local.writeUInt32LE(payload.compressedSize, 18);
-    local.writeUInt32LE(payload.uncompressedSize, 22);
-    local.writeUInt16LE(nameBuf.length, 26);
-    local.writeUInt16LE(extraLen, 28);
-    nameBuf.copy(local, 30);
-    extra.copy(local, 30 + nameBuf.length);
-
-    const central = Buffer.alloc(46 + nameBuf.length + extraLen);
-    central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE(versionNeeded, 4); // version made by
-    central.writeUInt16LE(versionNeeded, 6); // version needed
-    central.writeUInt16LE(0, 8);
-    central.writeUInt16LE(method, 10);
-    central.writeUInt16LE(dosTime, 12);
-    central.writeUInt16LE(dosDate, 14);
-    central.writeUInt32LE(crc, 16);
-    central.writeUInt32LE(payload.compressedSize, 20);
-    central.writeUInt32LE(payload.uncompressedSize, 24);
-    central.writeUInt16LE(nameBuf.length, 28);
-    central.writeUInt16LE(extraLen, 30);
-    central.writeUInt16LE(0, 32);
-    central.writeUInt16LE(0, 34);
-    central.writeUInt16LE(0, 36);
-    central.writeUInt32LE(0, 38);
-    central.writeUInt32LE(offset, 42);
-    nameBuf.copy(central, 46);
-    extra.copy(central, 46 + nameBuf.length);
-
-    localParts.push(local, payload.data);
-    centralParts.push(central);
-    offset += local.length + payload.data.length;
-  }
-
-  const centralDir = Buffer.concat(centralParts);
-  const centralOffset = offset;
-  const eocd = Buffer.alloc(22);
-  eocd.writeUInt32LE(0x06054b50, 0);
-  eocd.writeUInt16LE(0, 4);
-  eocd.writeUInt16LE(0, 6);
-  eocd.writeUInt16LE(entries.length, 8);
-  eocd.writeUInt16LE(entries.length, 10);
-  eocd.writeUInt32LE(centralDir.length, 12);
-  eocd.writeUInt32LE(centralOffset, 16);
-  eocd.writeUInt16LE(0, 20);
-
-  return Buffer.concat([...localParts, centralDir, eocd]);
+  return buildZipBufferSync(toKitMembers(entries, compressOpts));
 }
