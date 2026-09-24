@@ -15,6 +15,7 @@ import {
 } from "@zipwiki/api-client";
 import {
   accountApiUrlAfterLogin,
+  dashboardSettingsUrl,
   deviceApprovalPage,
   formatZipwikiApiTarget,
   resolveAuthLoginTarget,
@@ -102,31 +103,57 @@ export async function runAuthLogin(opts: {
   console.error(
     "[zipwiki] Waiting for account setup in the browser (Settings wizard)…",
   );
+  const dash = dashboardSettingsUrl({ apiUrl: url });
+  console.error(`[zipwiki] Dashboard: ${dash}`);
+  if (!opts.noBrowser) {
+    void openBrowser(dash);
+  }
+
   let printedSetupUrl = false;
-  const settings = await waitForSetupComplete(url, approved.api_key, {
-    onPending: (setupUrl) => {
-      if (!printedSetupUrl && setupUrl) {
-        printedSetupUrl = true;
-        console.error(`[zipwiki] Finish setup: ${setupUrl}`);
-        if (!opts.noBrowser) {
-          void openBrowser(setupUrl);
+  try {
+    // Prefer Convex for settings — Fly often 404s when CONVEX_SITE_URL is wrong.
+    const settings = await waitForSetupComplete(deviceAuthUrl, approved.api_key, {
+      fallbackBaseUrls: [url],
+      timeoutMs: 45_000,
+      intervalMs: 2000,
+      onPending: (setupUrl) => {
+        if (!printedSetupUrl && setupUrl) {
+          printedSetupUrl = true;
+          console.error(`[zipwiki] Finish setup: ${setupUrl}`);
         }
-      }
-    },
-  });
-  saveCachedAccountSettings(settings);
-  applyAccountSettingsToEnv(settings.settings);
-  warnMissingByoSecrets(settings.settings);
-  console.error("[zipwiki] Account setup complete — settings cached.");
+      },
+      onError: (message) => {
+        console.error(`[zipwiki] settings check: ${message}`);
+      },
+    });
+    saveCachedAccountSettings(settings);
+    applyAccountSettingsToEnv(settings.settings);
+    warnMissingByoSecrets(settings.settings);
+    console.error("[zipwiki] Account setup complete — settings cached.");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[zipwiki] Login saved. Settings not synced yet: ${msg}`);
+    console.error(`  1. Save Settings in the dashboard (if prompted)`);
+    console.error(`  2. pnpm zipwiki -- settings pull`);
+    // Key is already in ~/.zipwiki/.env — login succeeded.
+    return;
+  }
 
   try {
-    const cfg = await fetchClientConfig(url, approved.api_key, {
+    const cfg = await fetchClientConfig(deviceAuthUrl, approved.api_key, {
       bypassCache: true,
     });
     printClientConfigSummary(cfg);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[zipwiki] Connected, but client-config failed: ${msg}`);
+  } catch {
+    try {
+      const cfg = await fetchClientConfig(url, approved.api_key, {
+        bypassCache: true,
+      });
+      printClientConfigSummary(cfg);
+    } catch (err2) {
+      const msg = err2 instanceof Error ? err2.message : String(err2);
+      console.error(`[zipwiki] Connected, but client-config failed: ${msg}`);
+    }
   }
 }
 

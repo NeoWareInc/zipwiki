@@ -26,6 +26,8 @@ export type DocumentParseResult = {
   route?: NeoZipAiParser["route"];
   /** LlamaParse `job.usage.credits` when the job has been billed. */
   llamaCredits?: number;
+  /** LlamaParse job id when available. */
+  jobId?: string;
   raw?: unknown;
 };
 

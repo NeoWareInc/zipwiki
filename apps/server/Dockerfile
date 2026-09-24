@@ -6,6 +6,7 @@ RUN corepack enable && corepack prepare pnpm@11.11.0 --activate
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 COPY packages/typescript-config/package.json packages/typescript-config/
 COPY apps/server/package.json apps/server/
 

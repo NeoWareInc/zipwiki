@@ -14,6 +14,7 @@ import {
   loadZipwikiConfig,
   loadZipwikiHomeEnv,
   loadZipwikiOnboarding,
+  maybeReportActivity,
   needsCredentialSetup,
   refreshAndPrintClientUsage,
   resolveOmitOriginalDocuments,
@@ -246,14 +247,16 @@ export async function runStage(
     }
 
     if (needsOkfWork && useAi) {
-      await ensureCredentialsOrFail({
-        useAi,
-        interactive: isInteractiveTty(),
-      });
-      if (needsCredentialSetup({ useAi }).needsSetup) {
-        throw new Error(
-          formatNonInteractiveSetupError(needsCredentialSetup({ useAi })),
-        );
+      const creds = needsCredentialSetup({ useAi });
+      if (creds.needsSetup) {
+        // Soft-skip AI OKF when the machine lacks the portal/BYO key —
+        // pack continues with fallback OKF; agents can still okf_enrich later.
+        useAi = false;
+        if (!opts.quiet) {
+          console.error(
+            `[zipwiki] Skipping AI OKF (${formatNonInteractiveSetupError(creds).split("\n")[0]}). Pack continues with fallback OKF.`,
+          );
+        }
       }
     }
 
@@ -585,6 +588,23 @@ export async function runStage(
               archiveBytes,
             }),
           );
+        }
+        if (phase === "all") {
+          let archiveBytes: number | undefined;
+          try {
+            archiveBytes = statSync(outputPath).size;
+          } catch {
+            /* ignore */
+          }
+          await maybeReportActivity({
+            type: "pack",
+            action: "pack",
+            status: succeeded > 0 ? "success" : "fail",
+            path: outputPath,
+            bytes: archiveBytes,
+            count: documentCount || succeeded,
+            quiet: opts.quiet,
+          });
         }
       }
 

@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, join, resolve } from "node:path";
+import { stageLog } from "../lib/cli/activity-dots.js";
 import {
   parseCategoryOverride,
   parsedMarkdownFileName,
@@ -151,6 +152,8 @@ export async function parseOneFile(
     engine: parsed.engine,
     llamaCredits: parsed.llamaCredits,
     pages: parsed.pages?.length,
+    filename: originalName,
+    jobId: parsed.jobId,
     quiet: opts.quiet,
   });
   return {
@@ -311,7 +314,7 @@ export async function runParseAndOkfPhase(input: {
           };
         }
         if (!opts.quiet) {
-          console.error(
+          stageLog(
             `[stage] okf ${originalName} (no parse — filename/type context)`,
           );
         }
@@ -343,7 +346,7 @@ export async function runParseAndOkfPhase(input: {
           const notes: string[] = [written.mode, `${written.ms}ms`];
           if (loaded.parseFailed) notes.push("no parse");
           if (written.aiError) notes.push(`ai: ${written.aiError}`);
-          console.error(
+          stageLog(
             `[stage] okf done ${loaded.originalName} (${notes.join(", ")})`,
           );
         }
@@ -351,7 +354,7 @@ export async function runParseAndOkfPhase(input: {
       },
       onOkfError: (item, _i, err) => {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[stage] okf error ${basename(item)}: ${msg}`);
+        stageLog(`[stage] okf error ${basename(item)}: ${msg}`);
       },
     });
     const outMembers: StageMember[] = [];
@@ -405,7 +408,7 @@ export async function runParseAndOkfPhase(input: {
             engine: project.parser.engine,
           });
           if (!opts.quiet) {
-            console.error(`[stage] parse ${result.member.originalName}`);
+            stageLog(`[stage] parse ${result.member.originalName}`);
           }
           return { ...result, parsePath };
         } catch (err) {
@@ -420,7 +423,7 @@ export async function runParseAndOkfPhase(input: {
       okf: async () => undefined,
       onParseError: (item, _i, err) => {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[stage] parse error ${basename(item)}: ${msg}`);
+        stageLog(`[stage] parse error ${basename(item)}: ${msg}`);
       },
     });
     for (let i = 0; i < files.length; i++) {
@@ -461,7 +464,7 @@ export async function runParseAndOkfPhase(input: {
           engine: project.parser.engine,
         });
         if (!opts.quiet) {
-          console.error(`[stage] parse ${result.member.originalName}`);
+          stageLog(`[stage] parse ${result.member.originalName}`);
         }
         return { ...result, parsePath, parseFailed: false as const };
       } catch (err) {
@@ -474,7 +477,7 @@ export async function runParseAndOkfPhase(input: {
         const msg = err instanceof Error ? err.message : String(err);
         const originalName = basename(abs);
         if (!opts.quiet) {
-          console.error(`[stage] parse error ${originalName}: ${msg}`);
+          stageLog(`[stage] parse error ${originalName}: ${msg}`);
         }
         if (opts.failFast) throw err;
         const classification = classifyDocument({
@@ -513,7 +516,7 @@ export async function runParseAndOkfPhase(input: {
         const notes: string[] = [written.mode, `${written.ms}ms`];
         if (parsed.parseFailed) notes.push("no parse");
         if (written.aiError) notes.push(`ai: ${written.aiError}`);
-        console.error(
+        stageLog(
           `[stage] okf done ${parsed.member.originalName} (${notes.join(", ")})`,
         );
       }
@@ -521,7 +524,7 @@ export async function runParseAndOkfPhase(input: {
     },
     onOkfError: (item, _i, err) => {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[stage] okf error ${basename(item)}: ${msg}`);
+      stageLog(`[stage] okf error ${basename(item)}: ${msg}`);
     },
   });
 

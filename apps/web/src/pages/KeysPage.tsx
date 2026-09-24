@@ -29,6 +29,14 @@ function downloadText(filename: string, text: string): void {
   URL.revokeObjectURL(url);
 }
 
+type KeyRow = {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  lastUsedAt?: number | null;
+  createdAt?: number;
+};
+
 export default function KeysPage() {
   const [params, setParams] = useSearchParams();
   const [newKey, setNewKey] = useState<string | null>(null);
@@ -61,6 +69,8 @@ export default function KeysPage() {
       setBusy(false);
     }
   }
+
+  const newestId = keys?.[0]?.id;
 
   return (
     <div className="space-y-6">
@@ -95,6 +105,14 @@ export default function KeysPage() {
           uses your session and does not need a key.
         </div>
       )}
+
+      <p className="text-sm text-(--muted)">
+        Full secrets are shown only once when created.{" "}
+        <code className="text-xs">zipwiki auth login</code> rotates the active{" "}
+        <code className="text-xs">CLI zipwiki</code> key and saves it to{" "}
+        <code className="text-xs">~/.zipwiki/.env</code>. Last used updates when
+        the key hits the hosted API (parse, OKF, whoami).
+      </p>
 
       {newKey && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
@@ -149,24 +167,28 @@ export default function KeysPage() {
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Prefix</th>
+              <th className="px-4 py-3">Created</th>
               <th className="px-4 py-3">Last used</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
-            {keys?.map((k: {
-              id: string;
-              name: string;
-              keyPrefix: string;
-              lastUsedAt?: number | null;
-            }) => {
+            {keys?.map((k: KeyRow) => {
               const fullKey = revealedById[k.id];
+              const isNewest = k.id === newestId;
               return (
                 <tr
                   key={k.id}
                   className="border-b border-(--border) last:border-0"
                 >
-                  <td className="px-4 py-3">{k.name}</td>
+                  <td className="px-4 py-3">
+                    {k.name}
+                    {isNewest ? (
+                      <span className="ml-2 text-xs text-(--muted)">
+                        (newest)
+                      </span>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <code className="font-mono text-xs">
@@ -176,6 +198,11 @@ export default function KeysPage() {
                         <CopyButton value={fullKey} label="Copy API key" />
                       ) : null}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-(--muted)">
+                    {k.createdAt
+                      ? new Date(k.createdAt).toLocaleString()
+                      : "—"}
                   </td>
                   <td className="px-4 py-3 text-(--muted)">
                     {k.lastUsedAt
@@ -199,7 +226,7 @@ export default function KeysPage() {
             {keys?.length === 0 && (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="px-4 py-8 text-center text-(--muted)"
                 >
                   No keys yet.

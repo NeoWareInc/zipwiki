@@ -8,7 +8,7 @@ export default function PricingPage() {
         <PageHero
           kicker="Pricing"
           title="Free locally. Credits for high-quality hosted parse."
-          lead="Start with the plugin, local LiteParse, and your agent’s LLM. Add prepaid credits when documents need high-quality hosted parsing or ZipWiki OKF. About $10 covers roughly 1,000 pages of high-quality results."
+          lead="Start with the plugin, local LiteParse, and your agent’s LLM. Add prepaid credits when documents need high-quality hosted parsing or ZipWiki OKF. About $10 covers roughly 640 pages of high-quality (Agentic) results."
         />
 
         <ul className="mt-10 grid gap-8 md:grid-cols-2">

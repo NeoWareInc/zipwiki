@@ -87,7 +87,8 @@ export const listMine = query({
         keyPrefix: k.keyPrefix,
         lastUsedAt: k.lastUsedAt ?? null,
         createdAt: k._creationTime,
-      }));
+      }))
+      .sort((a, b) => b.createdAt - a.createdAt);
   },
 });
 
@@ -104,11 +105,13 @@ export const createMine = mutation({
 
     const { raw, prefix } = generateApiKey();
     const keyHash = await hashApiKey(raw);
+    const now = Date.now();
     const id = await ctx.db.insert("apiKeys", {
       accountId: account._id,
       name: name?.trim() || "Default",
       keyHash,
       keyPrefix: prefix,
+      lastUsedAt: now,
     });
     return { id, apiKey: raw, keyPrefix: prefix };
   },

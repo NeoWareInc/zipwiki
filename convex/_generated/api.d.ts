@@ -16,6 +16,7 @@ import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as authRedirects from "../authRedirects.js";
 import type * as billing from "../billing.js";
+import type * as clientConfig from "../clientConfig.js";
 import type * as deviceAuth from "../deviceAuth.js";
 import type * as deviceAuthHttp from "../deviceAuthHttp.js";
 import type * as http from "../http.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   authRedirects: typeof authRedirects;
   billing: typeof billing;
+  clientConfig: typeof clientConfig;
   deviceAuth: typeof deviceAuth;
   deviceAuthHttp: typeof deviceAuthHttp;
   http: typeof http;

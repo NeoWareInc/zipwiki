@@ -146,7 +146,75 @@ http.route({
       token,
     });
     if (!keyCtx?.email) return json({ error: "unauthorized" }, 401);
+    await ctx.runMutation(internal.apiKeys.touchLastUsed, {
+      apiKeyId: keyCtx.apiKeyId,
+    });
     return json({ email: keyCtx.email });
+  }),
+});
+
+function bearerFrom(req: Request): string {
+  const header = req.headers.get("authorization") ?? "";
+  return /^Bearer\s+(.+)$/i.exec(header.trim())?.[1]?.trim() ?? "";
+}
+
+/** CLI can call Convex directly for settings (Fly may be misconfigured). */
+http.route({
+  path: "/api/settings",
+  method: "OPTIONS",
+  handler: httpAction(async () => corsPreflight()),
+});
+
+http.route({
+  path: "/api/settings",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const token = bearerFrom(req);
+    if (!token) return json({ error: "unauthorized" }, 401);
+    const keyCtx = await ctx.runQuery(internal.apiKeys.resolveByToken, {
+      token,
+    });
+    if (!keyCtx) return json({ error: "unauthorized" }, 401);
+    if (keyCtx.accountDisabled || keyCtx.accountStatus === "suspended") {
+      return json({ error: "account_disabled" }, 403);
+    }
+    await ctx.runMutation(internal.apiKeys.touchLastUsed, {
+      apiKeyId: keyCtx.apiKeyId,
+    });
+    const row = await ctx.runQuery(internal.settings.getByAccountId, {
+      accountId: keyCtx.accountId,
+    });
+    return json({
+      settings: row.settings,
+      setupComplete: row.setupComplete,
+      setupCompletedAt: row.setupCompletedAt,
+      updatedAt: row.updatedAt,
+      setupUrl: row.setupUrl,
+    });
+  }),
+});
+
+http.route({
+  path: "/api/client-config",
+  method: "OPTIONS",
+  handler: httpAction(async () => corsPreflight()),
+});
+
+http.route({
+  path: "/api/client-config",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const token = bearerFrom(req);
+    if (!token) return json({ error: "unauthorized" }, 401);
+    const config = await ctx.runQuery(internal.clientConfig.forApiKey, {
+      token,
+    });
+    if (!config) return json({ error: "unauthorized" }, 401);
+    await ctx.runMutation(internal.apiKeys.touchLastUsed, {
+      apiKeyId: config.apiKeyId,
+    });
+    const { accountId: _a, apiKeyId: _k, ...publicConfig } = config;
+    return json(publicConfig);
   }),
 });
 
@@ -276,6 +344,8 @@ http.route({
         input_tokens?: number;
         output_tokens?: number;
         llama_credits?: number;
+        filename?: string;
+        job_id?: string;
       };
       if (!body.account_id || !body.kind) {
         return json({ error: "invalid_request" }, 400);
@@ -292,6 +362,8 @@ http.route({
         inputTokens: body.input_tokens,
         outputTokens: body.output_tokens,
         llamaCredits: body.llama_credits,
+        filename: body.filename,
+        jobId: body.job_id,
       });
       return json({ ok: true, ...result });
     } catch {
@@ -328,6 +400,97 @@ http.route({
 });
 
 http.route({
+  path: "/api/telemetry/activity",
+  method: "OPTIONS",
+  handler: httpAction(async () => corsPreflight()),
+});
+
+/** CLI / MCP: pack + query activity (Bearer API key; no credit debit). */
+http.route({
+  path: "/api/telemetry/activity",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const token = bearerFrom(req);
+    if (!token) return json({ error: "unauthorized" }, 401);
+    const keyCtx = await ctx.runQuery(internal.apiKeys.resolveByToken, {
+      token,
+    });
+    if (!keyCtx) return json({ error: "unauthorized" }, 401);
+    if (keyCtx.accountDisabled || keyCtx.accountStatus === "suspended") {
+      return json({ error: "account_disabled" }, 403);
+    }
+
+    let body: {
+      type?: string;
+      engine?: string;
+      status?: string;
+      filename?: string;
+      bytes?: number;
+      pages?: number;
+    };
+    try {
+      body = (await req.json()) as typeof body;
+    } catch {
+      return json({ error: "invalid_request" }, 400);
+    }
+    if (body.type !== "pack" && body.type !== "query") {
+      return json({ error: "invalid_request" }, 400);
+    }
+
+    await ctx.runMutation(internal.apiKeys.touchLastUsed, {
+      apiKeyId: keyCtx.apiKeyId,
+    });
+    await ctx.runMutation(internal.usage.recordActivity, {
+      accountId: keyCtx.accountId,
+      type: body.type,
+      engine: body.engine,
+      status: body.status,
+      filename: body.filename,
+      bytes: body.bytes,
+      pages: body.pages,
+    });
+    return json({ ok: true });
+  }),
+});
+
+http.route({
+  path: "/internal/record-activity",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!workerAuthorized(req)) return json({ error: "forbidden" }, 403);
+    try {
+      const body = (await req.json()) as {
+        account_id: string;
+        type: "pack" | "query";
+        engine?: string;
+        status?: string;
+        filename?: string;
+        bytes?: number;
+        pages?: number;
+      };
+      if (
+        !body.account_id ||
+        (body.type !== "pack" && body.type !== "query")
+      ) {
+        return json({ error: "invalid_request" }, 400);
+      }
+      await ctx.runMutation(internal.usage.recordActivity, {
+        accountId: body.account_id as never,
+        type: body.type,
+        engine: body.engine,
+        status: body.status,
+        filename: body.filename,
+        bytes: body.bytes,
+        pages: body.pages,
+      });
+      return json({ ok: true });
+    } catch {
+      return json({ error: "invalid_request" }, 400);
+    }
+  }),
+});
+
+http.route({
   path: "/internal/account-settings",
   method: "POST",
   handler: httpAction(async (ctx, req) => {
@@ -346,20 +509,70 @@ http.route({
         const row = await ctx.runQuery(internal.settings.getByAccountId, {
           accountId: body.account_id as never,
         });
-        return json(row);
+        return json({
+          settings: row.settings,
+          settings_json: row.settingsJson,
+          setupComplete: row.setupComplete,
+          setupCompletedAt: row.setupCompletedAt,
+          updatedAt: row.updatedAt,
+          setupUrl: row.setupUrl,
+        });
       }
       const row = await ctx.runMutation(internal.settings.putByAccountId, {
         accountId: body.account_id as never,
         settingsJson: body.settings_json ?? "{}",
         markSetupComplete: body.mark_setup_complete === true,
       });
-      return json(row);
+      let settings: unknown = {};
+      try {
+        settings = JSON.parse(row.settingsJson);
+      } catch {
+        settings = {};
+      }
+      return json({
+        settings,
+        settings_json: row.settingsJson,
+        setupComplete: row.setupComplete,
+        setupCompletedAt: row.setupCompletedAt
+          ? new Date(row.setupCompletedAt).toISOString()
+          : null,
+        updatedAt: new Date(row.updatedAt).toISOString(),
+        setupUrl: null,
+      });
     } catch (e) {
       return json(
         { error: e instanceof Error ? e.message : "invalid_request" },
         400,
       );
     }
+  }),
+});
+
+http.route({
+  path: "/internal/client-config",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!workerAuthorized(req)) return json({ error: "forbidden" }, 403);
+    let token = "";
+    try {
+      const body = (await req.json()) as { api_key?: string };
+      token = body.api_key?.trim() ?? "";
+    } catch {
+      return json({ error: "invalid_request" }, 400);
+    }
+    if (!token) return json({ error: "unauthorized" }, 401);
+
+    const config = await ctx.runQuery(internal.clientConfig.forApiKey, {
+      token,
+    });
+    if (!config) return json({ error: "unauthorized" }, 401);
+
+    await ctx.runMutation(internal.apiKeys.touchLastUsed, {
+      apiKeyId: config.apiKeyId,
+    });
+
+    const { accountId: _a, apiKeyId: _k, ...publicConfig } = config;
+    return json(publicConfig);
   }),
 });
 

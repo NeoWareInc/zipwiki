@@ -19,6 +19,10 @@ export {
 export { reportLiteParseTelemetry } from "./liteparse-telemetry.js";
 export { reportLlamaParseUsage } from "./llama-usage.js";
 export {
+  reportActivityTelemetry,
+  type ActivityTelemetryInput,
+} from "./activity-telemetry.js";
+export {
   AccountSettingsBodySchema,
   AccountSettingsResponseSchema,
   DEFAULT_ACCOUNT_SETTINGS,

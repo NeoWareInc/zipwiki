@@ -117,7 +117,12 @@ export {
   maybeReportLocalLiteParse,
 } from "./liteparse-telemetry.js";
 export {
+  maybeReportActivity,
+  type ActivityReportInput,
+} from "./activity-telemetry.js";
+export {
   applyAccountSettingsToEnv,
+  applyCachedAccountSettingsToEnv,
   isZipwikiAccountConnected,
   loadCachedAccountSettings,
   pullAccountSettings,

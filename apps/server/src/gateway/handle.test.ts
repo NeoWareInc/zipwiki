@@ -11,6 +11,23 @@ function convex(partial: Partial<ConvexGateway> & Pick<ConvexGateway, "validateK
       lowCredits: false,
       autoReload: false,
     }),
+    getAccountSettings: async () => ({
+      settings: {},
+      setupComplete: true,
+      setupCompletedAt: null,
+      updatedAt: null,
+      setupUrl: null,
+    }),
+    putAccountSettings: async () => ({
+      settings: {},
+      setupComplete: true,
+      setupCompletedAt: null,
+      updatedAt: null,
+      setupUrl: null,
+    }),
+    getClientConfig: async () => ({}),
+    recordLiteparse: async () => {},
+    recordActivity: async () => {},
     ...partial,
   };
 }

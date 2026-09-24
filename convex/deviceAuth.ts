@@ -140,13 +140,27 @@ export const approve = mutation({
       return { ok: true, status: "denied" as const };
     }
 
+    const keyName = `CLI ${row.clientName}`;
+    const now = Date.now();
+    // One active key per CLI client — revoke prior CLI keys so login rotates.
+    const existing = await ctx.db
+      .query("apiKeys")
+      .withIndex("by_accountId", (q) => q.eq("accountId", account._id))
+      .collect();
+    for (const key of existing) {
+      if (!key.revokedAt && key.name === keyName) {
+        await ctx.db.patch(key._id, { revokedAt: now });
+      }
+    }
+
     const { raw, prefix } = generateApiKey();
     const keyHash = await hashApiKey(raw);
     await ctx.db.insert("apiKeys", {
       accountId: account._id,
-      name: `CLI ${row.clientName}`,
+      name: keyName,
       keyHash,
       keyPrefix: prefix,
+      lastUsedAt: now,
     });
 
     await ctx.db.patch(row._id, {
@@ -155,7 +169,7 @@ export const approve = mutation({
       accountId: account._id,
       apiKeyOnce: raw,
       keyPrefix: prefix,
-      approvedAt: Date.now(),
+      approvedAt: now,
     });
 
     const settings = await ctx.db

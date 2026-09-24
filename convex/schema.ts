@@ -69,6 +69,8 @@ export default defineSchema({
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     llamaCredits: v.optional(v.number()),
+    filename: v.optional(v.string()),
+    jobId: v.optional(v.string()),
   })
     .index("by_accountId", ["accountId"])
     .index("by_stripeSessionId", ["stripeSessionId"])
@@ -92,15 +94,17 @@ export default defineSchema({
     okfCount: v.number(),
     liteparseSuccessCount: v.number(),
     liteparseFailCount: v.number(),
-    /** Sum of LlamaParse `job.usage.credits` this month. */
+    /** Sum of LlamaParse `job.usage.credits` this month (internal). */
     llamaCredits: v.optional(v.number()),
-    /** ZipWiki credits debited for those LlamaParse jobs. */
+    /** ZipWiki credits debited for hosted parse jobs. */
     parseCreditsSpent: v.optional(v.number()),
+    /** Pages parsed via hosted parse this period. */
+    pages: v.optional(v.number()),
   }).index("by_account_period", ["accountId", "periodStart"]),
 
   usageEvents: defineTable({
     accountId: v.id("accounts"),
-    type: v.string(), // parse | okf | liteparse
+    type: v.string(), // parse | okf | liteparse | pack | query
     engine: v.optional(v.string()),
     bytes: v.optional(v.number()),
     status: v.optional(v.string()),
@@ -113,6 +117,10 @@ export default defineSchema({
     llamaCredits: v.optional(v.number()),
     /** ZipWiki credits debited for this event. */
     creditCost: v.optional(v.number()),
+    /** Original filename / package path when known. */
+    filename: v.optional(v.string()),
+    /** LlamaParse job id when known. */
+    jobId: v.optional(v.string()),
   }).index("by_accountId", ["accountId"]),
 
   /** Master vendor float. The API key itself stays a Fly secret named by `secretEnv`. */

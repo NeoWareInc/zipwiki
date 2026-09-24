@@ -3,6 +3,7 @@ import pc from "picocolors";
 import {
   CONFIG_FILENAME,
   MANAGED_HOME_ENV_KEYS,
+  applyCachedAccountSettingsToEnv,
   buildEffectiveConfigView,
   findConfigPath,
   loadZipwikiConfig,
@@ -188,6 +189,9 @@ export function runConfigPathCommand(opts: ConfigCommandOptions = {}): void {
 export async function runConfigShowCommand(
   opts: ConfigCommandOptions = {},
 ): Promise<void> {
+  // Portal settings (last pull / login) drive parse + OKF lines — not "URL ⇒ hosted".
+  applyCachedAccountSettingsToEnv({ persist: true });
+
   const { config, configPath } = loadZipwikiConfig({
     configPath: opts.config,
   });

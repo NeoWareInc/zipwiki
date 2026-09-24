@@ -9,16 +9,39 @@ export const CREDIT_COST_PARSE = 1;
 export const CREDIT_COST_LLM = 1;
 /** LlamaParse overage price: $1.25 per 1,000 Llama credits. */
 export const LLAMA_USD_PER_1000_CREDITS = 1.25;
+/**
+ * Target gross margin on LlamaParse resale (sell so profit / sell = 20%).
+ * Markup on cost = 1 / (1 − margin) = 1.25×.
+ * @see https://developers.llamaindex.ai/llamaparse/general/pricing/
+ */
+export const TARGET_PROFIT_MARGIN = 0.2;
+export const COST_MARKUP = 1 / (1 - TARGET_PROFIT_MARGIN);
+/** Default hosted tier (ZipWiki settings): Agentic = 10 Llama credits / page. */
+export const LLAMA_AGENTIC_CREDITS_PER_PAGE = 10;
 
 /**
  * ZipWiki credits to debit for one LlamaParse job.
- * $1.25 / 1,000 Llama credits, sold at 100 ZipWiki credits per dollar.
- * Any job Llama billed costs at least 1 ZipWiki credit.
+ * Cost = Llama credits × $1.25 / 1,000, then × markup for TARGET_PROFIT_MARGIN,
+ * converted at 100 ZipWiki credits per dollar. Any billed job costs ≥ 1 credit.
  */
 export function zipwikiCreditsForLlamaCredits(llamaCredits: number): number {
   if (!Number.isFinite(llamaCredits) || llamaCredits <= 0) return 0;
-  const raw = (llamaCredits * LLAMA_USD_PER_1000_CREDITS * CREDITS_PER_DOLLAR) / 1000;
+  const costCredits =
+    (llamaCredits * LLAMA_USD_PER_1000_CREDITS * CREDITS_PER_DOLLAR) / 1000;
+  const raw = costCredits * COST_MARKUP;
   return Math.max(1, Math.ceil(raw - 1e-9));
+}
+
+/**
+ * Approximate Agentic pages covered by `usd` at TARGET_PROFIT_MARGIN
+ * (fractional sell rate; per-job ceil may yield slightly fewer pages).
+ */
+export function approxAgenticPagesForUsd(usd: number): number {
+  if (!Number.isFinite(usd) || usd <= 0) return 0;
+  const costPerPage =
+    (LLAMA_AGENTIC_CREDITS_PER_PAGE * LLAMA_USD_PER_1000_CREDITS) / 1000;
+  const sellPerPage = costPerPage * COST_MARKUP;
+  return Math.floor(usd / sellPerPage + 1e-9);
 }
 
 export const CREDIT_PRESETS_USD = [5, 10, 25, 50, 100] as const;

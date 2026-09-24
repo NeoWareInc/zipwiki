@@ -271,8 +271,8 @@ function okfCredentialFromEnv(
 
 /**
  * Resolve parse credential source.
- * Explicit `ZIPWIKI_PARSE_CREDENTIAL` wins (BYO override).
- * Otherwise URL set ⇒ hosted `zipwiki`; else `local`.
+ * Explicit `ZIPWIKI_PARSE_CREDENTIAL` wins (set from portal settings pull).
+ * Otherwise local LiteParse — signing in alone does not force hosted parse.
  */
 export function resolveParseCredentialSource(
   env: NodeJS.ProcessEnv = process.env,
@@ -284,18 +284,16 @@ export function resolveParseCredentialSource(
   if (legacyMode === "remote") return "zipwiki";
   if (legacyMode === "local") return "local";
 
-  // URL alone ⇒ hosted (key may be obtained later). HOSTED_MODE is legacy-only.
-  if (hasZipwikiApiCredentials(env) || isHostedMode({ env })) {
-    return "zipwiki";
-  }
+  // Legacy flag only — portal settings normally set ZIPWIKI_PARSE_CREDENTIAL.
+  if (isHostedMode({ env })) return "zipwiki";
 
   return "local";
 }
 
 /**
  * Resolve OKF credential source.
- * Explicit `ZIPWIKI_OKF_CREDENTIAL` wins (BYO override).
- * Otherwise URL set ⇒ hosted `zipwiki`; else `local`.
+ * Explicit `ZIPWIKI_OKF_CREDENTIAL` wins (set from portal settings pull).
+ * Otherwise local / skip AI — signing in alone does not force hosted OKF.
  */
 export function resolveOkfCredentialSource(
   env: NodeJS.ProcessEnv = process.env,
@@ -307,9 +305,7 @@ export function resolveOkfCredentialSource(
   if (legacyMode === "remote") return "zipwiki";
   if (legacyMode === "local") return "local";
 
-  if (hasZipwikiApiCredentials(env) || isHostedMode({ env })) {
-    return "zipwiki";
-  }
+  if (isHostedMode({ env })) return "zipwiki";
 
   return "local";
 }

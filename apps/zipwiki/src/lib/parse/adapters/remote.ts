@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import { readFileSync } from "node:fs";
+import { withActivityDots, stageLog } from "../../cli/activity-dots.js";
 import {
   resolveZipwikiApiKey,
   resolveZipwikiApiUrl,
@@ -71,57 +72,57 @@ export class RemoteParseAdapter {
       headers.Authorization = `Bearer ${this.api.key}`;
     }
 
-    const response = await this.fetchImpl(`${base}/api/parse`, {
-      method: "POST",
-      headers,
-      body: form,
-    });
+    return withActivityDots(filename, { quiet: opts.cli?.quiet }, async () => {
+      const response = await this.fetchImpl(`${base}/api/parse`, {
+        method: "POST",
+        headers,
+        body: form,
+      });
 
-    const text = await response.text();
-    let body: unknown;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      throw new Error(
-        `ZipWiki parse API error (${response.status}): ${text.slice(0, 500)}`,
-      );
-    }
+      const text = await response.text();
+      let body: unknown;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        throw new Error(
+          `ZipWiki parse API error (${response.status}): ${text.slice(0, 500)}`,
+        );
+      }
 
-    if (!response.ok) {
-      const err =
-        typeof body === "object" &&
-        body !== null &&
-        "error" in body &&
-        typeof (body as { error: unknown }).error === "string"
-          ? (body as { error: string }).error
-          : text.slice(0, 500);
-      throw new Error(
-        `ZipWiki parse API ${response.status}: ${err}`,
-      );
-    }
+      if (!response.ok) {
+        const err =
+          typeof body === "object" &&
+          body !== null &&
+          "error" in body &&
+          typeof (body as { error: unknown }).error === "string"
+            ? (body as { error: string }).error
+            : text.slice(0, 500);
+        throw new Error(`ZipWiki parse API ${response.status}: ${err}`);
+      }
 
-    const parsed = body as DocumentParseResult & {
-      forcedEngine?: string;
-      fallbackReason?: string;
-    };
-    if (
-      parsed.forcedEngine === "liteparse" ||
-      parsed.fallbackReason === "quota_fallback_free" ||
-      parsed.fallbackReason === "free_plan"
-    ) {
-      const why =
-        parsed.fallbackReason === "quota_fallback_free"
-          ? "LlamaParse quota used; falling back to LiteParse"
-          : "Hosted parse unavailable — using LiteParse";
-      if (!opts.cli?.quiet) console.error(`[zipwiki] ${why}`);
-      const err = new Error(why);
-      (err as Error & { code?: string }).code =
+      const parsed = body as DocumentParseResult & {
+        forcedEngine?: string;
+        fallbackReason?: string;
+      };
+      if (
+        parsed.forcedEngine === "liteparse" ||
+        parsed.fallbackReason === "quota_fallback_free" ||
         parsed.fallbackReason === "free_plan"
-          ? "free_plan"
-          : "quota_fallback_free";
-      throw err;
-    }
+      ) {
+        const why =
+          parsed.fallbackReason === "quota_fallback_free"
+            ? "LlamaParse quota used; falling back to LiteParse"
+            : "Hosted parse unavailable — using LiteParse";
+        if (!opts.cli?.quiet) stageLog(`[zipwiki] ${why}`);
+        const err = new Error(why);
+        (err as Error & { code?: string }).code =
+          parsed.fallbackReason === "free_plan"
+            ? "free_plan"
+            : "quota_fallback_free";
+        throw err;
+      }
 
-    return parsed;
+      return parsed;
+    });
   }
 }

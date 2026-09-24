@@ -52,6 +52,8 @@ export async function maybeReportLlamaParseUsage(input: {
   llamaCredits?: number;
   pages?: number;
   bytes?: number;
+  filename?: string;
+  jobId?: string;
   quiet?: boolean;
 }): Promise<void> {
   if (input.engine !== "llamaparse") return;
@@ -75,6 +77,8 @@ export async function maybeReportLlamaParseUsage(input: {
       llamaCredits: input.llamaCredits,
       pages: input.pages,
       bytes: input.bytes,
+      filename: input.filename,
+      jobId: input.jobId,
     });
     if (!input.quiet) {
       const llama =

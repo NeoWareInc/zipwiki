@@ -84,6 +84,17 @@ export const pollToken = internalMutation({
             : undefined);
       }
     }
+
+    // Mark the issued key as used when the CLI claims it.
+    const keyHash = await hashApiKey(apiKey);
+    const issued = await ctx.db
+      .query("apiKeys")
+      .withIndex("by_keyHash", (q) => q.eq("keyHash", keyHash))
+      .unique();
+    if (issued && !issued.revokedAt) {
+      await ctx.db.patch(issued._id, { lastUsedAt: Date.now() });
+    }
+
     await ctx.db.delete(row._id);
     return {
       status: "approved" as const,

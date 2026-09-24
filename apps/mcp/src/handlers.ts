@@ -33,6 +33,7 @@ import {
   readZipEntryPayload,
 } from "@zipwiki/zipwiki/archive";
 import { runPack } from "@zipwiki/zipwiki";
+import { maybeReportActivity } from "@zipwiki/zipwiki/config";
 import {
   invalidatePackageCache,
   withCachedPackage,
@@ -68,7 +69,16 @@ export async function open(args: {
   package?: string;
 }): Promise<ToolResult> {
   try {
-    return jsonResult(withCachedPackage(args.package, () => openPackage(args.package)));
+    const result = withCachedPackage(args.package, () =>
+      openPackage(args.package),
+    );
+    void maybeReportActivity({
+      type: "query",
+      action: "open",
+      path: args.package,
+      quiet: true,
+    });
+    return jsonResult(result);
   } catch (err) {
     return errorResult(err);
   }
@@ -80,7 +90,14 @@ export async function list(args: {
   limit?: number;
 }): Promise<ToolResult> {
   try {
-    return jsonResult(withCachedPackage(args.package, () => listPackage(args)));
+    const result = withCachedPackage(args.package, () => listPackage(args));
+    void maybeReportActivity({
+      type: "query",
+      action: "list",
+      path: args.package,
+      quiet: true,
+    });
+    return jsonResult(result);
   } catch (err) {
     return errorResult(err);
   }
@@ -100,9 +117,17 @@ export async function search(args: {
         true,
       );
     }
-    return jsonResult(
-      withCachedPackage(args.package, () => searchPackage(args)),
-    );
+    const result = withCachedPackage(args.package, () => searchPackage(args));
+    void maybeReportActivity({
+      type: "query",
+      action: "search",
+      path: args.package,
+      count: Array.isArray((result as { hits?: unknown }).hits)
+        ? (result as { hits: unknown[] }).hits.length
+        : undefined,
+      quiet: true,
+    });
+    return jsonResult(result);
   } catch (err) {
     return errorResult(err);
   }
@@ -124,34 +149,42 @@ export async function query(args: {
         true,
       );
     }
-    return jsonResult(
-      withCachedPackage(args.package, () => {
-        const search = searchPackage(args);
-        const k = Math.min(
-          Math.max(args.readTopK ?? 3, 0),
-          search.hits.length,
-        );
-        const paths = search.hits.slice(0, k).map((h) => h.path);
-        const topK =
-          paths.length > 0
-            ? readEntries({
-                package: args.package,
-                paths,
-                maxBytes: args.maxBytes,
-              })
-            : [];
-        return {
-          ...search,
-          topK: topK.map((r) => ({
-            path: r.path,
-            encoding: r.encoding ?? "utf8",
-            truncated: r.truncated,
-            text: r.text,
-            data: r.data,
-          })),
-        };
-      }),
-    );
+    const result = withCachedPackage(args.package, () => {
+      const search = searchPackage(args);
+      const k = Math.min(
+        Math.max(args.readTopK ?? 3, 0),
+        search.hits.length,
+      );
+      const paths = search.hits.slice(0, k).map((h) => h.path);
+      const topK =
+        paths.length > 0
+          ? readEntries({
+              package: args.package,
+              paths,
+              maxBytes: args.maxBytes,
+            })
+          : [];
+      return {
+        ...search,
+        topK: topK.map((r) => ({
+          path: r.path,
+          encoding: r.encoding ?? "utf8",
+          truncated: r.truncated,
+          text: r.text,
+          data: r.data,
+        })),
+      };
+    });
+    void maybeReportActivity({
+      type: "query",
+      action: "query",
+      path: args.package,
+      count: Array.isArray((result as { hits?: unknown }).hits)
+        ? (result as { hits: unknown[] }).hits.length
+        : undefined,
+      quiet: true,
+    });
+    return jsonResult(result);
   } catch (err) {
     return errorResult(err);
   }

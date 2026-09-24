@@ -18,7 +18,7 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, pack "./knowledge/test1" into ./knowledge/test1.zipwiki, enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "pnpm zipwiki -- pack knowledge/test1 -o ./knowledge/test1.zipwiki",
+      "pnpm zipwiki -- pack knowledge/test1 -o ./knowledge/test1.zipwiki --no-ai-okf",
   },
   {
     id: "sample-docs",
@@ -28,7 +28,7 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     prompt:
       'Using ZipWiki MCP, pack "./knowledge/test2" into ./knowledge/sample-docs.zipwiki, enrich every primary with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/sample-docs.zipwiki",
+      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/sample-docs.zipwiki --no-ai-okf",
   },
   {
     id: "folder",

@@ -18,11 +18,31 @@ export const getByAccountId = internalQuery({
       .query("accountSettings")
       .withIndex("by_accountId", (q) => q.eq("accountId", accountId))
       .unique();
+    const settingsJson = row?.settingsJson ?? DEFAULT_SETTINGS;
+    let settings: unknown = {};
+    try {
+      settings = JSON.parse(settingsJson);
+    } catch {
+      settings = {};
+    }
+    const webOrigin =
+      process.env.WEB_ORIGIN?.trim().split(",")[0]?.trim() ||
+      process.env.SITE_URL?.trim() ||
+      "http://localhost:5173";
+    const origin = webOrigin.replace(/\/$/, "");
     return {
-      settingsJson: row?.settingsJson ?? DEFAULT_SETTINGS,
+      settingsJson,
+      settings,
       setupComplete: Boolean(row?.setupCompletedAt),
-      setupCompletedAt: row?.setupCompletedAt ?? null,
-      updatedAt: row?._creationTime ?? null,
+      setupCompletedAt: row?.setupCompletedAt
+        ? new Date(row.setupCompletedAt).toISOString()
+        : null,
+      updatedAt: row
+        ? new Date(row._creationTime).toISOString()
+        : null,
+      setupUrl: row?.setupCompletedAt
+        ? null
+        : `${origin}/dashboard/settings?onboarding=1`,
     };
   },
 });

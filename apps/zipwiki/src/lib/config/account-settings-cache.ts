@@ -3,15 +3,18 @@ import { join } from "node:path";
 import {
   AccountSettingsBodySchema,
   DEFAULT_ACCOUNT_SETTINGS,
+  ZipwikiApiError,
   fetchAccountSettings,
   type AccountSettingsBody,
   type AccountSettingsResponse,
 } from "@zipwiki/api-client";
 import {
   resolveZipwikiApiKey,
+  resolveZipwikiApiTarget,
   resolveZipwikiApiUrl,
+  zipwikiDeviceAuthUrl,
 } from "./api.js";
-import { zipwikiHomeDir } from "./home.js";
+import { saveZipwikiHomeEnv, zipwikiHomeDir } from "./home.js";
 import { isSecretEnvConfigured } from "./home.js";
 
 export function zipwikiSettingsCachePath(): string {
@@ -54,10 +57,32 @@ export function saveCachedAccountSettings(
 /** Apply credential prefs into process.env (BYO secrets stay local). */
 export function applyAccountSettingsToEnv(
   settings: AccountSettingsBody,
+  opts?: { persist?: boolean },
 ): void {
   process.env.ZIPWIKI_PARSE_CREDENTIAL = settings.parseCredential;
   process.env.ZIPWIKI_OKF_CREDENTIAL =
     settings.okfCredential === "local" ? "local" : settings.okfCredential;
+  if (opts?.persist !== false) {
+    // Portal settings must survive the next CLI process — not only this one.
+    saveZipwikiHomeEnv({
+      ZIPWIKI_PARSE_CREDENTIAL: settings.parseCredential,
+      ZIPWIKI_OKF_CREDENTIAL:
+        settings.okfCredential === "local" ? "local" : settings.okfCredential,
+    });
+  }
+}
+
+/**
+ * Load the last pulled portal settings into process.env (and home .env).
+ * Call before config show / pack so signed-in defaults match the dashboard.
+ */
+export function applyCachedAccountSettingsToEnv(opts?: {
+  persist?: boolean;
+}): AccountSettingsBody | null {
+  const cached = loadCachedAccountSettings();
+  if (!cached?.setupComplete) return null;
+  applyAccountSettingsToEnv(cached.settings, { persist: opts?.persist });
+  return cached.settings;
 }
 
 export function warnMissingByoSecrets(settings: AccountSettingsBody): void {
@@ -90,7 +115,31 @@ export async function pullAccountSettings(opts?: {
   if (!url || !key) {
     throw new Error("Not connected — run: zipwiki auth login");
   }
-  const payload = await fetchAccountSettings(url, key);
+
+  let payload: AccountSettingsResponse;
+  try {
+    payload = await fetchAccountSettings(url, key);
+  } catch (err) {
+    // Fly often returns 404+unauthorized when CONVEX_SITE_URL is wrong.
+    // Fall back to the Convex HTTP host used for device login.
+    const target = resolveZipwikiApiTarget(url) ?? "dev";
+    const convexSite = zipwikiDeviceAuthUrl(target);
+    if (
+      err instanceof ZipwikiApiError &&
+      (err.status === 404 || err.status === 401 || err.status === 502) &&
+      convexSite.replace(/\/+$/, "") !== url.replace(/\/+$/, "")
+    ) {
+      if (!opts?.quiet) {
+        console.error(
+          `[zipwiki] ${url} failed (${err.message}); trying ${convexSite}…`,
+        );
+      }
+      payload = await fetchAccountSettings(convexSite, key);
+    } else {
+      throw err;
+    }
+  }
+
   const path = saveCachedAccountSettings(payload);
   if (!opts?.quiet) {
     console.error(`[zipwiki] settings synced → ${path}`);

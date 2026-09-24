@@ -16,22 +16,33 @@ import {
 } from "./api.js";
 
 describe("credential source resolution", () => {
-  it("defaults to zipwiki when API URL is set (key optional)", () => {
+  it("defaults to local when API URL is set but portal prefs are unset", () => {
     const env = {
       ZIPWIKI_API_URL: ZIPWIKI_DEV_API_URL,
       ANTHROPIC_API_KEY: "sk-ant",
       LLAMA_CLOUD_API_KEY: "llx",
     };
-    assert.equal(resolveParseCredentialSource(env), "zipwiki");
-    assert.equal(resolveOkfCredentialSource(env), "zipwiki");
+    assert.equal(resolveParseCredentialSource(env), "local");
+    assert.equal(resolveOkfCredentialSource(env), "local");
   });
 
-  it("defaults to zipwiki when API URL and key are set", () => {
+  it("defaults to local when API URL and key are set without portal prefs", () => {
     const env = {
       ZIPWIKI_API_URL: ZIPWIKI_DEV_API_URL,
       ZIPWIKI_API_KEY: "zc_live_test",
       ANTHROPIC_API_KEY: "sk-ant",
       LLAMA_CLOUD_API_KEY: "llx",
+    };
+    assert.equal(resolveParseCredentialSource(env), "local");
+    assert.equal(resolveOkfCredentialSource(env), "local");
+  });
+
+  it("honors explicit zipwiki credentials from portal settings", () => {
+    const env = {
+      ZIPWIKI_API_URL: ZIPWIKI_DEV_API_URL,
+      ZIPWIKI_API_KEY: "zc_live_test",
+      ZIPWIKI_PARSE_CREDENTIAL: "zipwiki",
+      ZIPWIKI_OKF_CREDENTIAL: "zipwiki",
     };
     assert.equal(resolveParseCredentialSource(env), "zipwiki");
     assert.equal(resolveOkfCredentialSource(env), "zipwiki");
@@ -52,6 +63,15 @@ describe("credential source resolution", () => {
     const env = { ANTHROPIC_API_KEY: "sk-ant" };
     assert.equal(resolveParseCredentialSource(env), "local");
     assert.equal(resolveOkfCredentialSource(env), "local");
+  });
+
+  it("legacy ZIPWIKI_HOSTED_MODE still forces zipwiki", () => {
+    const env = {
+      ZIPWIKI_API_URL: ZIPWIKI_DEV_API_URL,
+      ZIPWIKI_HOSTED_MODE: "1",
+    };
+    assert.equal(resolveParseCredentialSource(env), "zipwiki");
+    assert.equal(resolveOkfCredentialSource(env), "zipwiki");
   });
 
   it("maps preset URLs to dev / production (local aliases to hosted Dev)", () => {

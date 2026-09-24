@@ -129,6 +129,7 @@ export class LlamaParseAdapter implements DocumentParser {
       text,
       pages: pages.length > 0 ? pages : undefined,
       ...(llamaCredits != null ? { llamaCredits } : {}),
+      ...(jobId ? { jobId } : {}),
       raw: result,
     };
   }

@@ -5,6 +5,7 @@ import {
   creditSnapshot,
   creditsForUsdCents,
   zipwikiCreditsForLlamaCredits,
+  approxAgenticPagesForUsd,
   crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
@@ -22,13 +23,19 @@ describe("credits", () => {
     assert.equal(clampUsdCents(2_000_000), MAX_USD_CENTS);
   });
 
-  it("converts LlamaParse job credits at $1.25 per 1,000", () => {
+  it("converts LlamaParse job credits at $1.25/1k with 20% margin", () => {
+    // Cost × 1.25 markup, then ceil. Cost credits = llama × 0.125.
     assert.equal(zipwikiCreditsForLlamaCredits(0), 0);
-    assert.equal(zipwikiCreditsForLlamaCredits(1), 1);
-    assert.equal(zipwikiCreditsForLlamaCredits(8), 1);
-    assert.equal(zipwikiCreditsForLlamaCredits(10), 2);
-    assert.equal(zipwikiCreditsForLlamaCredits(80), 10);
-    assert.equal(zipwikiCreditsForLlamaCredits(100), 13);
+    assert.equal(zipwikiCreditsForLlamaCredits(1), 1); // 0.15625 → 1
+    assert.equal(zipwikiCreditsForLlamaCredits(8), 2); // 1.25 → 2
+    assert.equal(zipwikiCreditsForLlamaCredits(10), 2); // 1.5625 → 2 (1 Agentic page)
+    assert.equal(zipwikiCreditsForLlamaCredits(80), 13); // 12.5 → 13
+    assert.equal(zipwikiCreditsForLlamaCredits(100), 16); // 15.625 → 16
+  });
+
+  it("estimates ~640 Agentic pages for $10 at 20% margin", () => {
+    assert.equal(approxAgenticPagesForUsd(10), 640);
+    assert.equal(approxAgenticPagesForUsd(0), 0);
   });
 
   it("grants 100 credits per dollar", () => {

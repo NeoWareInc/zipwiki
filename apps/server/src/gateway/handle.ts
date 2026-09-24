@@ -71,6 +71,8 @@ export async function handleParse(
         engine: "llamaparse",
         pages: parsed.pageCount,
         bytes: args.bytes.byteLength,
+        filename: args.filename,
+        ...(parsed.jobId ? { jobId: parsed.jobId } : {}),
         ...(parsed.llamaCredits != null
           ? { llamaCredits: parsed.llamaCredits }
           : {}),

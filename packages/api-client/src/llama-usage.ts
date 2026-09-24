@@ -4,7 +4,13 @@ import { apiFetch } from "./client-config.js";
 export async function reportLlamaParseUsage(
   baseUrl: string,
   apiKey: string,
-  input: { llamaCredits?: number; pages?: number; bytes?: number },
+  input: {
+    llamaCredits?: number;
+    pages?: number;
+    bytes?: number;
+    filename?: string;
+    jobId?: string;
+  },
 ): Promise<void> {
   const res = await apiFetch(baseUrl, "/api/usage/llamaparse", {
     method: "POST",
@@ -13,6 +19,8 @@ export async function reportLlamaParseUsage(
       llamaCredits: input.llamaCredits,
       pages: input.pages,
       bytes: input.bytes,
+      filename: input.filename,
+      jobId: input.jobId,
     }),
   });
   if (!res.ok) {

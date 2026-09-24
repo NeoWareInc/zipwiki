@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { AccountSettingsBody } from "@zipwiki/api-client";
+import { ZipwikiApiError, type AccountSettingsBody } from "@zipwiki/api-client";
 import {
+  applyAccountSettingsToEnv,
   loadCachedAccountSettings,
   pullAccountSettings,
   requireAccountConnected,
@@ -23,18 +24,53 @@ function settingsPageUrl(): string {
   });
 }
 
+function printAuthHint(err: unknown): never {
+  const status =
+    err instanceof ZipwikiApiError ? err.status : undefined;
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error("");
+  console.error("[zipwiki] Could not load account settings from the API.");
+  if (status === 401 || status === 403 || /unauthorized/i.test(msg)) {
+    console.error(
+      "  Your API key was rejected (revoked or wrong). Get a new one:",
+    );
+  } else if (status === 404) {
+    console.error(
+      "  The API host returned 404 for /api/settings (wrong URL or Fly not deployed).",
+    );
+    console.error(
+      "  After fixing Fly secrets, you can also pull via Convex device-auth host.",
+    );
+  } else {
+    console.error(`  ${msg}`);
+  }
+  console.error("");
+  console.error("  pnpm zipwiki -- auth login");
+  console.error("  pnpm zipwiki -- settings pull");
+  console.error("");
+  process.exit(1);
+}
+
 export async function runSettingsShow(opts?: {
   format?: "text" | "json";
 }): Promise<void> {
   requireAccountConnected();
   let cached = loadCachedAccountSettings();
   if (!cached) {
-    await pullAccountSettings({ quiet: true });
-    cached = loadCachedAccountSettings();
+    try {
+      await pullAccountSettings({ quiet: true });
+      cached = loadCachedAccountSettings();
+    } catch (err) {
+      printAuthHint(err);
+    }
   }
   if (!cached) {
-    throw new Error("No settings cache — run: zipwiki settings pull");
+    console.error(
+      "[zipwiki] No settings cache yet. Run: pnpm zipwiki -- auth login",
+    );
+    process.exit(1);
   }
+  applyAccountSettingsToEnv(cached.settings);
 
   if (opts?.format === "json") {
     process.stdout.write(
@@ -65,10 +101,14 @@ export async function runSettingsShow(opts?: {
 
 export async function runSettingsPull(): Promise<void> {
   requireAccountConnected();
-  const payload = await pullAccountSettings();
-  console.error(
-    `[zipwiki] setupComplete=${payload.setupComplete} parse=${payload.settings.parseCredential} okf=${payload.settings.okfCredential}`,
-  );
+  try {
+    const payload = await pullAccountSettings();
+    console.error(
+      `[zipwiki] setupComplete=${payload.setupComplete} parse=${payload.settings.parseCredential} okf=${payload.settings.okfCredential}`,
+    );
+  } catch (err) {
+    printAuthHint(err);
+  }
 }
 
 export async function runSettingsOpen(opts?: {

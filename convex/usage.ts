@@ -120,6 +120,8 @@ export const recordUsage = internalMutation({
     outputTokens: v.optional(v.number()),
     /** LlamaParse `job.usage.credits` for this document. */
     llamaCredits: v.optional(v.number()),
+    filename: v.optional(v.string()),
+    jobId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const {
@@ -134,7 +136,17 @@ export const recordUsage = internalMutation({
       inputTokens,
       outputTokens,
       llamaCredits,
+      filename,
+      jobId,
     } = args;
+    const safeFilename =
+      typeof filename === "string" && filename.trim()
+        ? filename.trim().slice(0, 512)
+        : undefined;
+    const safeJobId =
+      typeof jobId === "string" && jobId.trim()
+        ? jobId.trim().slice(0, 128)
+        : undefined;
     const creditCost =
       kind === "parse"
         ? llamaCredits != null
@@ -159,6 +171,7 @@ export const recordUsage = internalMutation({
         liteparseFailCount: 0,
         llamaCredits: kind === "parse" ? (llamaCredits ?? 0) : 0,
         parseCreditsSpent: kind === "parse" ? creditCost : 0,
+        pages: kind === "parse" ? (pages ?? 0) : 0,
       });
       period = (await ctx.db.get(id))!;
     } else {
@@ -171,6 +184,8 @@ export const recordUsage = internalMutation({
         parseCreditsSpent:
           (period.parseCreditsSpent ?? 0) +
           (kind === "parse" ? creditCost : 0),
+        pages:
+          (period.pages ?? 0) + (kind === "parse" ? (pages ?? 0) : 0),
       });
     }
 
@@ -186,6 +201,8 @@ export const recordUsage = internalMutation({
       outputTokens,
       llamaCredits,
       creditCost,
+      filename: safeFilename,
+      jobId: safeJobId,
     });
 
     const providerSlug =
@@ -279,6 +296,8 @@ export const recordUsage = internalMutation({
       inputTokens,
       outputTokens,
       llamaCredits,
+      filename: safeFilename,
+      jobId: safeJobId,
     });
 
     if (notify) {
@@ -341,6 +360,41 @@ export const recordLiteparse = internalMutation({
   },
 });
 
+/**
+ * Soft activity log for pack / open / search / query (no credit debit).
+ * `engine` holds the action subtype for query events (open|search|query|…).
+ */
+export const recordActivity = internalMutation({
+  args: {
+    accountId: v.id("accounts"),
+    type: v.union(v.literal("pack"), v.literal("query")),
+    engine: v.optional(v.string()),
+    status: v.optional(v.string()),
+    filename: v.optional(v.string()),
+    bytes: v.optional(v.number()),
+    pages: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const safeFilename =
+      typeof args.filename === "string" && args.filename.trim()
+        ? args.filename.trim().slice(0, 512)
+        : undefined;
+    const safeEngine =
+      typeof args.engine === "string" && args.engine.trim()
+        ? args.engine.trim().slice(0, 64)
+        : undefined;
+    await ctx.db.insert("usageEvents", {
+      accountId: args.accountId,
+      type: args.type,
+      engine: safeEngine,
+      status: args.status ?? "success",
+      filename: safeFilename,
+      bytes: args.bytes,
+      pages: args.pages,
+    });
+  },
+});
+
 export const myUsage = query({
   args: {},
   handler: async (ctx) => {
@@ -363,8 +417,8 @@ export const myUsage = query({
     return {
       parseCount: period?.parseCount ?? 0,
       okfCount: period?.okfCount ?? 0,
-      llamaCredits: period?.llamaCredits ?? 0,
       parseCreditsSpent: period?.parseCreditsSpent ?? 0,
+      parsePages: period?.pages ?? 0,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,
       liteparseFailCount: period?.liteparseFailCount ?? 0,
       maxParses: credits.plan.maxParsesPerMonth,
@@ -386,6 +440,42 @@ export const myUsage = query({
       autoReloadLastError: account.autoReloadLastError || null,
       hasPaymentMethod: Boolean(account.stripePaymentMethodId),
     };
+  },
+});
+
+/** Recent usage events for the signed-in account (portal activity log). */
+export const myUsageLog = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+    const account = await ctx.db
+      .query("accounts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!account) return null;
+    const take = Math.min(100, Math.max(1, Math.floor(limit ?? 40)));
+    const rows = await ctx.db
+      .query("usageEvents")
+      .withIndex("by_accountId", (q) => q.eq("accountId", account._id))
+      .order("desc")
+      .take(take);
+    return rows.map((row) => ({
+      id: row._id,
+      createdAt: row._creationTime,
+      type: row.type,
+      engine: row.engine ?? null,
+      status: row.status ?? null,
+      provider: row.provider ?? null,
+      pages: row.pages ?? null,
+      bytes: row.bytes ?? null,
+      llamaCredits: row.llamaCredits ?? null,
+      creditCost: row.creditCost ?? null,
+      filename: row.filename ?? null,
+      jobId: row.jobId ?? null,
+      inputTokens: row.inputTokens ?? null,
+      outputTokens: row.outputTokens ?? null,
+    }));
   },
 });
 
