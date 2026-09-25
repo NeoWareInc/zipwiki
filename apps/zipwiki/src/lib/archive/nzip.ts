@@ -425,7 +425,11 @@ function toOkfZipEntries(
 ): ZipEntry[] {
   if (!okf?.files?.length) return [];
   return okf.files
-    .filter((f) => f.name.replace(/\\/g, "/").split("/").pop() !== "log.md")
+    .filter((f) => {
+      const name = f.name.replace(/\\/g, "/");
+      if (/(^|\/)topics\/pdf\.md$/i.test(name)) return false;
+      return name.split("/").pop() !== "log.md";
+    })
     .map((f) => ({
       name: okfPathFor(f.name, aiRoot),
       data: Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data, "utf-8"),

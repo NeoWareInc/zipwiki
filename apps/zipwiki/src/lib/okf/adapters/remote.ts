@@ -3,6 +3,7 @@ import {
   resolveZipwikiApiUrl,
   type ZipwikiApiConfig,
 } from "../../config/index.js";
+import { okfParseSample } from "../parse-sample.js";
 import type { BuildOkfBundleInput, OkfEnrichment } from "../types.js";
 
 export type RemoteOkfAdapterOptions = {
@@ -45,7 +46,7 @@ export class RemoteOkfAdapter {
       headers,
       body: JSON.stringify({
         primaries: input.primaries,
-        parsedMarkdown: input.parsedMarkdown,
+        parsedMarkdown: okfParseSample(input.parsedMarkdown),
         title: input.title,
         digest: input.digest,
         documentType: input.documentType,

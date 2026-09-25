@@ -24,7 +24,8 @@ export type AnthropicOutput = {
   outputTokens?: number;
 };
 
-const MAX_PARSE_CHARS = 12_000;
+/** Keep in step with `OKF_PARSE_SAMPLE_CHARS` in the zipwiki client. */
+export const MAX_PARSE_CHARS = 12_000;
 
 function promptFor(input: OkfRequest): string {
   const sample = (input.parsedMarkdown ?? "").slice(0, MAX_PARSE_CHARS);

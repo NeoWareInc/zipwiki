@@ -1,6 +1,7 @@
 /**
  * OKF catalog maintenance: topic pages and the index.
  * Run this whenever concepts are written so add/delete cannot leave a stale catalog.
+ * The file-type tag `pdf` does not get a page (`topics/pdf.md` only repeats the file list).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -15,7 +16,6 @@ import {
   type OkfIndexEntry,
 } from "./render.js";
 import { buildDocumentFrontmatter } from "./yaml.js";
-
 export type OkfMarkdownFile = {
   /** Path relative to `wiki/okf/`, e.g. `lease.md` or `topics/warehouse.md`. */
   href: string;
@@ -45,6 +45,15 @@ function tagsOf(markdown: string): string[] {
   return Array.isArray(fields.tags) ? fields.tags.map(String) : [];
 }
 
+/** `topics/pdf.md` lists every PDF and adds nothing the index does not already say. */
+function isOmittedTopicTag(tag: string): boolean {
+  return tag.trim().toLowerCase() === "pdf";
+}
+
+function isOmittedTopicHref(href: string): boolean {
+  return /(?:^|\/)topics\/pdf\.md$/i.test(href.replace(/\\/g, "/"));
+}
+
 function sourcesOf(markdown: string): Array<{ resource: string; description?: string }> {
   const { frontmatter } = splitFrontmatter(markdown);
   if (!frontmatter) return [];
@@ -68,7 +77,7 @@ function titleOf(href: string, markdown: string): string {
 
 /**
  * Shared tags that appear on at least two concept cards become topic pages.
- * Capped so the first read of the index stays short.
+ * Capped so the first read of the index stays short. The `pdf` tag is skipped.
  */
 export function buildTopicFiles(
   concepts: OkfMarkdownFile[],
@@ -77,6 +86,7 @@ export function buildTopicFiles(
   const byTag = new Map<string, OkfMarkdownFile[]>();
   for (const concept of concepts) {
     for (const tag of tagsOf(concept.markdown)) {
+      if (isOmittedTopicTag(tag)) continue;
       const list = byTag.get(tag) ?? [];
       list.push(concept);
       byTag.set(tag, list);
@@ -180,7 +190,7 @@ export function danglingSourcePaths(
   return missing;
 }
 
-/** Rewrite topics and index.md from the concept files on disk. */
+/** Rewrite topics and index.md from the concept files on disk. Drops `topics/pdf.md`, `log.md`, and `search.json`. */
 export function finalizeOkfDirectory(okfDir: string, generatedAt = new Date().toISOString()): number {
   if (!existsSync(okfDir)) return 0;
   const concepts: OkfMarkdownFile[] = [];
@@ -229,8 +239,8 @@ function searchIndexPath(okfRoot: string): string {
 
 /**
  * Rebuild topic pages and `index.md` from the concept cards still in the
- * archive. Drops `log.md` and `search.json`. A topic with no sources left
- * is omitted. Call this before the archive is sealed.
+ * archive. Drops `topics/pdf.md`, `log.md`, and `search.json`. A topic with
+ * no sources left is omitted. Call this before the archive is sealed.
  */
 export function syncOkfArchive(input: {
   okfRoot: string;
@@ -263,7 +273,7 @@ export function syncOkfArchive(input: {
   const put: Array<{ name: string; data: string }> = [];
   const del = new Set<string>();
   for (const name of existingTopics) {
-    if (!topicNames.has(name)) del.add(name);
+    if (!topicNames.has(name) || isOmittedTopicHref(name)) del.add(name);
   }
   del.add(`${root}${OKF_LOG_NAME}`);
   del.add(searchIndexPath(root));

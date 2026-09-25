@@ -380,7 +380,7 @@ describe("updatePackage", () => {
         "type: Document",
         `title: ${title}`,
         "description: shared warehouse note",
-        "tags: [warehouse]",
+        "tags: [warehouse, pdf]",
         "sources:",
         `  - resource: "../../${file}"`,
         "    description: primary",
@@ -414,6 +414,7 @@ describe("updatePackage", () => {
     assert.ok(!names.includes("gamma.txt"));
     assert.ok(!names.includes("wiki/okf/gamma.md"));
     assert.ok(names.includes("wiki/okf/topics/warehouse.md"));
+    assert.ok(!names.includes("wiki/okf/topics/pdf.md"));
     const topic = after.entries.find((e) => e.name === "wiki/okf/topics/warehouse.md")!;
     const topicMd = topic.data.toString("utf8");
     assert.match(topicMd, /\]\(\.\.\/alpha\.md\)/);
@@ -422,6 +423,7 @@ describe("updatePackage", () => {
     const index = after.entries.find((e) => e.name === "wiki/okf/index.md")!;
     const indexMd = index.data.toString("utf8");
     assert.match(indexMd, /# Topics/);
+    assert.doesNotMatch(indexMd, /topics\/pdf\.md/);
     assert.doesNotMatch(indexMd, /gamma\.md/);
     assert.ok(!names.includes("wiki/okf/log.md"));
     assert.ok(!names.includes("wiki/search.json"));

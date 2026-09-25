@@ -29,7 +29,7 @@ workflows).
 
 | Spec (§3, §8–§9) | ZipWiki |
 | --- | --- |
-| Arbitrary directory tree of concepts | Per-file cards at `{aiRoot}/okf/{stem}.md`. Shared tags also produce a capped set of `{aiRoot}/okf/topics/{tag}.md` pages, rebuilt on add, update, and delete |
+| Arbitrary directory tree of concepts | Per-file cards at `{aiRoot}/okf/{stem}.md`. Shared tags also produce a capped set of `{aiRoot}/okf/topics/{tag}.md` pages, rebuilt on add, update, and delete. The file-type tag `pdf` does not get a page |
 | `index.md` optional at any level | **Emitted** at bundle root with `okf_version: "0.2"`, a `# Files` list, and a `# Topics` list when topic pages exist; never used as a concept |
 | `log.md` optional | **Not emitted.** OKF allows it; ZipWiki does not write `wiki/okf/log.md` |
 | Bundle-root `index.md` MAY carry `okf_version` (§12) | Yes — also advertised via `manifest.json` → `ai.okf.version` / `ai.okf.index` |

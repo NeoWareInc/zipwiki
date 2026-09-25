@@ -4,7 +4,7 @@ Same open sequence as [AGENTS.md](AGENTS.md):
 
 **pack → catalog → search → read** (OKF before parsed; `origin` for Extra Field `0x014F`).
 
-Do not add `wiki/search.json` or `wiki/okf/log.md` to a package. See [AGENTS.md](AGENTS.md).
+Do not add `wiki/search.json`, `wiki/okf/log.md`, or `wiki/okf/topics/pdf.md` to a package. See [AGENTS.md](AGENTS.md).
 
 Portable knowledge lives in **`.zipwiki`** packages.
 

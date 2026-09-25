@@ -53,6 +53,19 @@ describe("okf bundle", () => {
     assert.match(topics[0]!.markdown, /\.\.\/\.\.\/deed\.pdf/);
   });
 
+  it("does not emit topics/pdf.md for the file-type tag", () => {
+    const withPdf = (file: typeof lease) => ({
+      ...file,
+      markdown: file.markdown.replace("tags: [", "tags: [pdf, "),
+    });
+    const topics = buildTopicFiles(
+      [withPdf(lease), withPdf(deed)],
+      "2026-01-02T00:00:00.000Z",
+    );
+    assert.equal(topics.length, 1);
+    assert.equal(topics[0]!.href, "topics/warehouse.md");
+  });
+
   it("drops a topic page when no sources remain", () => {
     const bare = {
       ...lease,
@@ -84,7 +97,7 @@ describe("okf bundle", () => {
     assert.deepEqual(missing, ["lease.md → lease.txt"]);
   });
 
-  it("rebuilds topics in an archive sync and drops log and search.json", () => {
+  it("rebuilds topics in an archive sync and drops pdf.md, log.md, and search.json", () => {
     const synced = syncOkfArchive({
       okfRoot: "wiki/okf/",
       generatedAt: "2026-01-02T00:00:00.000Z",
@@ -95,12 +108,17 @@ describe("okf bundle", () => {
         "wiki/parsed/deed.pdf.md",
         "wiki/okf/lease.md",
         "wiki/okf/deed.md",
+        "wiki/okf/topics/pdf.md",
         "wiki/okf/log.md",
         "wiki/search.json",
       ],
       files: [
         lease,
         deed,
+        {
+          name: "wiki/okf/topics/pdf.md",
+          data: "---\ntype: Topic\ntitle: pdf\n---\n",
+        },
         {
           name: "wiki/okf/log.md",
           data: "# Log\n\n- 2026-01-01T00:00:00.000Z pack lease.txt — lease.md fallback\n",
@@ -116,9 +134,12 @@ describe("okf bundle", () => {
     assert.match(index.data, /# Files/);
     assert.match(index.data, /# Topics/);
     assert.match(index.data, /topics\/warehouse\.md/);
+    assert.doesNotMatch(index.data, /topics\/pdf\.md/);
     assert.ok(synced.put.some((f) => f.name === "wiki/okf/topics/warehouse.md"));
+    assert.ok(!synced.put.some((f) => f.name.endsWith("/topics/pdf.md")));
     assert.ok(!synced.put.some((f) => f.name.endsWith("/log.md")));
     assert.ok(!synced.put.some((f) => f.name.endsWith("/search.json")));
+    assert.ok(synced.delete.includes("wiki/okf/topics/pdf.md"));
     assert.ok(synced.delete.includes("wiki/okf/log.md"));
     assert.ok(synced.delete.includes("wiki/search.json"));
   });

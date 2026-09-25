@@ -52,8 +52,9 @@ go to `.output/florida-laws/`.
 
 ```bash
 pnpm archive:florida-laws
+pnpm archive:florida-laws-failed   # five largest chapters from the missed-parse batch
 pnpm test:florida-laws
 pnpm list:florida-laws
-pnpm verify:florida-laws-origins
+pnpm verify:florida-laws-origins   # origin URL, or the original PDF stored in the archive
 pnpm origin:florida-laws:fetch
 ```

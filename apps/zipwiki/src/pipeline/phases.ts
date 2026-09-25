@@ -102,6 +102,7 @@ function collectOkfFiles(dir: string, prefix = ""): { name: string; data: string
       out.push(...collectOkfFiles(path, rel));
       continue;
     }
+    if (rel.replace(/\\/g, "/") === "topics/pdf.md") continue;
     if (!name.endsWith(".md")) continue;
     out.push({ name: rel, data: readFileSync(path, "utf-8") });
   }

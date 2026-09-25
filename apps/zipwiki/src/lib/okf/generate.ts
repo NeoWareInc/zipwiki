@@ -16,6 +16,7 @@ import {
   resolveOkfModel,
   resolveOkfProvider,
 } from "./providers.js";
+import { okfParseSample } from "./parse-sample.js";
 import type {
   BuildOkfBundleInput,
   BuildOkfDocumentInput,
@@ -39,8 +40,6 @@ export {
   type OkfProviderId,
 } from "./providers.js";
 
-const MAX_PARSE_CHARS = 12_000;
-
 const enrichmentSchema = z.object({
   title: z.string(),
   description: z.string(),
@@ -57,12 +56,6 @@ const enrichmentSchema = z.object({
     .optional()
     .describe("Section / topic map of what is inside the document"),
 });
-
-function truncateForPrompt(text: string | undefined): string {
-  if (!text) return "";
-  if (text.length <= MAX_PARSE_CHARS) return text;
-  return `${text.slice(0, MAX_PARSE_CHARS)}\n\n[…truncated for OKF generation…]`;
-}
 
 function asStringList(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -146,7 +139,7 @@ export async function fetchOkfEnrichment(
   const primaryList = input.primaries
     .map((p) => `- ${p.path}${p.documentType ? ` [${p.documentType}]` : ""}`)
     .join("\n");
-  const parseSample = truncateForPrompt(input.parsedMarkdown);
+  const parseSample = okfParseSample(input.parsedMarkdown);
 
   const prompt = [
       "You author Open Knowledge Format (OKF) v0.2 metadata for a ZipWiki document.",

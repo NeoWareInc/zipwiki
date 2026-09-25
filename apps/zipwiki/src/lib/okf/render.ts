@@ -26,7 +26,7 @@ export const OKF_DOCUMENT_NAME = "document.md" as const;
 export const OKF_INDEX_NAME = "index.md" as const;
 /** Optional reserved name (OKF §9). Append-only change history, never a concept. */
 export const OKF_LOG_NAME = "log.md" as const;
-/** Cross-document pages live under `wiki/okf/topics/`. */
+/** Cross-document pages live under `wiki/okf/topics/`. `pdf.md` is not written. */
 export const OKF_TOPICS_DIR = "topics" as const;
 /** Cap shared topic pages so the catalog stays short. */
 export const TOPIC_PAGE_CAP = 8 as const;
