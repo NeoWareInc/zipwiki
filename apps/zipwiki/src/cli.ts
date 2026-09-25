@@ -199,7 +199,7 @@ function withPipelineFlags(cmd: Command): Command {
     )
     .option(
       "--remote-okf",
-      "OKF via ZipWiki API (ZIPWIKI_OKF_CREDENTIAL=zipwiki)",
+      "OKF via the ZipWiki API (Fly server Claude key)",
     )
     .option(
       "--okf-credential <source>",

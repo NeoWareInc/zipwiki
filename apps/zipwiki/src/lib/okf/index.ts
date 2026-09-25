@@ -29,15 +29,12 @@ export {
   type OkfIndexEntry,
 } from "./render.js";
 export {
-  appendLogMarkdown,
   buildTopicFiles,
   conceptFiles,
   danglingSourcePaths,
   finalizeOkfDirectory,
-  formatLogLine,
   isReservedOkfHref,
   isTopicHref,
-  logHeader,
   renderBundleIndex,
   resolveOkfResource,
   syncOkfArchive,

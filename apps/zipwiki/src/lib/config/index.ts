@@ -35,6 +35,8 @@ export {
 } from "./onboarding.js";
 export {
   buildEffectiveConfigView,
+  configuredUserOkfApiKey,
+  credentialForRemoteOkf,
   formatNonInteractiveSetupError,
   needsCredentialSetup,
   type CredentialSetupStatus,

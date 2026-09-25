@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  appendLogMarkdown,
   buildTopicFiles,
   danglingSourcePaths,
-  formatLogLine,
   resolveOkfResource,
   syncOkfArchive,
 } from "./bundle.js";
@@ -67,28 +65,6 @@ describe("okf bundle", () => {
     assert.deepEqual(buildTopicFiles([bare, other], "2026-01-02T00:00:00.000Z"), []);
   });
 
-  it("appends log lines without rewriting history", () => {
-    const first = appendLogMarkdown(undefined, [
-      formatLogLine({
-        at: "2026-01-01T00:00:00.000Z",
-        action: "pack",
-        primary: "lease.txt",
-        detail: "lease.md fallback",
-      }),
-    ]);
-    const next = appendLogMarkdown(first, [
-      formatLogLine({
-        at: "2026-01-02T00:00:00.000Z",
-        action: "del",
-        primary: "deed.pdf",
-        detail: "concept removed",
-      }),
-    ]);
-    assert.match(next, /pack lease\.txt/);
-    assert.match(next, /del deed\.pdf/);
-    assert.ok(next.indexOf("pack") < next.indexOf("del"));
-  });
-
   it("resolves in-package sources and ignores absolute ones", () => {
     assert.equal(resolveOkfResource("wiki/okf", "../../lease.txt"), "lease.txt");
     assert.equal(
@@ -108,7 +84,7 @@ describe("okf bundle", () => {
     assert.deepEqual(missing, ["lease.md → lease.txt"]);
   });
 
-  it("rebuilds topics in an archive sync and keeps the previous log", () => {
+  it("rebuilds topics in an archive sync and drops log and search.json", () => {
     const synced = syncOkfArchive({
       okfRoot: "wiki/okf/",
       generatedAt: "2026-01-02T00:00:00.000Z",
@@ -120,14 +96,7 @@ describe("okf bundle", () => {
         "wiki/okf/lease.md",
         "wiki/okf/deed.md",
         "wiki/okf/log.md",
-      ],
-      logLines: [
-        formatLogLine({
-          at: "2026-01-02T00:00:00.000Z",
-          action: "add",
-          primary: "deed.pdf",
-          detail: "deed.md fallback",
-        }),
+        "wiki/search.json",
       ],
       files: [
         lease,
@@ -148,9 +117,9 @@ describe("okf bundle", () => {
     assert.match(index.data, /# Topics/);
     assert.match(index.data, /topics\/warehouse\.md/);
     assert.ok(synced.put.some((f) => f.name === "wiki/okf/topics/warehouse.md"));
-    const log = synced.put.find((f) => f.name === "wiki/okf/log.md")!;
-    assert.match(log.data, /pack lease\.txt/);
-    assert.match(log.data, /add deed\.pdf/);
-    assert.ok(!synced.put.some((f) => f.name.endsWith("/log.md") && f.data.includes("log.md fallback")));
+    assert.ok(!synced.put.some((f) => f.name.endsWith("/log.md")));
+    assert.ok(!synced.put.some((f) => f.name.endsWith("/search.json")));
+    assert.ok(synced.delete.includes("wiki/okf/log.md"));
+    assert.ok(synced.delete.includes("wiki/search.json"));
   });
 });

@@ -32,8 +32,9 @@ export const BUNDLE_PATHS = {
   okfRoot: "wiki/okf/",
   okfIndex: "wiki/okf/index.md",
   okfDocument: "wiki/okf/document.md",
+  /** Legacy only. Writers must not emit this. */
   okfLog: "wiki/okf/log.md",
-  /** Pack-time inverted catalog for zipwiki search. */
+  /** Legacy only. Writers must not emit this. Search scans OKF markdown. */
   searchIndex: "wiki/search.json",
 } as const;
 

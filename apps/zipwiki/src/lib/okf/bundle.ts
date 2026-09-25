@@ -1,5 +1,5 @@
 /**
- * OKF catalog maintenance: topic pages, the append-only log, and the index.
+ * OKF catalog maintenance: topic pages and the index.
  * Run this whenever concepts are written so add/delete cannot leave a stale catalog.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -14,7 +14,6 @@ import {
   TOPIC_PAGE_CAP,
   type OkfIndexEntry,
 } from "./render.js";
-import { buildWikiSearchIndex, serializeWikiSearchIndex } from "./search-index.js";
 import { buildDocumentFrontmatter } from "./yaml.js";
 
 export type OkfMarkdownFile = {
@@ -137,34 +136,6 @@ export function renderBundleIndex(
   return renderOkfIndex(concepts.map(toEntry), topics.map(toEntry));
 }
 
-export function logHeader(): string {
-  return "# Log\n\n";
-}
-
-export function formatLogLine(input: {
-  at?: string;
-  action: "pack" | "add" | "update" | "del" | "enrich";
-  primary: string;
-  detail: string;
-}): string {
-  const at = input.at ?? new Date().toISOString();
-  return `- ${at} ${input.action} ${input.primary} — ${input.detail}`;
-}
-
-/** Append lines. A missing file starts with the heading. Existing history is kept. */
-export function appendLogMarkdown(
-  existing: string | undefined,
-  lines: string[],
-): string {
-  const body = lines.filter(Boolean);
-  if (body.length === 0) {
-    return existing?.trim() ? existing.replace(/\s*$/, "\n") : logHeader();
-  }
-  const base = existing?.trim() ? existing.replace(/\s*$/, "\n") : logHeader();
-  const withHeader = base.includes("# Log") ? base : `${logHeader()}${base}`;
-  return `${withHeader}${body.join("\n")}\n`;
-}
-
 /**
  * Resolve an OKF `sources[].resource` (relative to `wiki/okf/`) to a zip entry.
  * Absolute and URI resources are outside the package and are not checked.
@@ -209,7 +180,7 @@ export function danglingSourcePaths(
   return missing;
 }
 
-/** Rewrite topics, index, and a fresh pack log from the concept files on disk. */
+/** Rewrite topics and index.md from the concept files on disk. */
 export function finalizeOkfDirectory(okfDir: string, generatedAt = new Date().toISOString()): number {
   if (!existsSync(okfDir)) return 0;
   const concepts: OkfMarkdownFile[] = [];
@@ -235,21 +206,10 @@ export function finalizeOkfDirectory(okfDir: string, generatedAt = new Date().to
     "utf-8",
   );
 
-  const logLines = concepts.map((concept) => {
-    const { frontmatter } = splitFrontmatter(concept.markdown);
-    const fields = frontmatter ? parseFrontmatterFields(frontmatter) : {};
-    const by = fields.generated?.by?.trim() || "unknown";
-    const mode = by.includes("fallback") ? "fallback" : "enriched";
-    return formatLogLine({
-      at: generatedAt,
-      action: "pack",
-      primary: concept.href.replace(/\.md$/i, ""),
-      detail: `${concept.href} ${mode}`,
-    });
-  });
   const logPath = join(okfDir, OKF_LOG_NAME);
-  const existingLog = existsSync(logPath) ? readFileSync(logPath, "utf-8") : undefined;
-  writeFileSync(logPath, appendLogMarkdown(existingLog, logLines), "utf-8");
+  if (existsSync(logPath)) rmSync(logPath);
+  const searchPath = join(okfDir, "..", "search.json");
+  if (existsSync(searchPath)) rmSync(searchPath);
   return concepts.length;
 }
 
@@ -268,33 +228,27 @@ function searchIndexPath(okfRoot: string): string {
 }
 
 /**
- * Rebuild topic pages, `index.md`, and `wiki/search.json` from the concept
- * cards still in the archive, and append `log.md`. A topic with no sources
- * left is omitted. Call this before the archive is sealed.
+ * Rebuild topic pages and `index.md` from the concept cards still in the
+ * archive. Drops `log.md` and `search.json`. A topic with no sources left
+ * is omitted. Call this before the archive is sealed.
  */
 export function syncOkfArchive(input: {
   okfRoot: string;
   files: Array<{ name: string; data: string }>;
   entryNames: Iterable<string>;
-  logLines?: string[];
   generatedAt?: string;
   /** Primaries stored outside the package. Citing them is not a missing member. */
   allowedMissing?: Iterable<string>;
 }): OkfArchiveChange {
   const root = input.okfRoot.replace(/\\/g, "/").replace(/\/?$/, "/");
   const generatedAt = input.generatedAt ?? new Date().toISOString();
-  const topicsPrefix = `${root}${OKF_TOPICS_DIR}/`;
   const concepts: OkfMarkdownFile[] = [];
   const existingTopics: string[] = [];
-  let existingLog: string | undefined;
   for (const file of input.files) {
     const name = file.name.replace(/\\/g, "/");
     if (!name.startsWith(root) || !name.endsWith(".md")) continue;
     const href = name.slice(root.length);
-    if (href === OKF_LOG_NAME) {
-      existingLog = file.data;
-      continue;
-    }
+    if (href === OKF_LOG_NAME) continue;
     if (href === OKF_INDEX_NAME) continue;
     if (isTopicHref(href)) {
       existingTopics.push(name);
@@ -311,6 +265,8 @@ export function syncOkfArchive(input: {
   for (const name of existingTopics) {
     if (!topicNames.has(name)) del.add(name);
   }
+  del.add(`${root}${OKF_LOG_NAME}`);
+  del.add(searchIndexPath(root));
 
   if (concepts.length > 0) {
     put.push({
@@ -320,28 +276,8 @@ export function syncOkfArchive(input: {
     for (const topic of topics) {
       put.push({ name: `${root}${topic.href}`, data: topic.markdown });
     }
-    const search = buildWikiSearchIndex(
-      [...concepts, ...topics].map((file) => ({
-        name: `${root}${file.href}`,
-        data: file.markdown,
-      })),
-      root,
-    );
-    put.push({
-      name: searchIndexPath(root),
-      data: serializeWikiSearchIndex(search),
-    });
   } else {
     del.add(`${root}${OKF_INDEX_NAME}`);
-    del.add(searchIndexPath(root));
-  }
-
-  const lines = input.logLines ?? [];
-  if (lines.length > 0 || existingLog) {
-    put.push({
-      name: `${root}${OKF_LOG_NAME}`,
-      data: appendLogMarkdown(existingLog, lines),
-    });
   }
 
   const present = new Set(input.entryNames);

@@ -18,6 +18,7 @@ import {
   needsCredentialSetup,
   refreshAndPrintClientUsage,
   resolveOmitOriginalDocuments,
+  credentialForRemoteOkf,
   resolveOkfCredentialSource,
   resolveParseCredentialSource,
 } from "../lib/config/index.js";
@@ -40,6 +41,7 @@ import {
   fileBytes,
   formatPackPlan,
   packOkfMode,
+  resolvePackUseAi,
   PackAbortedError,
   runPackConfirmLoop,
   shouldConfirmPack,
@@ -72,7 +74,7 @@ function applyCredentialEnv(opts: StageOptions): void {
     process.env.ZIPWIKI_PARSE_CREDENTIAL = "zipwiki";
   }
   if (opts.remoteOkf) {
-    process.env.ZIPWIKI_OKF_CREDENTIAL = "zipwiki";
+    process.env.ZIPWIKI_OKF_CREDENTIAL = credentialForRemoteOkf();
   }
 }
 
@@ -167,6 +169,10 @@ export async function runStage(
         quiet: opts.quiet,
       });
     }
+    // Portal sync writes credential env from the account. Flags on this
+    // command (--parse-credential, --remote-okf, --okf-credential) apply
+    // only to this run and must win over that pull.
+    applyCredentialEnv(opts);
     // Logged-out packs must not inject the LiteParse account default over the
     // user's CLI parser choice. Website settings apply only after login.
     const accountOverlay =
@@ -180,7 +186,7 @@ export async function runStage(
       parseCredential,
       okfCredential,
       remoteParse: opts.remoteParse === true,
-      remoteOkf: opts.remoteOkf === true,
+      remoteOkf: opts.remoteOkf === true && okfCredential === "zipwiki",
     });
 
     const { config: project, configPath } = loadZipwikiConfig({
@@ -220,12 +226,13 @@ export async function runStage(
     }
 
     const onboarding = loadZipwikiOnboarding();
-    let useAi =
-      opts.noOkf === true
-        ? false
-        : opts.noAiOkf === true
-          ? false
-          : project.okf.useAi;
+    let useAi = resolvePackUseAi({
+      noOkf: opts.noOkf,
+      noAiOkf: opts.noAiOkf,
+      remoteOkf: opts.remoteOkf,
+      okfCredential: opts.okfCredential,
+      projectUseAi: project.okf.useAi,
+    });
 
     // Soft-skip hosted ZipWiki OKF when plan has no remaining OKF quota.
     if (hosted?.okfHostFallback && useAi) {

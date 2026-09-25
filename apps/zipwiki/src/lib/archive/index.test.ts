@@ -37,11 +37,6 @@ import {
   writeNzipBundle,
   writeNzipCollectionBundle,
 } from "./index.js";
-import {
-  buildWikiSearchIndex,
-  serializeWikiSearchIndex,
-} from "../okf/search-index.js";
-
 describe("archive schema", () => {
   it("exposes in-bundle layout paths", () => {
     assert.equal(BUNDLE_PATHS.manifest, "META-INF/manifest.json");
@@ -244,9 +239,7 @@ describe("archive schema", () => {
       "META-INF/manifest.json",
       "wiki/okf/document.md",
       "wiki/okf/index.md",
-      "wiki/okf/log.md",
       "wiki/parsed/hello.txt.md",
-      "wiki/search.json",
       "hello.txt",
     ]);
 
@@ -266,17 +259,6 @@ describe("archive schema", () => {
       },
       { path: "wiki/okf/index.md", content: Buffer.from(indexMd) },
       { path: "wiki/okf/document.md", content: Buffer.from(okfDoc) },
-      { path: "wiki/okf/log.md", content: Buffer.from("# log\n") },
-      {
-        path: "wiki/search.json",
-        content: Buffer.from(
-          serializeWikiSearchIndex(
-            buildWikiSearchIndex([
-              { name: "wiki/okf/document.md", data: okfDoc },
-            ]),
-          ),
-        ),
-      },
     ]);
     assert.equal(result.merkleRoot, expected);
   });
@@ -365,9 +347,7 @@ describe("archive schema", () => {
       "META-INF/manifest.json",
       "wiki/okf/document.md",
       "wiki/okf/index.md",
-      "wiki/okf/log.md",
       "wiki/parsed/hello.txt.md",
-      "wiki/search.json",
       "hello.txt",
     ]);
     assert.equal(readZipEntry(out, "hello.txt").toString("utf-8"), "hello neo\n");
@@ -1008,11 +988,9 @@ describe("multi-primary package", () => {
       "META-INF/manifest.json",
       "wiki/okf/document.md",
       "wiki/okf/index.md",
-      "wiki/okf/log.md",
       "wiki/parsed/a.txt.md",
       "wiki/parsed/b.txt.md",
       "wiki/parsed/c.txt.md",
-      "wiki/search.json",
       "a.txt",
       "b.txt",
       "c.txt",

@@ -1,5 +1,6 @@
 /**
- * Pack-time wiki/search.json catalog + scoring (OKF frontmatter, no full parse scan).
+ * Read a leftover `wiki/search.json` from older packages.
+ * New packages do not write this file; search scans OKF markdown instead.
  */
 
 import {

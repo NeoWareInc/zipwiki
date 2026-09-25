@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { formatPackPlan, packOkfMode, shouldConfirmPack } from "./pack-confirm.js";
+import {
+  formatPackPlan,
+  packOkfMode,
+  resolvePackUseAi,
+  shouldConfirmPack,
+} from "./pack-confirm.js";
 
 describe("pack confirm", () => {
   it("asks on an interactive zip-producing pack", () => {
@@ -64,5 +69,29 @@ describe("pack confirm", () => {
     assert.equal(packOkfMode({ noAiOkf: true }, true), "fallback");
     assert.equal(packOkfMode({}, false), "fallback");
     assert.equal(packOkfMode({}, true), "ai");
+  });
+
+  it("turns AI OKF on for an explicit ZipWiki or Anthropic credential", () => {
+    assert.equal(
+      resolvePackUseAi({ remoteOkf: true, projectUseAi: false }),
+      true,
+    );
+    assert.equal(
+      resolvePackUseAi({ okfCredential: "zipwiki", projectUseAi: false }),
+      true,
+    );
+    assert.equal(
+      resolvePackUseAi({ okfCredential: "anthropic", projectUseAi: false }),
+      true,
+    );
+    assert.equal(
+      resolvePackUseAi({
+        remoteOkf: true,
+        noAiOkf: true,
+        projectUseAi: true,
+      }),
+      false,
+    );
+    assert.equal(resolvePackUseAi({ projectUseAi: false }), false);
   });
 });

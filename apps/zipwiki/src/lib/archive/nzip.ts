@@ -12,6 +12,7 @@
 
 import { createHash } from "node:crypto";
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -34,11 +35,6 @@ import {
   originLocatorPresent,
   type OriginLocator,
 } from "./origin-extra.js";
-import {
-  buildWikiSearchIndex,
-  serializeWikiSearchIndex,
-} from "../okf/search-index.js";
-
 export const PACKAGE_SPEC_VERSION = "0.2.0" as const;
 export const DEFAULT_AI_ROOT = "wiki" as const;
 export const DEFAULT_PARSED_DIR = "parsed" as const;
@@ -428,10 +424,12 @@ function toOkfZipEntries(
   aiRoot: string,
 ): ZipEntry[] {
   if (!okf?.files?.length) return [];
-  return okf.files.map((f) => ({
-    name: okfPathFor(f.name, aiRoot),
-    data: Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data, "utf-8"),
-  }));
+  return okf.files
+    .filter((f) => f.name.replace(/\\/g, "/").split("/").pop() !== "log.md")
+    .map((f) => ({
+      name: okfPathFor(f.name, aiRoot),
+      data: Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data, "utf-8"),
+    }));
 }
 
 function okfManifestBlock(
@@ -771,18 +769,6 @@ export function writeNzipCollectionBundle(
   const includedPrimaries = byPath.filter((m) => m.sourceIncluded);
   const omittedPrimaries = byPath.filter((m) => !m.sourceIncluded);
 
-  const searchIndex = buildWikiSearchIndex(
-    okfEntries.map((e) => ({ name: e.name, data: e.data.toString("utf8") })),
-    `${aiRoot.replace(/\/+$/, "")}/${DEFAULT_OKF_DIR}/`,
-  );
-  const searchEntry =
-    searchIndex.documents.length > 0
-      ? {
-          name: `${aiRoot.replace(/\/+$/, "")}/search.json`,
-          data: Buffer.from(serializeWikiSearchIndex(searchIndex), "utf8"),
-        }
-      : undefined;
-
   const wikiEntries: ZipEntry[] = [
     ...parsedMembers.map((m) => {
       const origin = originLocatorFromOriginal({
@@ -803,7 +789,6 @@ export function writeNzipCollectionBundle(
       };
     }),
     ...okfEntries,
-    ...(searchEntry ? [searchEntry] : []),
   ].sort((a, b) =>
     Buffer.from(a.name, "utf-8").compare(Buffer.from(b.name, "utf-8")),
   );
@@ -860,6 +845,13 @@ export function writeNzipCollectionBundle(
     writeEntryFile(wikiRoot, MANIFEST_ENTRY, manifestData);
     for (const entry of wikiEntries) {
       writeEntryFile(wikiRoot, entry.name, entry.data);
+    }
+    for (const stale of [
+      `${aiRoot}/search.json`,
+      `${aiRoot}/${DEFAULT_OKF_DIR}/log.md`,
+    ]) {
+      const abs = join(wikiRoot, stale);
+      if (existsSync(abs)) rmSync(abs);
     }
 
     // ZipWiki pack order (not APPNOTE-required): manifest → wiki → sources.

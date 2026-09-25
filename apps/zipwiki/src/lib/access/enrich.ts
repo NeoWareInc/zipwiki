@@ -10,7 +10,6 @@ import {
 import {
   buildOkfBundle,
   conceptFileNameFor,
-  formatLogLine,
   syncOkfArchive,
   type OkfEnrichment,
   type OkfPrimaryRef,
@@ -136,13 +135,6 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
     allowedMissing: [...inventory.primaries.values()]
       .filter((slot) => !slot.sourceIncluded)
       .map((slot) => slot.path),
-    logLines: [
-      formatLogLine({
-        action: "enrich",
-        primary: primaryForConcept[0]?.path ?? conceptFileName,
-        detail: `${conceptFileName} enriched`,
-      }),
-    ],
   });
   if (synced.dangling.length > 0) {
     throw new AccessError(

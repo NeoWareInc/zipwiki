@@ -366,7 +366,7 @@ describe("updatePackage", () => {
     assert.ok(!names.includes("drop.txt"));
   });
 
-  it("rebuilds topic pages and appends the log when a primary is removed", async () => {
+  it("rebuilds topic pages when a primary is removed", async () => {
     const alpha = join(dir, "alpha.txt");
     const beta = join(dir, "beta.txt");
     const gamma = join(dir, "gamma.txt");
@@ -423,8 +423,8 @@ describe("updatePackage", () => {
     const indexMd = index.data.toString("utf8");
     assert.match(indexMd, /# Topics/);
     assert.doesNotMatch(indexMd, /gamma\.md/);
-    const log = after.entries.find((e) => e.name === "wiki/okf/log.md")!;
-    assert.match(log.data.toString("utf8"), /del gamma\.txt/);
+    assert.ok(!names.includes("wiki/okf/log.md"));
+    assert.ok(!names.includes("wiki/search.json"));
   });
 
   it("refuses to seal when a remaining concept cites a missing primary", async () => {

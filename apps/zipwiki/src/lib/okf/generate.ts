@@ -42,22 +42,18 @@ export {
 const MAX_PARSE_CHARS = 12_000;
 
 const enrichmentSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().min(1).max(400),
-  type: z.string().min(1).max(80),
+  title: z.string(),
+  description: z.string(),
+  type: z.string(),
   tags: z
-    .array(z.string().min(1).max(48))
-    .min(1)
-    .max(12)
+    .array(z.string())
     .describe("Short lowercase topical labels, e.g. sec-filing, contract"),
   keyFacts: z
-    .array(z.string().min(1).max(220))
-    .min(3)
-    .max(8)
+    .array(z.string())
     .describe("Concrete skim facts (parties, dates, amounts, filing type)"),
   contents: z
-    .array(z.string().min(1).max(160))
-    .max(12)
+    .array(z.string())
+    .nullable()
     .optional()
     .describe("Section / topic map of what is inside the document"),
 });
@@ -66,6 +62,51 @@ function truncateForPrompt(text: string | undefined): string {
   if (!text) return "";
   if (text.length <= MAX_PARSE_CHARS) return text;
   return `${text.slice(0, MAX_PARSE_CHARS)}\n\n[…truncated for OKF generation…]`;
+}
+
+function asStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") {
+          const row = item as Record<string, unknown>;
+          const text = row.text ?? row.fact ?? row.value ?? row.name ?? row.title;
+          return typeof text === "string" ? text : "";
+        }
+        return typeof item === "number" ? String(item) : "";
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(/[,\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+/** Accept a model JSON object even when a field type misses the strict schema. */
+function coerceEnrichment(
+  value: unknown,
+): z.infer<typeof enrichmentSchema> | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  const title = typeof row.title === "string" ? row.title.trim() : "";
+  const description =
+    typeof row.description === "string" ? row.description.trim() : "";
+  if (!title || !description) return undefined;
+  const contents = asStringList(row.contents);
+  return {
+    title,
+    description,
+    type: typeof row.type === "string" && row.type.trim() ? row.type : "Document",
+    tags: asStringList(row.tags),
+    keyFacts: asStringList(row.keyFacts),
+    contents: contents.length > 0 ? contents : undefined,
+  };
 }
 
 function ensureEnrichmentTags(
@@ -107,10 +148,7 @@ export async function fetchOkfEnrichment(
     .join("\n");
   const parseSample = truncateForPrompt(input.parsedMarkdown);
 
-  const { object } = await generateObject({
-    model: handle.model,
-    schema: enrichmentSchema,
-    prompt: [
+  const prompt = [
       "You author Open Knowledge Format (OKF) v0.2 metadata for a ZipWiki document.",
       "Full parse markdown lives in a separate file — do NOT paste or paraphrase long excerpts.",
       "Return title, description, type, tags, keyFacts, and optional contents for ONE concept.",
@@ -143,8 +181,31 @@ export async function fetchOkfEnrichment(
       "",
       "Parsed text sample:",
       parseSample || "(no parse text — filename/type only)",
-    ].join("\n"),
-  });
+    ].join("\n");
+
+  let object: z.infer<typeof enrichmentSchema> | undefined;
+  try {
+    ({ object } = await generateObject({
+      model: handle.model,
+      schema: enrichmentSchema,
+      prompt,
+    }));
+  } catch (err) {
+    const text =
+      err instanceof Error && "text" in err && typeof (err as { text?: unknown }).text === "string"
+        ? (err as { text: string }).text
+        : "";
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      try {
+        object = coerceEnrichment(JSON.parse(text.slice(start, end + 1)));
+      } catch {
+        object = undefined;
+      }
+    }
+    if (!object) throw err;
+  }
 
   const type = object.type.trim() || "Document";
   const primary = input.primaries[0];
@@ -193,6 +254,7 @@ async function resolveEnrichment(
       if (isRemoteOkfMode()) {
         const remote = new RemoteOkfAdapter();
         enrichment = await remote.enrich(input);
+        generatedBy = input.generatedBy ?? "zipwiki-api/anthropic/claude-haiku-4-5";
       } else {
         enrichment = await fetchOkfEnrichment({
           ...input,
@@ -202,9 +264,9 @@ async function resolveEnrichment(
               ? "anthropic"
               : undefined),
         });
+        generatedBy = input.generatedBy ?? `zipwiki/okf@${tag}`;
       }
       mode = "ai";
-      generatedBy = input.generatedBy ?? `zipwiki/okf@${tag}`;
     } catch (err) {
       if (requireAi) throw err;
       const msg = err instanceof Error ? err.message : String(err);

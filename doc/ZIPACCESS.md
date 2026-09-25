@@ -92,7 +92,7 @@ stdio MCP (`zipwiki-mcp`) registers **short verbs** (scoped by the server name `
 
 **Originals:** `read_parsed` includes `origin` (URI, size, CRC-32 **or** SHA-256 as hex, Unix `originMtime` plus `originMtimeUtc`) from Extra Field `0x014F` when present. `origin` / `--fetch-origin` downloads `http(s)` or `file:` and checks the payload against the saved digest (and size when written). A mismatch raises `integrity_failed` and does not write.
 
-**Search:** rank OKF frontmatter (title, tags, description, type) first; optionally scan `wiki/parsed/*.md` at lower weight. Return paths + snippets; never dump full bodies.
+**Search:** rank OKF frontmatter (title, tags, description, type) and concept bodies; optionally scan `wiki/parsed/*.md` at lower weight. Return paths + snippets; never dump full bodies.
 
 **Out of scope for zipaccess:** packing sources, hosted parse quotas, uploading to `/api/packages`, general filesystem MCP.
 

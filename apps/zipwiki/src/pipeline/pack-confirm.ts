@@ -42,6 +42,31 @@ export function packOkfMode(opts: StageOptions, useAi: boolean): PackOkfMode {
   return "ai";
 }
 
+/**
+ * Whether this pack should call an LLM for OKF.
+ * `--no-okf` / `--no-ai-okf` always win. An explicit hosted or BYO OKF
+ * credential (`--remote-okf`, `--okf-credential zipwiki|anthropic`) turns AI
+ * on for this run even when the portal profile has `okf.useAi: false`.
+ */
+export function resolvePackUseAi(input: {
+  noOkf?: boolean;
+  noAiOkf?: boolean;
+  remoteOkf?: boolean;
+  okfCredential?: string;
+  projectUseAi: boolean;
+}): boolean {
+  if (input.noOkf === true || input.noAiOkf === true) return false;
+  const credential = input.okfCredential?.trim();
+  if (
+    input.remoteOkf === true ||
+    credential === "zipwiki" ||
+    credential === "anthropic"
+  ) {
+    return true;
+  }
+  return input.projectUseAi;
+}
+
 /** True when a TTY pack should stop for proceed / change / abort. */
 export function shouldConfirmPack(input: {
   phase: string;

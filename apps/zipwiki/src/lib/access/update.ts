@@ -54,7 +54,7 @@ import {
   renderConceptMarkdown,
   splitFrontmatter,
 } from "../okf/frontmatter.js";
-import { formatLogLine, syncOkfArchive } from "../okf/bundle.js";
+import { syncOkfArchive } from "../okf/bundle.js";
 import { parseOneFile, okfOneFile } from "../../pipeline/phases.js";
 import {
   loadZipwikiConfig,
@@ -530,8 +530,6 @@ export async function updatePackage(
   const removed: string[] = [];
   const updated: string[] = [];
   const added: string[] = [];
-  const logLines: string[] = [];
-
   const pathsNow = () => [...inventory.primaries.keys()];
 
   logUpdate(quiet, `open ${zipPath}`);
@@ -541,13 +539,6 @@ export async function updatePackage(
     logUpdate(quiet, `del ${p}`);
     removeMemberGraph(map, p, inventory, warnings);
     removed.push(p);
-    logLines.push(
-      formatLogLine({
-        action: "del",
-        primary: p,
-        detail: "concept removed",
-      }),
-    );
   }
 
   for (const spec of updateSpecs) {
@@ -571,13 +562,6 @@ export async function updatePackage(
     for (const e of ingested.entries) map.set(e.name, e);
     rememberPrimary(inventory, p, ingested.primary);
     updated.push(p);
-    logLines.push(
-      formatLogLine({
-        action: "update",
-        primary: p,
-        detail: `${conceptFileNameFor(p)} ${ingested.okfMode}`,
-      }),
-    );
     logUpdate(quiet, `updated ${p}`);
   }
 
@@ -602,13 +586,6 @@ export async function updatePackage(
     for (const e of ingested.entries) map.set(e.name, e);
     rememberPrimary(inventory, p, ingested.primary);
     added.push(p);
-    logLines.push(
-      formatLogLine({
-        action: "add",
-        primary: p,
-        detail: `${conceptFileNameFor(p)} ${ingested.okfMode}`,
-      }),
-    );
     logUpdate(quiet, `added ${p}`);
   }
 
@@ -620,7 +597,6 @@ export async function updatePackage(
       .filter((e) => e.name.startsWith(inventory.okfRoot) && e.name.endsWith(".md"))
       .map((e) => ({ name: e.name, data: e.data.toString("utf8") })),
     entryNames: map.keys(),
-    logLines,
     allowedMissing: [...inventory.primaries.values()]
       .filter((slot) => !slot.sourceIncluded)
       .map((slot) => slot.path),

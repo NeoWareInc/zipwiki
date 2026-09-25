@@ -33,6 +33,7 @@
     "test:zipwiki": "pnpm --filter @zipwiki/zipwiki test",
     "sample-zipwiki": "pnpm zipwiki -- pack knowledge/test2 -o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse -sf && pnpm zipwiki -- open knowledge/sample-docs.zipwiki",
     "sample-zipwiki:test1": "pnpm zipwiki -- pack knowledge/test1 -o knowledge/test1.zipwiki --no-ai-okf --parser liteparse -sf && pnpm zipwiki -- open knowledge/test1.zipwiki",
+    "okf:tokens": "bash scripts/okf-zipwiki-tokens.sh",
     "smoke:zipwiki": "pnpm zipwiki -- open knowledge/sample-docs.zipwiki && pnpm zipwiki -- search knowledge/sample-docs.zipwiki deed",
     "archive:test1": "pnpm zipwiki -- stage knowledge/test1 --phase all -o knowledge/.output/test1/test1.zipwiki --no-ai-okf --stage-dir knowledge/.stage/test1 -sf -T && pnpm extract:test1",
     "archive:test2": "pnpm zipwiki -- stage knowledge/test2 --phase all -o knowledge/.output/test2/test2.zipwiki --no-ai-okf --stage-dir knowledge/.stage/test2 -sf -T && pnpm extract:test2",

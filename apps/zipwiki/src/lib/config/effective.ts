@@ -29,6 +29,32 @@ const OKF_KEY_ENVS = [
   "AI_GATEWAY_API_KEY",
 ] as const;
 
+/** First user LLM key on this machine, if any. Anthropic is preferred. */
+export function configuredUserOkfApiKey(
+  env: NodeJS.ProcessEnv = process.env,
+): (typeof OKF_KEY_ENVS)[number] | undefined {
+  const preferred = [
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_GENERATIVE_AI_API_KEY",
+    "OPENROUTER_API_KEY",
+    "OPENAI_COMPATIBLE_API_KEY",
+    "AI_GATEWAY_API_KEY",
+  ] as const;
+  return preferred.find((key) => isSecretEnvConfigured(key, env));
+}
+
+/**
+ * `--remote-okf`: always the ZipWiki API. The Fly server calls Claude with
+ * its own key. A local LLM key on this machine is not used.
+ */
+export function credentialForRemoteOkf(
+  _env: NodeJS.ProcessEnv = process.env,
+): "zipwiki" {
+  return "zipwiki";
+}
+
 export type CredentialSetupStatus = {
   useAi: boolean;
   hasOkfKey: boolean;

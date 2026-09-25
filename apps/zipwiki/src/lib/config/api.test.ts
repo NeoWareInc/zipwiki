@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { credentialForRemoteOkf } from "./effective.js";
 import {
   accountApiUrlAfterLogin,
   dashboardSettingsUrl,
@@ -14,6 +15,25 @@ import {
   ZIPWIKI_DEV_API_URL,
   ZIPWIKI_DEV_DEVICE_AUTH_URL,
 } from "./api.js";
+
+describe("remote OKF credential", () => {
+  it("uses the ZipWiki API even when a local LLM key is set", () => {
+    assert.equal(
+      credentialForRemoteOkf({
+        ANTHROPIC_API_KEY: "sk-ant",
+        ZIPWIKI_API_KEY: "zc_live_test",
+      }),
+      "zipwiki",
+    );
+  });
+
+  it("uses the ZipWiki API when no user LLM key is set", () => {
+    assert.equal(
+      credentialForRemoteOkf({ ZIPWIKI_API_KEY: "zc_live_test" }),
+      "zipwiki",
+    );
+  });
+});
 
 describe("credential source resolution", () => {
   it("defaults to local when API URL is set but portal prefs are unset", () => {
