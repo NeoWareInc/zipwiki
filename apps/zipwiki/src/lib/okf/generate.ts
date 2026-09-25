@@ -199,6 +199,9 @@ export async function fetchOkfEnrichment(
     }
     if (!object) throw err;
   }
+  if (!object) {
+    throw new Error("OKF model returned no enrichment");
+  }
 
   const type = object.type.trim() || "Document";
   const primary = input.primaries[0];
