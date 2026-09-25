@@ -11,8 +11,8 @@ Source corpora for pack / query smoke.
 | `sample-docs.zipwiki` | Packed test2 example (`pnpm sample-zipwiki`, gitignored) |
 | `fax/` | Extra junk-fax images |
 | `florida-laws.zipwiki-origins.json` | Origin pattern for the Florida Laws pack |
-| `florida-laws-of-florida.zipwiki` | Local Florida Laws package (gitignored) |
-| `.stage/{test1,test2}/` | Pack staging (gitignored) |
+| `florida-laws-2025.zipwiki` | Packed Laws of Florida 2025 (`pnpm archive:florida-laws`, gitignored) |
+| `.stage/{test1,test2,florida-laws}/` | Pack staging (gitignored) |
 | `.output/{test1,test2,florida-laws}/` | Packed archives + extract / origin fetch (gitignored) |
 
 Phase 2 smoke (no login, LiteParse):
@@ -40,14 +40,20 @@ pnpm read:test1
 pnpm origin:test2
 ```
 
-Florida Laws — local package is `knowledge/florida-laws-of-florida.zipwiki`
-(not committed). Source PDFs for a rebuild live at
-`$HOME/Documents/Florida-Laws-of-Florida/2025-pdf`. Extracts go to
-`.output/florida-laws/`.
+Laws of Florida 2025 — package is `knowledge/florida-laws-2025.zipwiki`
+(not committed). Source PDFs live at `$HOME/Documents/florida-laws/2025-pdf`
+(253 `Ch_2025-*.pdf` files). `pnpm archive:florida-laws` packs them with
+originals omitted, stage tree `knowledge/.stage/florida-laws`, and the origin
+rule from `florida-laws.zipwiki-origins.json` (`Ch_2025-001.pdf` →
+`https://laws.flrules.org/2025/1`, CRC-32 of the original). Parser and OKF
+follow the saved settings. The pack prints the plan and waits before it
+writes. `-T` runs the integrity test when the archive is written. Extracts
+go to `.output/florida-laws/`.
 
 ```bash
+pnpm archive:florida-laws
+pnpm test:florida-laws
 pnpm list:florida-laws
 pnpm verify:florida-laws-origins
 pnpm origin:florida-laws:fetch
-pnpm archive:florida-laws   # only if you need to rebuild
 ```
