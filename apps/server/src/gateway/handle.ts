@@ -1,5 +1,9 @@
 import { invokeAnthropic, type OkfRequest } from "./anthropic.js";
-import { invokeLlamaParse } from "./llamaparse.js";
+import {
+  invokeLlamaParse,
+  LlamaParseTimeoutError,
+  type LlamaParseProgress,
+} from "./llamaparse.js";
 import type { ConvexGateway, GatewayResponse } from "./types.js";
 
 export type GatewayDeps = {
@@ -7,6 +11,12 @@ export type GatewayDeps = {
   fetchImpl?: typeof fetch;
   env?: NodeJS.ProcessEnv;
   sleep?: (ms: number) => Promise<void>;
+  /** Test / ops override for LlamaParse poll budget. */
+  llamaWait?: {
+    maxWaitMs?: number;
+    progressEveryMs?: number;
+    pollIntervalMs?: number;
+  };
 };
 
 function masterKey(env: NodeJS.ProcessEnv, name: string): string | null {
@@ -21,6 +31,7 @@ export async function handleParse(
     filename: string;
     bytes: Uint8Array;
     noOcr?: boolean;
+    onProgress?: (info: LlamaParseProgress) => void;
   },
 ): Promise<GatewayResponse> {
   const env = deps.env ?? process.env;
@@ -55,8 +66,24 @@ export async function handleParse(
       apiKey,
       fetchImpl,
       deps.sleep,
+      args.onProgress,
+      deps.llamaWait,
     );
   } catch (err) {
+    if (err instanceof LlamaParseTimeoutError) {
+      return {
+        status: 200,
+        body: {
+          engine: "liteparse",
+          text: "",
+          forcedEngine: "liteparse",
+          fallbackReason: "llamaparse_timeout",
+          error: err.message,
+          jobId: err.jobId,
+          lastStatus: err.lastStatus,
+        },
+      };
+    }
     const message = err instanceof Error ? err.message : "parse_failed";
     return { status: 502, body: { error: message } };
   }

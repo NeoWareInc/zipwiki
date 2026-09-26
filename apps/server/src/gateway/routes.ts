@@ -178,13 +178,72 @@ export async function registerGateway(
     const bytes = await file.toBuffer();
     const fields = file.fields;
     const noOcr = readField(fields, "noOcr") === "true";
-    const result = await handleParse(deps, {
-      token,
-      filename: file.filename,
-      bytes,
-      noOcr,
+    const stream =
+      (req.query as { stream?: string }).stream === "1" ||
+      String(req.headers.accept ?? "").includes("application/x-ndjson");
+
+    if (!stream) {
+      const result = await handleParse(deps, {
+        token,
+        filename: file.filename,
+        bytes,
+        noOcr,
+      });
+      return reply.code(result.status).send(result.body);
+    }
+
+    // NDJSON: progress lines keep the connection alive past Fly/proxy idle limits,
+    // then a final result / fallback / error event.
+    reply.hijack();
+    const raw = reply.raw;
+    raw.writeHead(200, {
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+      "x-accel-buffering": "no",
+      connection: "keep-alive",
     });
-    return reply.code(result.status).send(result.body);
+    const writeLine = (obj: Record<string, unknown>) => {
+      raw.write(`${JSON.stringify(obj)}\n`);
+    };
+    try {
+      const result = await handleParse(deps, {
+        token,
+        filename: file.filename,
+        bytes,
+        noOcr,
+        onProgress: (info) => {
+          writeLine({
+            event: "progress",
+            filename: file.filename,
+            jobId: info.jobId,
+            status: info.status,
+            elapsedSec: info.elapsedSec,
+            ...(info.progress != null ? { progress: info.progress } : {}),
+            ...(info.detail ? { detail: info.detail } : {}),
+          });
+        },
+      });
+      if (result.status >= 400) {
+        writeLine({
+          event: "error",
+          status: result.status,
+          ...(typeof result.body === "object" && result.body !== null
+            ? (result.body as Record<string, unknown>)
+            : { error: String(result.body) }),
+        });
+      } else {
+        writeLine({
+          event: "result",
+          ...(typeof result.body === "object" && result.body !== null
+            ? (result.body as Record<string, unknown>)
+            : { body: result.body }),
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "parse_failed";
+      writeLine({ event: "error", status: 502, error: message });
+    }
+    raw.end();
   });
 
   app.post("/api/usage/llamaparse", async (req, reply) => {

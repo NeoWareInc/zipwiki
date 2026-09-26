@@ -37,7 +37,8 @@ describe("RemoteParseAdapter", () => {
       return {
         ok: true,
         status: 200,
-        text: async () => JSON.stringify(fakeResult),
+        text: async () =>
+          `${JSON.stringify({ event: "result", ...fakeResult })}\n`,
       } as Response;
     };
 
@@ -53,7 +54,7 @@ describe("RemoteParseAdapter", () => {
 
     unlinkSync(tmp);
 
-    assert.equal(seenUrl, "http://api.example.com/api/parse");
+    assert.match(seenUrl, /\/api\/parse\?stream=1$/);
     assert.equal(seenAuth, "Bearer test-key");
     assert.equal(result.text, fakeResult.text);
     assert.equal(result.engine, "liteparse");
@@ -78,12 +79,13 @@ describe("RemoteParseAdapter", () => {
         ok: true,
         status: 200,
         text: async () =>
-          JSON.stringify({
+          `${JSON.stringify({
+            event: "result",
             engine: "liteparse",
             text: "",
             forcedEngine: "liteparse",
             fallbackReason: "quota_fallback_free",
-          }),
+          })}\n`,
       }) as Response;
     const adapter = new RemoteParseAdapter({
       api: { url: "http://api.example.com", key: "k" },
@@ -95,6 +97,45 @@ describe("RemoteParseAdapter", () => {
         typeof err === "object" &&
         err !== null &&
         (err as { code?: string }).code === "quota_fallback_free",
+    );
+    unlinkSync(tmp);
+  });
+
+  it("throws llamaparse_timeout so the caller can use LiteParse", async () => {
+    const tmp = join(tmpdir(), `remote-parse-${Date.now()}.txt`);
+    writeFileSync(tmp, "body", "utf8");
+    const fetchImpl = async (): Promise<Response> =>
+      ({
+        ok: true,
+        status: 200,
+        text: async () =>
+          [
+            JSON.stringify({
+              event: "progress",
+              status: "PENDING",
+              elapsedSec: 60,
+              filename: "body",
+            }),
+            JSON.stringify({
+              event: "result",
+              engine: "liteparse",
+              text: "",
+              forcedEngine: "liteparse",
+              fallbackReason: "llamaparse_timeout",
+              lastStatus: "PENDING",
+            }),
+          ].join("\n"),
+      }) as Response;
+    const adapter = new RemoteParseAdapter({
+      api: { url: "http://api.example.com", key: "k" },
+      fetchImpl,
+    });
+    await assert.rejects(
+      () => adapter.parse(tmp, { project: project(), cli: { quiet: true } }),
+      (err: unknown) =>
+        typeof err === "object" &&
+        err !== null &&
+        (err as { code?: string }).code === "llamaparse_timeout",
     );
     unlinkSync(tmp);
   });

@@ -39,6 +39,10 @@ kill_timeout = 30
     soft_limit = 25
     hard_limit = 40
 
+  # LlamaParse polls for up to 5 minutes with NDJSON status heartbeats.
+  [http_service.http_options]
+    idle_timeout = 360
+
 [[http_service.checks]]
   grace_period = "20s"
   interval = "15s"

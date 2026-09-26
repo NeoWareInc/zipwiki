@@ -78,7 +78,13 @@ export async function parseDocument(
         typeof err === "object" && err !== null && "code" in err
           ? (err as { code?: string }).code
           : undefined;
-      if (code !== "quota_fallback_free" && code !== "free_plan") throw err;
+      if (
+        code !== "quota_fallback_free" &&
+        code !== "free_plan" &&
+        code !== "llamaparse_timeout"
+      ) {
+        throw err;
+      }
       const lite = options.liteparse ?? new LiteParseAdapter();
       const probe = await lite.parse(path, runtime);
       return {

@@ -108,6 +108,72 @@ describe("hosted gateway", () => {
     assert.equal(recorded[0]?.llamaCredits, 20);
   });
 
+  it("falls back to LiteParse when LlamaParse times out", async () => {
+    const progress: Array<{ status: string; progress?: number }> = [];
+    let now = 0;
+    const realDateNow = Date.now;
+    Date.now = () => now;
+    try {
+      const result = await handleParse(
+        {
+          convex: convex({
+            async validateKey() {
+              return {
+                ok: true,
+                accountId: "acc",
+                billable: true,
+                fallback: false,
+              };
+            },
+            async recordUsage() {
+              throw new Error("should not debit on timeout");
+            },
+          }),
+          env: { LLAMA_CLOUD_API_KEY: "master" },
+          sleep: async () => {
+            now += 30_000;
+          },
+          llamaWait: {
+            maxWaitMs: 90_000,
+            progressEveryMs: 60_000,
+            pollIntervalMs: 1,
+          },
+          fetchImpl: async (url) => {
+            const href = String(url);
+            if (href.endsWith("/upload")) {
+              return json({ id: "slow", status: "PENDING" });
+            }
+            if (href.includes("/job/slow")) {
+              return json({ id: "slow", status: "PENDING", progress: 12 });
+            }
+            throw new Error(`unexpected ${href}`);
+          },
+        },
+        {
+          token: "zw",
+          filename: "big.pdf",
+          bytes: new Uint8Array([1]),
+          onProgress: (info) =>
+            progress.push({ status: info.status, progress: info.progress }),
+        },
+      );
+      assert.equal(result.status, 200);
+      const body = result.body as {
+        forcedEngine?: string;
+        fallbackReason?: string;
+        lastStatus?: string;
+      };
+      assert.equal(body.forcedEngine, "liteparse");
+      assert.equal(body.fallbackReason, "llamaparse_timeout");
+      assert.equal(body.lastStatus, "PENDING");
+      assert.ok(progress.length >= 1);
+      assert.equal(progress[0]?.status, "PENDING");
+      assert.equal(progress[0]?.progress, undefined);
+    } finally {
+      Date.now = realDateNow;
+    }
+  });
+
   it("returns okf_fallback_host_llm without calling Claude", async () => {
     const app = await buildApp({
       convex: convex({

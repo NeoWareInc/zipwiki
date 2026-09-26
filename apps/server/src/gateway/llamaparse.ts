@@ -2,6 +2,20 @@ import { llamaCreditsFromPayload } from "./llama-credits.js";
 
 const LLAMA_BASE = "https://api.cloud.llamaindex.ai";
 
+/** How long to wait for LlamaParse before LiteParse fallback.
+ * Official poll payloads only expose coarse job.status (PENDING/RUNNING/…).
+ * There is no reliable progress % — so we do not wait beyond 5 minutes. */
+export const LLAMA_PARSE_MAX_WAIT_MS = 5 * 60 * 1000;
+/** Emit a status line this often while still waiting (reports job.status). */
+export const LLAMA_PARSE_PROGRESS_EVERY_MS = 60_000;
+const POLL_INTERVAL_MS = 2_000;
+
+export type LlamaParseWaitOptions = {
+  maxWaitMs?: number;
+  progressEveryMs?: number;
+  pollIntervalMs?: number;
+};
+
 export type LlamaParseRequest = {
   filename: string;
   bytes: Uint8Array;
@@ -17,9 +31,68 @@ export type LlamaParseOutput = {
   jobId?: string;
 };
 
-type LlamaJob = { id?: string; status?: string };
+export type LlamaParseProgress = {
+  jobId: string;
+  status: string;
+  elapsedSec: number;
+  /** 0–100 when the vendor reports it. */
+  progress?: number;
+  detail?: string;
+};
+
+export class LlamaParseTimeoutError extends Error {
+  readonly jobId?: string;
+  readonly lastStatus: string;
+  constructor(message: string, opts: { jobId?: string; lastStatus: string }) {
+    super(message);
+    this.name = "LlamaParseTimeoutError";
+    this.jobId = opts.jobId;
+    this.lastStatus = opts.lastStatus;
+  }
+}
+
+type LlamaJob = {
+  id?: string;
+  status?: string;
+  error_message?: string | null;
+  errorMessage?: string | null;
+  progress?: number | string | null;
+  job?: {
+    id?: string;
+    status?: string;
+    error_message?: string | null;
+    progress?: number | string | null;
+  };
+};
+
 type LlamaPage = { page?: number; md?: string; markdown?: string; text?: string };
 type LlamaJson = { pages?: LlamaPage[]; markdown?: string };
+
+function normalizeStatus(raw: string | undefined): string {
+  const s = (raw ?? "PENDING").trim().toUpperCase();
+  if (s === "COMPLETED") return "SUCCESS";
+  if (s === "FAILED") return "ERROR";
+  return s || "PENDING";
+}
+
+function readProgressPercent(job: LlamaJob): number | undefined {
+  // Official LlamaParse GET job docs only guarantee status + error_message.
+  // Ignore undocumented progress fields so we never treat them as liveness.
+  void job;
+  return undefined;
+}
+
+function jobDetail(job: LlamaJob): string | undefined {
+  const err =
+    job.error_message ??
+    job.errorMessage ??
+    job.job?.error_message ??
+    undefined;
+  if (typeof err === "string" && err.trim()) return err.trim();
+  const pct = readProgressPercent(job);
+  if (pct != null) return `${pct}%`;
+  return undefined;
+}
 
 export async function invokeLlamaParse(
   request: LlamaParseRequest,
@@ -27,7 +100,14 @@ export async function invokeLlamaParse(
   fetchImpl: typeof fetch,
   sleep: (ms: number) => Promise<void> = (ms) =>
     new Promise((resolve) => setTimeout(resolve, ms)),
+  onProgress?: (info: LlamaParseProgress) => void,
+  wait?: LlamaParseWaitOptions,
 ): Promise<LlamaParseOutput> {
+  const maxWaitMs = wait?.maxWaitMs ?? LLAMA_PARSE_MAX_WAIT_MS;
+  const progressEveryMs =
+    wait?.progressEveryMs ?? LLAMA_PARSE_PROGRESS_EVERY_MS;
+  const pollIntervalMs = wait?.pollIntervalMs ?? POLL_INTERVAL_MS;
+
   const form = new FormData();
   form.append(
     "file",
@@ -48,28 +128,58 @@ export async function invokeLlamaParse(
     throw new Error(`LlamaParse upload failed (${upload.status})`);
   }
   const job = (await upload.json()) as LlamaJob;
-  if (!job.id) throw new Error("LlamaParse did not return a job id");
+  const jobId = job.id ?? job.job?.id;
+  if (!jobId) throw new Error("LlamaParse did not return a job id");
 
-  let status = job.status ?? "PENDING";
-  for (let attempt = 0; attempt < 40 && status !== "SUCCESS"; attempt += 1) {
+  let status = normalizeStatus(job.status ?? job.job?.status);
+  const started = Date.now();
+  let nextProgressAt = started + progressEveryMs;
+  let lastBody: LlamaJob = job;
+
+  while (status !== "SUCCESS") {
     if (status === "ERROR" || status === "FAILED" || status === "CANCELLED") {
-      throw new Error(`LlamaParse job ${status}`);
+      const detail = jobDetail(lastBody);
+      throw new Error(
+        detail
+          ? `LlamaParse job ${status}: ${detail}`
+          : `LlamaParse job ${status}`,
+      );
     }
-    await sleep(1500);
-    const polled = await fetchImpl(`${LLAMA_BASE}/api/parsing/job/${job.id}`, {
+    const elapsed = Date.now() - started;
+    if (elapsed >= maxWaitMs) {
+      throw new LlamaParseTimeoutError(
+        `LlamaParse timed out after ${Math.round(elapsed / 1000)}s (last status: ${status})`,
+        { jobId, lastStatus: status },
+      );
+    }
+
+    await sleep(pollIntervalMs);
+    const polled = await fetchImpl(`${LLAMA_BASE}/api/parsing/job/${jobId}`, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         Accept: "application/json",
       },
     });
     if (!polled.ok) throw new Error(`LlamaParse poll failed (${polled.status})`);
-    const body = (await polled.json()) as LlamaJob;
-    status = body.status ?? "PENDING";
+    lastBody = (await polled.json()) as LlamaJob;
+    status = normalizeStatus(lastBody.status ?? lastBody.job?.status);
+
+    const now = Date.now();
+    if (onProgress && now >= nextProgressAt) {
+      const elapsedSec = Math.round((now - started) / 1000);
+      onProgress({
+        jobId,
+        status,
+        elapsedSec,
+        progress: readProgressPercent(lastBody),
+        detail: jobDetail(lastBody),
+      });
+      nextProgressAt = now + progressEveryMs;
+    }
   }
-  if (status !== "SUCCESS") throw new Error("LlamaParse timed out");
 
   const result = await fetchImpl(
-    `${LLAMA_BASE}/api/parsing/job/${job.id}/result/json`,
+    `${LLAMA_BASE}/api/parsing/job/${jobId}/result/json`,
     {
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -91,12 +201,12 @@ export async function invokeLlamaParse(
     "";
   if (!text.trim()) throw new Error("LlamaParse returned empty markdown");
   const llamaCredits = await readLlamaJobCredits(
-    job.id,
+    jobId,
     apiKey,
     fetchImpl,
     sleep,
   );
-  return { text, pageCount: pages.length, pages, llamaCredits, jobId: job.id };
+  return { text, pageCount: pages.length, pages, llamaCredits, jobId };
 }
 
 /** Poll v2 usage until LlamaParse records the credits for this job. */
