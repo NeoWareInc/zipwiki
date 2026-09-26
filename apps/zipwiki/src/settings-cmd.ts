@@ -13,6 +13,11 @@ import {
   resolveZipwikiApiUrl,
   formatZipwikiApiTarget,
 } from "./lib/config/index.js";
+import {
+  isUnauthorizedApiError,
+  promptAndRunLogin,
+} from "./interactive/resume-login.js";
+import { isInteractiveTty } from "./interactive/tty.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -24,15 +29,15 @@ function settingsPageUrl(): string {
   });
 }
 
-function printAuthHint(err: unknown): never {
+async function recoverFromSettingsAuthFailure(err: unknown): Promise<never> {
   const status =
     err instanceof ZipwikiApiError ? err.status : undefined;
   const msg = err instanceof Error ? err.message : String(err);
   console.error("");
   console.error("[zipwiki] Could not load account settings from the API.");
-  if (status === 401 || status === 403 || /unauthorized/i.test(msg)) {
+  if (isUnauthorizedApiError(err)) {
     console.error(
-      "  Your API key was rejected (revoked or wrong). Get a new one:",
+      "  Your API key was rejected (revoked, expired, or wrong).",
     );
   } else if (status === 404) {
     console.error(
@@ -45,8 +50,10 @@ function printAuthHint(err: unknown): never {
     console.error(`  ${msg}`);
   }
   console.error("");
-  console.error("  pnpm zipwiki -- auth login");
-  console.error("  pnpm zipwiki -- settings pull");
+  console.error("  Needed: zipwiki auth login");
+  console.error(
+    "  (login pulls Settings automatically — no separate settings pull)",
+  );
   console.error("");
   process.exit(1);
 }
@@ -61,12 +68,18 @@ export async function runSettingsShow(opts?: {
       await pullAccountSettings({ quiet: true });
       cached = loadCachedAccountSettings();
     } catch (err) {
-      printAuthHint(err);
+      if (isUnauthorizedApiError(err) && isInteractiveTty()) {
+        await promptAndRunLogin({ reason: "unauthorized" });
+        await pullAccountSettings({ quiet: true });
+        cached = loadCachedAccountSettings();
+      } else {
+        await recoverFromSettingsAuthFailure(err);
+      }
     }
   }
   if (!cached) {
     console.error(
-      "[zipwiki] No settings cache yet. Run: pnpm zipwiki -- auth login",
+      "[zipwiki] No settings cache yet. Run: zipwiki auth login",
     );
     process.exit(1);
   }
@@ -107,7 +120,15 @@ export async function runSettingsPull(): Promise<void> {
       `[zipwiki] setupComplete=${payload.setupComplete} parse=${payload.settings.parseCredential} okf=${payload.settings.okfCredential}`,
     );
   } catch (err) {
-    printAuthHint(err);
+    if (isUnauthorizedApiError(err) && isInteractiveTty()) {
+      await promptAndRunLogin({ reason: "unauthorized" });
+      const payload = await pullAccountSettings();
+      console.error(
+        `[zipwiki] setupComplete=${payload.setupComplete} parse=${payload.settings.parseCredential} okf=${payload.settings.okfCredential}`,
+      );
+      return;
+    }
+    await recoverFromSettingsAuthFailure(err);
   }
 }
 

@@ -6,18 +6,96 @@ export const MAX_USD_CENTS = 1_000_000; // $10,000.00
 export const DEFAULT_USD_CENTS = 1_000; // $10.00
 export const LOW_CREDITS_THRESHOLD = 500; // $5 equivalent
 export const CREDIT_COST_PARSE = 1;
+/** Fallback hosted OKF debit when token counts are missing. */
 export const CREDIT_COST_LLM = 1;
 /** LlamaParse overage price: $1.25 per 1,000 Llama credits. */
 export const LLAMA_USD_PER_1000_CREDITS = 1.25;
 /**
- * Target gross margin on LlamaParse resale (sell so profit / sell = 20%).
+ * Target gross margin on vendor resale (sell so profit / sell = 20%).
  * Markup on cost = 1 / (1 − margin) = 1.25×.
+ * Used for LlamaParse and hosted Anthropic OKF.
  * @see https://developers.llamaindex.ai/llamaparse/general/pricing/
  */
 export const TARGET_PROFIT_MARGIN = 0.2;
 export const COST_MARKUP = 1 / (1 - TARGET_PROFIT_MARGIN);
 /** Default hosted tier (ZipWiki settings): Agentic = 10 Llama credits / page. */
 export const LLAMA_AGENTIC_CREDITS_PER_PAGE = 10;
+
+/** Default hosted ZipWiki OKF model (cheapest Claude). */
+export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-4-5";
+
+export const HOSTED_OKF_MODELS = [
+  "claude-haiku-4-5",
+  "claude-sonnet-4-5",
+  "claude-opus-4-5",
+] as const;
+
+export type HostedOkfModel = (typeof HOSTED_OKF_MODELS)[number];
+
+/**
+ * Anthropic API list prices ($ / million tokens).
+ * @see https://www.anthropic.com/pricing
+ * Keep in sync with gateway allowlist in apps/server/src/gateway/anthropic.ts.
+ */
+export const ANTHROPIC_MODEL_PRICES: Record<
+  HostedOkfModel,
+  { inputUsdPerMTok: number; outputUsdPerMTok: number; label: string }
+> = {
+  "claude-haiku-4-5": {
+    label: "Claude Haiku 4.5",
+    inputUsdPerMTok: 1,
+    outputUsdPerMTok: 5,
+  },
+  "claude-sonnet-4-5": {
+    label: "Claude Sonnet 4.5",
+    inputUsdPerMTok: 3,
+    outputUsdPerMTok: 15,
+  },
+  "claude-opus-4-5": {
+    label: "Claude Opus 4.5",
+    inputUsdPerMTok: 15,
+    outputUsdPerMTok: 75,
+  },
+};
+
+export function isHostedOkfModel(model: string): model is HostedOkfModel {
+  return (HOSTED_OKF_MODELS as readonly string[]).includes(model);
+}
+
+export function resolveHostedOkfModel(model?: string | null): HostedOkfModel {
+  const trimmed = model?.trim();
+  if (trimmed && isHostedOkfModel(trimmed)) return trimmed;
+  return DEFAULT_HOSTED_OKF_MODEL;
+}
+
+/**
+ * ZipWiki credits to debit for one hosted Anthropic OKF call.
+ * USD = tokens/1e6 × list price, then × COST_MARKUP, × CREDITS_PER_DOLLAR.
+ * Falls back to CREDIT_COST_LLM when tokens are missing. Any billed job ≥ 1.
+ */
+export function zipwikiCreditsForAnthropicTokens(args: {
+  model?: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+}): number {
+  const input =
+    typeof args.inputTokens === "number" && Number.isFinite(args.inputTokens)
+      ? Math.max(0, args.inputTokens)
+      : 0;
+  const output =
+    typeof args.outputTokens === "number" && Number.isFinite(args.outputTokens)
+      ? Math.max(0, args.outputTokens)
+      : 0;
+  if (input <= 0 && output <= 0) return CREDIT_COST_LLM;
+
+  const model = resolveHostedOkfModel(args.model);
+  const prices = ANTHROPIC_MODEL_PRICES[model];
+  const usd =
+    (input / 1_000_000) * prices.inputUsdPerMTok +
+    (output / 1_000_000) * prices.outputUsdPerMTok;
+  const raw = usd * COST_MARKUP * CREDITS_PER_DOLLAR;
+  return Math.max(1, Math.ceil(raw - 1e-9));
+}
 
 /**
  * ZipWiki credits to debit for one LlamaParse job.

@@ -129,13 +129,77 @@ export const accountDetail = query({
         periodStart: new Date(p.periodStart).toISOString(),
         parseCount: p.parseCount,
         okfCount: p.okfCount,
+        llamaCredits: p.llamaCredits ?? 0,
+        parseCreditsSpent: p.parseCreditsSpent ?? 0,
+        pages: p.pages ?? 0,
+        okfInputTokens: p.okfInputTokens ?? 0,
+        okfOutputTokens: p.okfOutputTokens ?? 0,
+        okfCreditsSpent: p.okfCreditsSpent ?? 0,
+        packCount: p.packCount ?? 0,
+        queryCount: p.queryCount ?? 0,
       })),
       events: events.map((e) => ({
         type: e.type,
         engine: e.engine ?? null,
+        model: e.model ?? null,
+        status: e.status ?? null,
         bytes: e.bytes ?? null,
+        pages: e.pages ?? null,
+        inputTokens: e.inputTokens ?? null,
+        outputTokens: e.outputTokens ?? null,
+        llamaCredits: e.llamaCredits ?? null,
+        creditCost: e.creditCost ?? null,
+        filename: e.filename ?? null,
         createdAt: new Date(e._creationTime).toISOString(),
       })),
+    };
+  },
+});
+
+/** Admin usage overview: current period aggregates per account. */
+export const usageOverview = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const accounts = await ctx.db.query("accounts").collect();
+    const periodStart = startOfMonthMs();
+    const rows = [];
+    for (const account of accounts) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (qq) => qq.eq("userId", account.userId))
+        .unique();
+      if (!profile) continue;
+      const credits = creditSnapshot(account);
+      const period = await ctx.db
+        .query("usagePeriods")
+        .withIndex("by_account_period", (qq) =>
+          qq.eq("accountId", account._id).eq("periodStart", periodStart),
+        )
+        .unique();
+      rows.push({
+        id: account._id,
+        email: profile.email,
+        name: account.name,
+        disabled: account.disabled,
+        creditsRemaining: credits.creditsRemaining,
+        creditsUnlimited: credits.creditsUnlimited,
+        parseCount: period?.parseCount ?? 0,
+        parsePages: period?.pages ?? 0,
+        llamaCredits: period?.llamaCredits ?? 0,
+        parseCreditsSpent: period?.parseCreditsSpent ?? 0,
+        okfCount: period?.okfCount ?? 0,
+        okfInputTokens: period?.okfInputTokens ?? 0,
+        okfOutputTokens: period?.okfOutputTokens ?? 0,
+        okfCreditsSpent: period?.okfCreditsSpent ?? 0,
+        packCount: period?.packCount ?? 0,
+        queryCount: period?.queryCount ?? 0,
+      });
+    }
+    rows.sort((a, b) => a.email.localeCompare(b.email));
+    return {
+      periodStart: new Date(periodStart).toISOString(),
+      accounts: rows,
     };
   },
 });

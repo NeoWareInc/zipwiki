@@ -1,0 +1,24 @@
+/** Visual kinds for billed / activity usage on the portal. */
+export type UsageVisualKind = "parse" | "okf" | "query" | "other";
+
+export function usageVisualKind(type: string): UsageVisualKind {
+  if (type === "parse" || type === "liteparse") return "parse";
+  if (type === "okf") return "okf";
+  if (type === "query" || type === "pack") return "query";
+  return "other";
+}
+
+/** CSS color for a usage kind (see --usage-* in index.css). */
+export function usageColor(kind: UsageVisualKind): string {
+  if (kind === "parse") return "var(--usage-parse)";
+  if (kind === "okf") return "var(--usage-okf)";
+  if (kind === "query") return "var(--usage-query)";
+  return "var(--muted)";
+}
+
+export function usageKindLabel(kind: UsageVisualKind): string {
+  if (kind === "parse") return "Parsing";
+  if (kind === "okf") return "OKF Enrichment";
+  if (kind === "query") return "Querying Knowledge Archive";
+  return "Other";
+}

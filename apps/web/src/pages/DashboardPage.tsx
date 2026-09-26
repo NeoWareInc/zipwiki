@@ -1,12 +1,23 @@
 import { useQuery } from "convex/react";
 import { Link, useSearchParams } from "react-router-dom";
+import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
+import {
+  usageColor,
+  usageKindLabel,
+  usageVisualKind,
+  type UsageVisualKind,
+} from "../lib/usage-colors";
 
 function CreditBar({
+  parseCredits,
+  okfCredits,
   used,
   purchased,
   unlimited,
 }: {
+  parseCredits: number;
+  okfCredits: number;
   used: number;
   purchased: number;
   unlimited: boolean;
@@ -18,18 +29,29 @@ function CreditBar({
           <span className="font-medium">ZipWiki credits</span>
           <span className="text-(--muted)">Unlimited</span>
         </div>
-        <div className="h-2 rounded-full bg-(--line)">
-          <div className="h-2 w-full rounded-full bg-(--accent)" />
+        <div className="flex h-2 overflow-hidden rounded-full bg-(--line)">
+          <div
+            className="h-full w-1/2"
+            style={{ background: usageColor("parse") }}
+          />
+          <div
+            className="h-full w-1/2"
+            style={{ background: usageColor("okf") }}
+          />
         </div>
+        <CreditLegend />
       </div>
     );
   }
 
   const remaining = Math.max(0, purchased - used);
-  const pct =
-    purchased <= 0
-      ? 0
-      : Math.min(100, Math.round((used / purchased) * 100));
+  const usedPct =
+    purchased <= 0 ? 0 : Math.min(100, (used / purchased) * 100);
+  const known = parseCredits + okfCredits;
+  const parseShare = known > 0 ? parseCredits / known : 0.5;
+  const okfShare = known > 0 ? okfCredits / known : 0.5;
+  const parsePct = usedPct * parseShare;
+  const okfPct = usedPct * okfShare;
   const low = remaining <= 500;
 
   return (
@@ -41,12 +63,70 @@ function CreditBar({
           / {purchased.toLocaleString()} purchased
         </span>
       </div>
-      <div className="h-2 rounded-full bg-(--line)">
-        <div
-          className={`h-2 rounded-full ${low ? "bg-amber-500" : "bg-(--accent)"}`}
-          style={{ width: `${purchased <= 0 ? 0 : pct}%` }}
-        />
+      <div className="flex h-2 overflow-hidden rounded-full bg-(--line)">
+        {parsePct > 0 && (
+          <div
+            className="h-full"
+            style={{
+              width: `${parsePct}%`,
+              background: usageColor("parse"),
+            }}
+            title={`${usageKindLabel("parse")}: ${parseCredits.toLocaleString()}`}
+          />
+        )}
+        {okfPct > 0 && (
+          <div
+            className="h-full"
+            style={{
+              width: `${okfPct}%`,
+              background: usageColor("okf"),
+            }}
+            title={`${usageKindLabel("okf")}: ${okfCredits.toLocaleString()}`}
+          />
+        )}
       </div>
+      {low && purchased > 0 && (
+        <p className="text-xs text-amber-700">Credits running low</p>
+      )}
+      <CreditLegend />
+    </div>
+  );
+}
+
+function CreditLegend() {
+  const items: UsageVisualKind[] = ["parse", "okf", "query"];
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--muted)">
+      {items.map((kind) => (
+        <li key={kind} className="inline-flex items-center gap-1.5">
+          <span
+            className="inline-block size-2.5 rounded-sm"
+            style={{ background: usageColor(kind) }}
+            aria-hidden
+          />
+          {usageKindLabel(kind)}
+          {kind === "query" ? (
+            <span className="text-(--muted)/80">(not billed)</span>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function KindCard({
+  kind,
+  children,
+}: {
+  kind: UsageVisualKind;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-lg border border-(--border) bg-(--paper) p-4"
+      style={{ borderLeftWidth: 4, borderLeftColor: usageColor(kind) }}
+    >
+      {children}
     </div>
   );
 }
@@ -59,19 +139,41 @@ function formatBytes(n: number | null): string {
 }
 
 function eventLabel(type: string, engine?: string | null): string {
-  if (type === "parse") return "Hosted parse";
-  if (type === "okf") return "ZipWiki OKF";
+  if (type === "parse") return "Parsing";
+  if (type === "okf") return "OKF Enrichment";
   if (type === "liteparse") return "LiteParse";
-  if (type === "pack") return "Pack";
+  if (type === "pack") return "Pack Knowledge Archive";
   if (type === "query") {
     const action = engine?.trim();
-    if (action === "open") return "Open";
-    if (action === "search") return "Search";
-    if (action === "query") return "Query";
-    if (action === "list") return "List";
-    return action ? `Query · ${action}` : "Query";
+    if (action === "open") return "Open Knowledge Archive";
+    if (action === "search") return "Search Knowledge Archive";
+    if (action === "query") return "Query Knowledge Archive";
+    if (action === "list") return "List Knowledge Archive";
+    if (action === "web_open") return "Web open Knowledge Archive";
+    if (action === "web_search") return "Web search Knowledge Archive";
+    return action
+      ? `Query Knowledge Archive · ${action}`
+      : "Query Knowledge Archive";
   }
   return type;
+}
+
+function CreditAmount({
+  type,
+  creditCost,
+}: {
+  type: string;
+  creditCost: number | null;
+}) {
+  const kind = usageVisualKind(type);
+  if (creditCost == null) {
+    return <span className="text-(--muted)">—</span>;
+  }
+  return (
+    <span className="font-medium tabular-nums" style={{ color: usageColor(kind) }}>
+      {creditCost.toLocaleString()}
+    </span>
+  );
 }
 
 export default function DashboardPage() {
@@ -90,6 +192,8 @@ export default function DashboardPage() {
       0,
     ) ?? 0;
   const parsePages = Math.max(usage?.parsePages ?? 0, logParsePages);
+  const parseCredits = usage?.parseCreditsSpent ?? 0;
+  const okfCredits = usage?.okfCreditsSpent ?? 0;
 
   return (
     <div className="space-y-8">
@@ -128,28 +232,60 @@ export default function DashboardPage() {
       {usage && (
         <div className="space-y-6 rounded-xl border border-(--border) bg-white shadow-soft p-6">
           <CreditBar
+            parseCredits={parseCredits}
+            okfCredits={okfCredits}
             used={usage.creditsSpent ?? 0}
             purchased={usage.creditsPurchased ?? 0}
             unlimited={unlimited}
           />
 
-          <div className="grid gap-4 md:grid-cols-2 text-sm">
-            <div className="rounded-lg border border-(--border) bg-(--paper) p-4">
-              <p className="font-medium">Hosted parse</p>
-              <p className="mt-1 text-(--muted) tabular-nums">
-                {(usage.parseCreditsSpent ?? 0).toLocaleString()} ZipWiki
-                credits · {parsePages.toLocaleString()} pages ·{" "}
+          <div className="grid gap-4 md:grid-cols-3 text-sm">
+            <KindCard kind="parse">
+              <p
+                className="font-medium"
+                style={{ color: usageColor("parse") }}
+              >
+                {usageKindLabel("parse")}
+              </p>
+              <p className="mt-1 tabular-nums" style={{ color: usageColor("parse") }}>
+                {parseCredits.toLocaleString()} ZipWiki credits
+              </p>
+              <p className="mt-0.5 text-(--muted) tabular-nums">
+                {parsePages.toLocaleString()} pages ·{" "}
                 {usage.parseCount.toLocaleString()} documents
               </p>
-            </div>
-            <div className="rounded-lg border border-(--border) bg-(--paper) p-4">
-              <p className="font-medium">ZipWiki OKF</p>
-              <p className="mt-1 text-(--muted) tabular-nums">
-                {usage.okfCount.toLocaleString()} enrichments ·{" "}
-                {usage.okfCount.toLocaleString()} ZipWiki credits
+            </KindCard>
+            <KindCard kind="okf">
+              <p className="font-medium" style={{ color: usageColor("okf") }}>
+                {usageKindLabel("okf")}
               </p>
-              <p className="mt-1 text-xs text-(--muted)">1 credit each</p>
-            </div>
+              <p className="mt-1 tabular-nums" style={{ color: usageColor("okf") }}>
+                {okfCredits.toLocaleString()} ZipWiki credits
+              </p>
+              <p className="mt-0.5 text-(--muted) tabular-nums">
+                {usage.okfCount.toLocaleString()} enrichments ·{" "}
+                {(usage.okfInputTokens ?? 0).toLocaleString()} in /{" "}
+                {(usage.okfOutputTokens ?? 0).toLocaleString()} out
+              </p>
+            </KindCard>
+            <KindCard kind="query">
+              <p
+                className="font-medium"
+                style={{ color: usageColor("query") }}
+              >
+                {usageKindLabel("query")}
+              </p>
+              <p
+                className="mt-1 tabular-nums"
+                style={{ color: usageColor("query") }}
+              >
+                0 ZipWiki credits
+              </p>
+              <p className="mt-0.5 text-(--muted) tabular-nums">
+                {(usage.queryCount ?? 0).toLocaleString()} open / search /
+                browse · {(usage.packCount ?? 0).toLocaleString()} packs
+              </p>
+            </KindCard>
           </div>
 
           <div className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm">
@@ -194,8 +330,8 @@ export default function DashboardPage() {
         <div>
           <h2 className="font-display text-xl font-semibold">Activity log</h2>
           <p className="mt-1 text-sm text-(--muted)">
-            Pack, open/search/query, hosted parse, and ZipWiki OKF — with pages
-            and ZipWiki credits when billed.
+            Pack, open/search/query, hosted parse, and OKF enrichment — with
+            pages and ZipWiki credits when billed.
           </p>
         </div>
         {usageLog === undefined && (
@@ -203,8 +339,8 @@ export default function DashboardPage() {
         )}
         {usageLog && usageLog.length === 0 && (
           <p className="text-sm text-(--muted)">
-            No activity yet. Pack a knowledge base or open one with the agent to
-            see entries here.
+            No activity yet. Pack a Knowledge Archive or open one with the agent
+            to see entries here.
           </p>
         )}
         {usageLog && usageLog.length > 0 && (
@@ -214,9 +350,9 @@ export default function DashboardPage() {
                 <tr className="border-b border-(--border) text-(--muted)">
                   <th className="py-2 pr-3 font-medium">When</th>
                   <th className="py-2 pr-3 font-medium">Type</th>
-                  <th className="py-2 pr-3 font-medium">File</th>
+                  <th className="py-2 pr-3 font-medium">File / model</th>
                   <th className="py-2 pr-3 font-medium tabular-nums">
-                    Pages / docs
+                    Pages / tokens
                   </th>
                   <th className="py-2 font-medium tabular-nums">
                     ZipWiki credits
@@ -224,40 +360,60 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {usageLog.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="border-b border-(--border)/60 align-top"
-                  >
-                    <td className="py-2 pr-3 whitespace-nowrap text-(--muted)">
-                      {new Date(row.createdAt).toLocaleString()}
-                    </td>
-                    <td className="py-2 pr-3">
-                      {eventLabel(row.type, row.engine)}
-                      {row.status && row.status !== "success" ? (
-                        <span className="text-(--muted)"> · {row.status}</span>
-                      ) : null}
-                    </td>
-                    <td
-                      className="py-2 pr-3 max-w-56 truncate"
-                      title={row.filename ?? undefined}
+                {usageLog.map((row) => {
+                  const kind = usageVisualKind(row.type);
+                  return (
+                    <tr
+                      key={row.id}
+                      className="border-b border-(--border)/60 align-top"
                     >
-                      {row.filename ?? (
-                        <span className="text-(--muted)">
-                          {row.bytes != null ? formatBytes(row.bytes) : "—"}
+                      <td className="py-2 pr-3 whitespace-nowrap text-(--muted)">
+                        {new Date(row.createdAt).toLocaleString()}
+                      </td>
+                      <td className="py-2 pr-3">
+                        <span
+                          className="font-medium"
+                          style={{ color: usageColor(kind) }}
+                        >
+                          {eventLabel(row.type, row.engine)}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-3 tabular-nums">
-                      {row.pages != null ? row.pages.toLocaleString() : "—"}
-                    </td>
-                    <td className="py-2 tabular-nums">
-                      {row.creditCost != null
-                        ? row.creditCost.toLocaleString()
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
+                        {row.status && row.status !== "success" ? (
+                          <span className="text-(--muted)">
+                            {" "}
+                            · {row.status}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td
+                        className="py-2 pr-3 max-w-56 truncate"
+                        title={row.filename ?? row.model ?? undefined}
+                      >
+                        {row.filename ??
+                          row.model ??
+                          (row.bytes != null ? (
+                            <span className="text-(--muted)">
+                              {formatBytes(row.bytes)}
+                            </span>
+                          ) : (
+                            "—"
+                          ))}
+                      </td>
+                      <td className="py-2 pr-3 tabular-nums">
+                        {row.pages != null
+                          ? row.pages.toLocaleString()
+                          : row.inputTokens != null || row.outputTokens != null
+                            ? `${(row.inputTokens ?? 0).toLocaleString()} / ${(row.outputTokens ?? 0).toLocaleString()}`
+                            : "—"}
+                      </td>
+                      <td className="py-2">
+                        <CreditAmount
+                          type={row.type}
+                          creditCost={row.creditCost}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

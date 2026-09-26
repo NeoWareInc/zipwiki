@@ -1,6 +1,6 @@
 import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { creditSnapshot } from "./lib/credits";
+import { creditSnapshot, resolveHostedOkfModel, HOSTED_OKF_MODELS } from "./lib/credits";
 import { startOfMonthMs } from "./lib/crypto";
 import { hashApiKey } from "./lib/crypto";
 
@@ -131,7 +131,16 @@ export const forApiKey = internalQuery({
       },
       okf: {
         provider: "anthropic",
-        model: "claude-haiku-4-5",
+        model: (() => {
+          const s =
+            settings && typeof settings === "object"
+              ? (settings as { okf?: { model?: unknown } }).okf
+              : undefined;
+          const m =
+            s && typeof s.model === "string" ? s.model.trim() : undefined;
+          return resolveHostedOkfModel(m);
+        })(),
+        models: HOSTED_OKF_MODELS,
         configured: true,
       },
       features: {

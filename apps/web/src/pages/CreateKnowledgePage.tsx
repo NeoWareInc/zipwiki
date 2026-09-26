@@ -15,7 +15,7 @@ export default function CreateKnowledgePage() {
             to="/dashboard/knowledge"
             className="text-(--accent) hover:underline"
           >
-            Knowledge
+            Knowledge Archive
           </Link>
           .
         </p>
@@ -32,10 +32,12 @@ export default function CreateKnowledgePage() {
           <li>Approve the tool call when asked.</li>
         </ol>
         <p className="text-xs text-(--muted)">
-          Create prompts pack with your account parser, then enrich OKF with
-          the agent LLM (<code className="text-xs">okf_enrich</code>). The
-          debug command does the same pack from the monorepo root, using that
-          parser and AI OKF — it does not force LiteParse or skip OKF.
+          Create prompts pack on this machine via MCP, then enrich OKF with the
+          agent’s own LLM (<code className="text-xs">okf_enrich</code>) — that
+          path does not use your ZipWiki Claude settings. CLI{" "}
+          <code className="text-xs">zipwiki pack</code> uses portal Settings
+          (parser + ZipWiki OKF model) after{" "}
+          <code className="text-xs">settings pull</code>.
         </p>
       </section>
 

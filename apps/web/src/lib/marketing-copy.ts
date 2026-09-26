@@ -33,7 +33,7 @@ export const AUDIENCES = [
   },
   {
     title: "Operators who keep the files",
-    body: "The knowledge base is a .zipwiki you can copy, backup, or unzip. It does not live on our servers.",
+    body: "The Knowledge Archive is a .zipwiki you can copy, backup, or unzip. It does not live on our servers.",
   },
   {
     title: "Teams that want hosted parse",
@@ -363,7 +363,7 @@ export const ROADMAP: Array<{
     status: "Later",
   },
   {
-    title: "Richer Knowledge browser",
+    title: "Richer Knowledge Archive browser",
     why: "Digest cards and the original beside its parse.",
     status: "Later",
   },

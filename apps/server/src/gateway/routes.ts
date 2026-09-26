@@ -244,14 +244,23 @@ export async function registerGateway(
     if (!body || typeof body !== "object") {
       return reply.code(400).send({ error: "invalid_request" });
     }
+    const raw = body as Record<string, unknown>;
+    const model = typeof raw.model === "string" ? raw.model : undefined;
     const result = await handleOkf(deps, {
       token,
-      input: body as {
-        primaries?: Array<{ path?: string; documentType?: string }>;
-        parsedMarkdown?: string;
-        title?: string;
-        digest?: string;
-        documentType?: string;
+      model,
+      input: {
+        primaries: raw.primaries as
+          | Array<{ path?: string; documentType?: string }>
+          | undefined,
+        parsedMarkdown:
+          typeof raw.parsedMarkdown === "string"
+            ? raw.parsedMarkdown
+            : undefined,
+        title: typeof raw.title === "string" ? raw.title : undefined,
+        digest: typeof raw.digest === "string" ? raw.digest : undefined,
+        documentType:
+          typeof raw.documentType === "string" ? raw.documentType : undefined,
       },
     });
     return reply.code(result.status).send(result.body);

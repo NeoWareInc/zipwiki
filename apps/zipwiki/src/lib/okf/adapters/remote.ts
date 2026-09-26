@@ -50,6 +50,7 @@ export class RemoteOkfAdapter {
         title: input.title,
         digest: input.digest,
         documentType: input.documentType,
+        ...(input.model?.trim() ? { model: input.model.trim() } : {}),
       }),
     });
 

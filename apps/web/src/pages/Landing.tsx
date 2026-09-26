@@ -51,7 +51,7 @@ export default function Landing() {
             Files, then the plugin, then answers
           </h2>
           <p className="mt-3 max-w-2xl text-(--muted)">
-            The knowledge base is a portable <code className="text-sm">.zipwiki</code>{" "}
+            The Knowledge Archive is a portable <code className="text-sm">.zipwiki</code>{" "}
             file. The plugin is how you and your agent create and query it. The
             dashboard is only for account, keys, and billing.
           </p>

@@ -101,7 +101,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
     <form onSubmit={onSubmit} className="space-y-8">
       {onboarding && (
         <p className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted)">
-          These choices apply when you create a ZipWiki knowledge base. The CLI
+          These choices apply when you create a ZipWiki Knowledge Archive. The CLI
           downloads them when you pack. A key of your own stays on this machine
           and is turned on under Advanced settings.
         </p>
@@ -110,7 +110,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">
-          Parse sources into the knowledge base
+          Parse sources into the Knowledge Archive
         </h2>
         <p className="text-sm text-(--muted)">
           ZipWiki account uses LlamaParse and prepaid credits.
@@ -125,7 +125,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
           </p>
         )}
         <Select
-          label="Parser for new knowledge bases"
+          label="Parser for new Knowledge Archives"
           value={form.parseCredential}
           onChange={(v) => {
             const parseCredential = v as AccountSettingsBody["parseCredential"];
@@ -208,14 +208,21 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">
-          OKF for the knowledge base
+          ZipWiki LLM (Claude)
         </h2>
         <p className="text-sm text-(--muted)">
-          ZipWiki account uses Anthropic {hostedOkfModel(form.okf.model)} and
-          prepaid credits.
+          Used when you create or query knowledge from the ZipWiki CLI or
+          website with ZipWiki-hosted AI (after{" "}
+          <code className="text-xs">settings pull</code>). Billed from Anthropic
+          tokens plus a 20% margin. Default is Haiku (cheapest).
+        </p>
+        <p className="text-sm text-(--muted)">
+          Not used when using the MCP server — the agent’s own LLM handles OKF
+          and answers via <code className="text-xs">okf_enrich</code> and the
+          query tools, at no ZipWiki credit cost.
         </p>
         <Select
-          label="OKF writer for new knowledge bases"
+          label="OKF writer (CLI / website pack)"
           value={form.okfCredential}
           onChange={(v) => {
             const okfCredential = v as AccountSettingsBody["okfCredential"];
@@ -227,7 +234,13 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
                 ...f.okf,
                 useAi: okfCredential !== "local",
                 provider:
-                  okfCredential === "anthropic" ? "anthropic" : f.okf.provider,
+                  okfCredential === "anthropic" || okfCredential === "zipwiki"
+                    ? "anthropic"
+                    : f.okf.provider,
+                model:
+                  okfCredential === "zipwiki"
+                    ? hostedOkfModel(f.okf.model)
+                    : f.okf.model,
               },
             }));
           }}
@@ -237,23 +250,43 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
               : [
                   {
                     value: "zipwiki",
-                    label: `ZipWiki account · Anthropic ${hostedOkfModel(form.okf.model)}`,
+                    label: `ZipWiki account · ${hostedOkfModelLabel(form.okf.model)}`,
                   },
                 ]),
-            { value: "local", label: "Skip AI OKF (host LLM / MCP)" },
+            {
+              value: "local",
+              label: "Skip ZipWiki AI OKF on CLI (deterministic / no hosted LLM)",
+            },
             ...(form.byo?.anthropic
-              ? [{ value: "anthropic", label: "Anthropic (your key)" }]
+              ? [{ value: "anthropic", label: "Anthropic (your machine key)" }]
               : []),
           ]}
         />
+        {form.okfCredential === "zipwiki" && !isFreePlan && (
+          <Select
+            label="Claude model (CLI & website only — not MCP)"
+            value={hostedOkfModel(form.okf.model)}
+            onChange={(v) =>
+              setForm((f) => ({
+                ...f,
+                okf: { ...f.okf, provider: "anthropic", model: v },
+              }))
+            }
+            options={[
+              { value: "claude-haiku-4-5", label: "Haiku 4.5 (cheapest)" },
+              { value: "claude-sonnet-4-5", label: "Sonnet 4.5" },
+              { value: "claude-opus-4-5", label: "Opus 4.5" },
+            ]}
+          />
+        )}
       </section>
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">
-          Knowledge base archive
+          Knowledge Archive packing
         </h2>
         <p className="text-sm text-(--muted)">
-          How the .zipwiki is packed when you create a knowledge base.
+          How the .zipwiki is packed when you create a Knowledge Archive.
         </p>
         <Select
           label="Compression"
@@ -329,7 +362,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
             </h2>
             <p className="text-sm text-(--muted)">
               Keys stay on this machine. Turn one on here, then it can be
-              selected when you create a knowledge base.
+              selected when you create a Knowledge Archive.
             </p>
             <Checkbox
               label="LlamaParse key on this machine"
@@ -522,8 +555,21 @@ function ByoHint({ env, cmd }: { env: string; cmd: string }) {
 
 function hostedOkfModel(model: string | undefined): string {
   const value = model?.trim();
-  if (value && value !== "gpt-4o-mini" && value !== "gpt-4o") return value;
+  if (
+    value === "claude-haiku-4-5" ||
+    value === "claude-sonnet-4-5" ||
+    value === "claude-opus-4-5"
+  ) {
+    return value;
+  }
   return "claude-haiku-4-5";
+}
+
+function hostedOkfModelLabel(model: string | undefined): string {
+  const id = hostedOkfModel(model);
+  if (id === "claude-sonnet-4-5") return "Sonnet 4.5";
+  if (id === "claude-opus-4-5") return "Opus 4.5";
+  return "Haiku 4.5";
 }
 
 export default function SettingsPage() {
@@ -531,10 +577,10 @@ export default function SettingsPage() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="font-display text-3xl font-semibold">
-          Knowledge base settings
+          Knowledge Archive settings
         </h1>
         <p className="mt-1 text-(--muted)">
-          These settings are for creating a ZipWiki knowledge base. The CLI
+          These settings are for creating a ZipWiki Knowledge Archive. The CLI
           downloads them for each pack.
         </p>
       </div>

@@ -26,7 +26,6 @@ import { accountSettingsToConfigInput } from "../lib/config/account-settings-ove
 import {
   isZipwikiAccountConnected,
   requireAccountForHostedCredential,
-  syncAccountSettingsForPack,
 } from "../lib/config/account-settings-cache.js";
 import { DEFAULT_ACCOUNT_SETTINGS } from "@zipwiki/api-client";
 import type { AccountSettingsResponse } from "@zipwiki/api-client";
@@ -37,6 +36,7 @@ import {
 } from "../lib/parse/index.js";
 import { ensureCredentialsOrFail } from "../interactive/wizard.js";
 import { isInteractiveTty } from "../interactive/tty.js";
+import { syncAccountSettingsForPackWithAuth } from "../interactive/resume-login.js";
 import {
   fileBytes,
   formatPackPlan,
@@ -165,7 +165,7 @@ export async function runStage(
         setupUrl: null,
       };
     } else {
-      accountSettings = await syncAccountSettingsForPack({
+      accountSettings = await syncAccountSettingsForPackWithAuth({
         quiet: opts.quiet,
       });
     }

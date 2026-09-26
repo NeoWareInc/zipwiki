@@ -110,6 +110,7 @@ export async function runAuthLogin(opts: {
   }
 
   let printedSetupUrl = false;
+  let settingsSynced = false;
   try {
     // Prefer Convex for settings — Fly often 404s when CONVEX_SITE_URL is wrong.
     const settings = await waitForSetupComplete(deviceAuthUrl, approved.api_key, {
@@ -129,12 +130,50 @@ export async function runAuthLogin(opts: {
     saveCachedAccountSettings(settings);
     applyAccountSettingsToEnv(settings.settings);
     warnMissingByoSecrets(settings.settings);
-    console.error("[zipwiki] Account setup complete — settings cached.");
+    settingsSynced = true;
+    console.error(
+      `[zipwiki] Settings pulled automatically: parse=${settings.settings.parseCredential} okf=${settings.settings.okfCredential} useAi=${settings.settings.okf.useAi ?? "—"}`,
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[zipwiki] Login saved. Settings not synced yet: ${msg}`);
-    console.error(`  1. Save Settings in the dashboard (if prompted)`);
-    console.error(`  2. pnpm zipwiki -- settings pull`);
+    console.error(`[zipwiki] Setup wait: ${msg}`);
+  }
+
+  if (!settingsSynced) {
+    try {
+      const settings = await fetchAccountSettings(deviceAuthUrl, approved.api_key);
+      saveCachedAccountSettings(settings);
+      applyAccountSettingsToEnv(settings.settings);
+      warnMissingByoSecrets(settings.settings);
+      settingsSynced = true;
+      console.error(
+        `[zipwiki] Settings pulled automatically: parse=${settings.settings.parseCredential} okf=${settings.settings.okfCredential} useAi=${settings.settings.okf.useAi ?? "—"}`,
+      );
+      if (!settings.setupComplete) {
+        console.error(
+          `[zipwiki] Setup still incomplete${settings.setupUrl ? `: ${settings.setupUrl}` : " — open dashboard Settings"}`,
+        );
+      }
+    } catch {
+      try {
+        const settings = await fetchAccountSettings(url, approved.api_key);
+        saveCachedAccountSettings(settings);
+        applyAccountSettingsToEnv(settings.settings);
+        warnMissingByoSecrets(settings.settings);
+        settingsSynced = true;
+        console.error(
+          `[zipwiki] Settings pulled automatically: parse=${settings.settings.parseCredential} okf=${settings.settings.okfCredential} useAi=${settings.settings.okf.useAi ?? "—"}`,
+        );
+      } catch (err2) {
+        const msg = err2 instanceof Error ? err2.message : String(err2);
+        console.error(`[zipwiki] Login saved. Settings not synced yet: ${msg}`);
+        console.error(`  1. Save Settings in the dashboard (if prompted)`);
+        console.error(`  2. pnpm zipwiki -- settings pull`);
+      }
+    }
+  }
+
+  if (!settingsSynced) {
     // Key is already in ~/.zipwiki/.env — login succeeded.
     return;
   }

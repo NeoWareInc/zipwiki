@@ -62,9 +62,9 @@ export async function runMainMenu(): Promise<void> {
   if (choice === "help") {
     console.log(
       [
-        "zipwiki pack <files…>      Create a .zipwiki knowledge base",
+        "zipwiki pack <files…>      Create a .zipwiki Knowledge Archive",
         "zipwiki open|search|read   Query a .zipwiki already on disk",
-        "zipwiki auth login         Connect account (hosted parse/OKF + settings)",
+        "zipwiki auth login         Connect account (pulls Settings: parser + ZipWiki OKF)",
         "zipwiki settings show|pull|open",
         "zipwiki config api-key     Local BYO secrets only",
         "",

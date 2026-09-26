@@ -249,8 +249,12 @@ async function resolveEnrichment(
     try {
       if (isRemoteOkfMode()) {
         const remote = new RemoteOkfAdapter();
-        enrichment = await remote.enrich(input);
-        generatedBy = input.generatedBy ?? "zipwiki-api/anthropic/claude-haiku-4-5";
+        enrichment = await remote.enrich({
+          ...input,
+          model: input.model ?? modelId,
+        });
+        generatedBy =
+          input.generatedBy ?? `zipwiki-api/anthropic/${input.model ?? modelId}`;
       } else {
         enrichment = await fetchOkfEnrichment({
           ...input,

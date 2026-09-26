@@ -99,7 +99,7 @@ export async function handleParse(
 
 export async function handleOkf(
   deps: GatewayDeps,
-  args: { token: string; input: OkfRequest },
+  args: { token: string; input: OkfRequest; model?: string },
 ): Promise<GatewayResponse> {
   const env = deps.env ?? process.env;
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -127,7 +127,12 @@ export async function handleOkf(
 
   let completion;
   try {
-    completion = await invokeAnthropic(args.input, apiKey, fetchImpl);
+    completion = await invokeAnthropic(
+      args.input,
+      apiKey,
+      fetchImpl,
+      args.model,
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "okf_failed";
     return { status: 502, body: { error: message } };

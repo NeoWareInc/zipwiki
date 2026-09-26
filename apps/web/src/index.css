@@ -12,6 +12,10 @@
   --sand: #d9c8a9;
   --flow-fill: #ffffff;
   --flow-stroke: #1f3a44;
+  /* Usage / credit kinds (Dashboard + admin) */
+  --usage-parse: #0f6e6a;
+  --usage-okf: #b45309;
+  --usage-query: #1f3a44;
 
   color: var(--ink);
   background: var(--paper);

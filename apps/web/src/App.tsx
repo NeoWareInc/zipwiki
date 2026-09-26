@@ -15,6 +15,7 @@ import BillingPage from "./pages/BillingPage";
 import AdminPage from "./pages/AdminPage";
 import AdminAccountPage from "./pages/AdminAccountPage";
 import AdminBillingPage from "./pages/AdminBillingPage";
+import AdminUsagePage from "./pages/AdminUsagePage";
 import SettingsPage from "./pages/SettingsPage";
 import KnowledgePage from "./pages/KnowledgePage";
 import CreateKnowledgePage from "./pages/CreateKnowledgePage";
@@ -66,6 +67,7 @@ export default function App() {
             <Route element={<AdminPasskeyGate />}>
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin/usage" element={<AdminUsagePage />} />
                 <Route path="/admin/accounts/:id" element={<AdminAccountPage />} />
                 <Route path="/admin/billing" element={<AdminBillingPage />} />
               </Route>

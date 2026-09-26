@@ -5,15 +5,19 @@ import {
   creditSnapshot,
   creditsForUsdCents,
   zipwikiCreditsForLlamaCredits,
+  zipwikiCreditsForAnthropicTokens,
+  resolveHostedOkfModel,
   approxAgenticPagesForUsd,
   crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
   shouldStartAutoReload,
   DEFAULT_USD_CENTS,
+  DEFAULT_HOSTED_OKF_MODEL,
   MIN_USD_CENTS,
   MAX_USD_CENTS,
   LOW_CREDITS_THRESHOLD,
+  CREDIT_COST_LLM,
 } from "./credits.js";
 
 describe("credits", () => {
@@ -24,13 +28,79 @@ describe("credits", () => {
   });
 
   it("converts LlamaParse job credits at $1.25/1k with 20% margin", () => {
-    // Cost × 1.25 markup, then ceil. Cost credits = llama × 0.125.
     assert.equal(zipwikiCreditsForLlamaCredits(0), 0);
-    assert.equal(zipwikiCreditsForLlamaCredits(1), 1); // 0.15625 → 1
-    assert.equal(zipwikiCreditsForLlamaCredits(8), 2); // 1.25 → 2
-    assert.equal(zipwikiCreditsForLlamaCredits(10), 2); // 1.5625 → 2 (1 Agentic page)
-    assert.equal(zipwikiCreditsForLlamaCredits(80), 13); // 12.5 → 13
-    assert.equal(zipwikiCreditsForLlamaCredits(100), 16); // 15.625 → 16
+    assert.equal(zipwikiCreditsForLlamaCredits(1), 1);
+    assert.equal(zipwikiCreditsForLlamaCredits(8), 2);
+    assert.equal(zipwikiCreditsForLlamaCredits(10), 2);
+    assert.equal(zipwikiCreditsForLlamaCredits(80), 13);
+    assert.equal(zipwikiCreditsForLlamaCredits(100), 16);
+  });
+
+  it("defaults hosted OKF model to Haiku", () => {
+    assert.equal(resolveHostedOkfModel(undefined), DEFAULT_HOSTED_OKF_MODEL);
+    assert.equal(resolveHostedOkfModel("nope"), DEFAULT_HOSTED_OKF_MODEL);
+    assert.equal(
+      resolveHostedOkfModel("claude-sonnet-4-5"),
+      "claude-sonnet-4-5",
+    );
+  });
+
+  it("prices Anthropic OKF tokens with 20% margin", () => {
+    assert.equal(zipwikiCreditsForAnthropicTokens({}), CREDIT_COST_LLM);
+    assert.equal(
+      zipwikiCreditsForAnthropicTokens({
+        model: "claude-haiku-4-5",
+        inputTokens: 0,
+        outputTokens: 0,
+      }),
+      CREDIT_COST_LLM,
+    );
+    // Haiku: 1M in + 1M out = $1 + $5 = $6 cost → $7.50 sell → 750 credits.
+    assert.equal(
+      zipwikiCreditsForAnthropicTokens({
+        model: "claude-haiku-4-5",
+        inputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+      }),
+      750,
+    );
+    assert.equal(
+      zipwikiCreditsForAnthropicTokens({
+        model: "claude-haiku-4-5",
+        inputTokens: 100,
+        outputTokens: 50,
+      }),
+      1,
+    );
+    const haiku = zipwikiCreditsForAnthropicTokens({
+      model: "claude-haiku-4-5",
+      inputTokens: 100_000,
+      outputTokens: 10_000,
+    });
+    const sonnet = zipwikiCreditsForAnthropicTokens({
+      model: "claude-sonnet-4-5",
+      inputTokens: 100_000,
+      outputTokens: 10_000,
+    });
+    const opus = zipwikiCreditsForAnthropicTokens({
+      model: "claude-opus-4-5",
+      inputTokens: 100_000,
+      outputTokens: 10_000,
+    });
+    assert.ok(sonnet > haiku);
+    assert.ok(opus > sonnet);
+    assert.equal(
+      zipwikiCreditsForAnthropicTokens({
+        model: "claude-mystery",
+        inputTokens: 1_000_000,
+        outputTokens: 0,
+      }),
+      zipwikiCreditsForAnthropicTokens({
+        model: "claude-haiku-4-5",
+        inputTokens: 1_000_000,
+        outputTokens: 0,
+      }),
+    );
   });
 
   it("estimates ~640 Agentic pages for $10 at 20% margin", () => {
@@ -39,9 +109,9 @@ describe("credits", () => {
   });
 
   it("grants 100 credits per dollar", () => {
-    assert.equal(creditsForUsdCents(1_000), 1_000); // $10
-    assert.equal(creditsForUsdCents(500), 500); // $5
-    assert.equal(creditsForUsdCents(2_550), 2_550); // $25.50
+    assert.equal(creditsForUsdCents(1_000), 1_000);
+    assert.equal(creditsForUsdCents(500), 500);
+    assert.equal(creditsForUsdCents(2_550), 2_550);
   });
 
   it("computes remaining balance", () => {

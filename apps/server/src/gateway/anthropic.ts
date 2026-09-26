@@ -1,4 +1,27 @@
-export const ANTHROPIC_MODEL = "claude-haiku-4-5";
+/** Keep in sync with convex/lib/credits.ts HOSTED_OKF_MODELS. */
+export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-4-5";
+
+export const HOSTED_OKF_MODELS = [
+  "claude-haiku-4-5",
+  "claude-sonnet-4-5",
+  "claude-opus-4-5",
+] as const;
+
+export type HostedOkfModel = (typeof HOSTED_OKF_MODELS)[number];
+
+/** @deprecated Use DEFAULT_HOSTED_OKF_MODEL */
+export const ANTHROPIC_MODEL = DEFAULT_HOSTED_OKF_MODEL;
+
+export function resolveHostedOkfModel(model?: string | null): HostedOkfModel {
+  const trimmed = model?.trim();
+  if (
+    trimmed &&
+    (HOSTED_OKF_MODELS as readonly string[]).includes(trimmed)
+  ) {
+    return trimmed as HostedOkfModel;
+  }
+  return DEFAULT_HOSTED_OKF_MODEL;
+}
 
 export type OkfRequest = {
   primaries?: Array<{ path?: string; documentType?: string }>;
@@ -81,7 +104,9 @@ export async function invokeAnthropic(
   input: OkfRequest,
   apiKey: string,
   fetchImpl: typeof fetch,
+  model?: string | null,
 ): Promise<AnthropicOutput> {
+  const resolved = resolveHostedOkfModel(model);
   const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -90,7 +115,7 @@ export async function invokeAnthropic(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
+      model: resolved,
       max_tokens: 1024,
       messages: [{ role: "user", content: promptFor(input) }],
     }),
@@ -111,7 +136,7 @@ export async function invokeAnthropic(
   const enrichment = asEnrichment(JSON.parse(text.slice(start, end + 1)));
   return {
     enrichment,
-    model: body.model ?? ANTHROPIC_MODEL,
+    model: body.model ?? resolved,
     inputTokens: body.usage?.input_tokens,
     outputTokens: body.usage?.output_tokens,
   };

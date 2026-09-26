@@ -1,13 +1,14 @@
-import { internalMutation, internalQuery, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { startOfMonthMs } from "./lib/crypto";
 import {
-  CREDIT_COST_LLM,
   CREDIT_COST_PARSE,
+  CREDIT_COST_LLM,
   creditSnapshot,
   zipwikiCreditsForLlamaCredits,
+  zipwikiCreditsForAnthropicTokens,
   crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
@@ -152,7 +153,11 @@ export const recordUsage = internalMutation({
         ? llamaCredits != null
           ? zipwikiCreditsForLlamaCredits(llamaCredits)
           : CREDIT_COST_PARSE
-        : CREDIT_COST_LLM;
+        : zipwikiCreditsForAnthropicTokens({
+            model,
+            inputTokens,
+            outputTokens,
+          });
     const periodStart = startOfMonthMs();
     let period = await ctx.db
       .query("usagePeriods")
@@ -160,6 +165,10 @@ export const recordUsage = internalMutation({
         q.eq("accountId", accountId).eq("periodStart", periodStart),
       )
       .unique();
+
+    const okfIn = kind === "okf" ? (inputTokens ?? 0) : 0;
+    const okfOut = kind === "okf" ? (outputTokens ?? 0) : 0;
+    const okfCredits = kind === "okf" ? creditCost : 0;
 
     if (!period) {
       const id = await ctx.db.insert("usagePeriods", {
@@ -172,6 +181,11 @@ export const recordUsage = internalMutation({
         llamaCredits: kind === "parse" ? (llamaCredits ?? 0) : 0,
         parseCreditsSpent: kind === "parse" ? creditCost : 0,
         pages: kind === "parse" ? (pages ?? 0) : 0,
+        okfInputTokens: okfIn,
+        okfOutputTokens: okfOut,
+        okfCreditsSpent: okfCredits,
+        packCount: 0,
+        queryCount: 0,
       });
       period = (await ctx.db.get(id))!;
     } else {
@@ -186,6 +200,9 @@ export const recordUsage = internalMutation({
           (kind === "parse" ? creditCost : 0),
         pages:
           (period.pages ?? 0) + (kind === "parse" ? (pages ?? 0) : 0),
+        okfInputTokens: (period.okfInputTokens ?? 0) + okfIn,
+        okfOutputTokens: (period.okfOutputTokens ?? 0) + okfOut,
+        okfCreditsSpent: (period.okfCreditsSpent ?? 0) + okfCredits,
       });
     }
 
@@ -364,6 +381,66 @@ export const recordLiteparse = internalMutation({
  * Soft activity log for pack / open / search / query (no credit debit).
  * `engine` holds the action subtype for query events (open|search|query|…).
  */
+/**
+ * Soft activity log for pack / open / search / query (no credit debit).
+ * `engine` holds the action subtype for query events (open|search|query|…).
+ */
+async function insertActivity(
+  ctx: { db: any },
+  args: {
+    accountId: Id<"accounts">;
+    type: "pack" | "query";
+    engine?: string;
+    status?: string;
+    filename?: string;
+    bytes?: number;
+    pages?: number;
+  },
+): Promise<void> {
+  const safeFilename =
+    typeof args.filename === "string" && args.filename.trim()
+      ? args.filename.trim().slice(0, 512)
+      : undefined;
+  const safeEngine =
+    typeof args.engine === "string" && args.engine.trim()
+      ? args.engine.trim().slice(0, 64)
+      : undefined;
+  await ctx.db.insert("usageEvents", {
+    accountId: args.accountId,
+    type: args.type,
+    engine: safeEngine,
+    status: args.status ?? "success",
+    filename: safeFilename,
+    bytes: args.bytes,
+    pages: args.pages,
+  });
+
+  const periodStart = startOfMonthMs();
+  let period = await ctx.db
+    .query("usagePeriods")
+    .withIndex("by_account_period", (q: any) =>
+      q.eq("accountId", args.accountId).eq("periodStart", periodStart),
+    )
+    .unique();
+  if (!period) {
+    await ctx.db.insert("usagePeriods", {
+      accountId: args.accountId,
+      periodStart,
+      parseCount: 0,
+      okfCount: 0,
+      liteparseSuccessCount: 0,
+      liteparseFailCount: 0,
+      packCount: args.type === "pack" ? 1 : 0,
+      queryCount: args.type === "query" ? 1 : 0,
+    });
+  } else {
+    await ctx.db.patch(period._id, {
+      packCount: (period.packCount ?? 0) + (args.type === "pack" ? 1 : 0),
+      queryCount: (period.queryCount ?? 0) + (args.type === "query" ? 1 : 0),
+    });
+  }
+}
+
 export const recordActivity = internalMutation({
   args: {
     accountId: v.id("accounts"),
@@ -375,23 +452,38 @@ export const recordActivity = internalMutation({
     pages: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const safeFilename =
-      typeof args.filename === "string" && args.filename.trim()
-        ? args.filename.trim().slice(0, 512)
-        : undefined;
-    const safeEngine =
-      typeof args.engine === "string" && args.engine.trim()
-        ? args.engine.trim().slice(0, 64)
-        : undefined;
-    await ctx.db.insert("usageEvents", {
-      accountId: args.accountId,
+    await insertActivity(ctx, args);
+  },
+});
+
+/** Authenticated portal: report pack/query activity from the website. */
+export const reportActivity = mutation({
+  args: {
+    type: v.union(v.literal("pack"), v.literal("query")),
+    engine: v.optional(v.string()),
+    status: v.optional(v.string()),
+    filename: v.optional(v.string()),
+    bytes: v.optional(v.number()),
+    pages: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const account = await ctx.db
+      .query("accounts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!account) throw new Error("No account");
+    await insertActivity(ctx, {
+      accountId: account._id,
       type: args.type,
-      engine: safeEngine,
-      status: args.status ?? "success",
-      filename: safeFilename,
+      engine: args.engine,
+      status: args.status,
+      filename: args.filename,
       bytes: args.bytes,
       pages: args.pages,
     });
+    return { ok: true as const };
   },
 });
 
@@ -419,6 +511,12 @@ export const myUsage = query({
       okfCount: period?.okfCount ?? 0,
       parseCreditsSpent: period?.parseCreditsSpent ?? 0,
       parsePages: period?.pages ?? 0,
+      llamaCredits: period?.llamaCredits ?? 0,
+      okfInputTokens: period?.okfInputTokens ?? 0,
+      okfOutputTokens: period?.okfOutputTokens ?? 0,
+      okfCreditsSpent: period?.okfCreditsSpent ?? 0,
+      packCount: period?.packCount ?? 0,
+      queryCount: period?.queryCount ?? 0,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,
       liteparseFailCount: period?.liteparseFailCount ?? 0,
       maxParses: credits.plan.maxParsesPerMonth,
@@ -473,6 +571,7 @@ export const myUsageLog = query({
       creditCost: row.creditCost ?? null,
       filename: row.filename ?? null,
       jobId: row.jobId ?? null,
+      model: row.model ?? null,
       inputTokens: row.inputTokens ?? null,
       outputTokens: row.outputTokens ?? null,
     }));

@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { usageColor, usageVisualKind } from "../lib/usage-colors";
 
 export default function AdminAccountPage() {
   const { id } = useParams<{ id: string }>();
@@ -192,17 +193,103 @@ export default function AdminAccountPage() {
       <section className="space-y-2">
         <h2 className="font-display text-lg font-semibold">Usage periods</h2>
         <ul className="rounded-xl border border-(--border) bg-white shadow-soft divide-y divide-(--border)">
-          {data.periods.map((p: {
-            periodStart: string;
-            parseCount: number;
-            okfCount: number;
-          }) => (
-            <li key={p.periodStart} className="px-4 py-3 text-sm">
-              {new Date(p.periodStart).toLocaleDateString()}: {p.parseCount}{" "}
-              parses / {p.okfCount} OKF
+          {data.periods.map((p) => (
+            <li key={p.periodStart} className="px-4 py-3 text-sm space-y-1">
+              <p className="font-medium">
+                {new Date(p.periodStart).toLocaleDateString()}
+              </p>
+              <p
+                className="tabular-nums"
+                style={{ color: usageColor("parse") }}
+              >
+                Parsing: {p.parseCount} docs · {p.pages} pages ·{" "}
+                {p.llamaCredits} Llama · {p.parseCreditsSpent} ZipWiki ¢
+              </p>
+              <p className="tabular-nums" style={{ color: usageColor("okf") }}>
+                OKF Enrichment: {p.okfCount} calls · {p.okfInputTokens} in /{" "}
+                {p.okfOutputTokens} out · {p.okfCreditsSpent} ZipWiki ¢
+              </p>
+              <p
+                className="tabular-nums"
+                style={{ color: usageColor("query") }}
+              >
+                Knowledge Archive: {p.packCount} pack · {p.queryCount} query
+              </p>
             </li>
           ))}
+          {data.periods.length === 0 && (
+            <li className="px-4 py-6 text-sm text-(--muted)">No periods yet</li>
+          )}
         </ul>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-display text-lg font-semibold">Recent events</h2>
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+          <table className="w-full min-w-xl text-left text-sm">
+            <thead>
+              <tr className="border-b border-(--border) text-(--muted)">
+                <th className="px-4 py-2 font-medium">When</th>
+                <th className="px-4 py-2 font-medium">Type</th>
+                <th className="px-4 py-2 font-medium">File / model</th>
+                <th className="px-4 py-2 font-medium tabular-nums">Pages / tok</th>
+                <th className="px-4 py-2 font-medium tabular-nums">Credits</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.events.map((e, i) => (
+                <tr
+                  key={`${e.createdAt}-${i}`}
+                  className="border-b border-(--border)/60"
+                >
+                  <td className="px-4 py-2 whitespace-nowrap text-(--muted)">
+                    {new Date(e.createdAt).toLocaleString()}
+                  </td>
+                  <td
+                    className="px-4 py-2 font-medium"
+                    style={{ color: usageColor(usageVisualKind(e.type)) }}
+                  >
+                    {e.type}
+                    {e.engine ? ` · ${e.engine}` : ""}
+                  </td>
+                  <td className="px-4 py-2 max-w-48 truncate">
+                    {e.filename ?? e.model ?? "—"}
+                  </td>
+                  <td className="px-4 py-2 tabular-nums">
+                    {e.pages != null
+                      ? `${e.pages} pg`
+                      : e.inputTokens != null || e.outputTokens != null
+                        ? `${e.inputTokens ?? 0}/${e.outputTokens ?? 0}`
+                        : e.llamaCredits != null
+                          ? `${e.llamaCredits} Llama`
+                          : "—"}
+                  </td>
+                  <td
+                    className="px-4 py-2 tabular-nums font-medium"
+                    style={{
+                      color:
+                        e.creditCost != null
+                          ? usageColor(usageVisualKind(e.type))
+                          : undefined,
+                    }}
+                  >
+                    {e.creditCost != null ? e.creditCost.toLocaleString() : "—"}
+                  </td>
+                </tr>
+              ))}
+              {data.events.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-6 text-center text-(--muted)"
+                  >
+                    No events yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

@@ -100,6 +100,13 @@ export default defineSchema({
     parseCreditsSpent: v.optional(v.number()),
     /** Pages parsed via hosted parse this period. */
     pages: v.optional(v.number()),
+    /** Hosted OKF token / credit aggregates. */
+    okfInputTokens: v.optional(v.number()),
+    okfOutputTokens: v.optional(v.number()),
+    okfCreditsSpent: v.optional(v.number()),
+    /** Soft pack / query activity counts. */
+    packCount: v.optional(v.number()),
+    queryCount: v.optional(v.number()),
   }).index("by_account_period", ["accountId", "periodStart"]),
 
   usageEvents: defineTable({

@@ -1,5 +1,7 @@
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { PromptSection } from "../components/ZipWikiPrompts";
 import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
@@ -37,22 +39,35 @@ export default function KnowledgePage() {
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<NzipOpenSummary | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const reportActivity = useMutation(api.usage.reportActivity);
 
-  const loadFile = useCallback(async (file: File) => {
-    setError("");
-    setLoading(true);
-    setSummary(null);
-    setShowAll(false);
-    try {
-      const buf = await file.arrayBuffer();
-      const opened = await openNzip(buf, file.name);
-      setSummary(opened);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadFile = useCallback(
+    async (file: File) => {
+      setError("");
+      setLoading(true);
+      setSummary(null);
+      setShowAll(false);
+      try {
+        const buf = await file.arrayBuffer();
+        const opened = await openNzip(buf, file.name);
+        setSummary(opened);
+        void reportActivity({
+          type: "query",
+          engine: "web_open",
+          filename: file.name,
+          bytes: file.size,
+          status: "success",
+        }).catch(() => {
+          /* soft-fail telemetry */
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [reportActivity],
+  );
 
   function onFiles(files: FileList | null) {
     const file = files?.[0];
@@ -70,7 +85,7 @@ export default function KnowledgePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Knowledge</h1>
+        <h1 className="font-display text-3xl font-semibold">Knowledge Archive</h1>
         <p className="mt-1 text-(--muted)">
           Open a local <code className="text-xs">.zipwiki</code> to inspect the
           package, or copy a query prompt for an agent with ZipWiki MCP.{" "}

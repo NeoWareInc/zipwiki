@@ -92,7 +92,7 @@ function SidebarNav({
         className={() => navClass({ isActive: knowledgeActive })}
         onClick={onNavigate}
       >
-        Knowledge
+        Knowledge Archive
       </NavLink>
       {isAdmin && (
         <NavLink
