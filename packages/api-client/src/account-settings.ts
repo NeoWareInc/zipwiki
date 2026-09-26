@@ -1,10 +1,16 @@
 import { z } from "zod";
+import {
+  DEFAULT_LLAMA_PARSE_TIER,
+  LLAMA_PARSE_TIERS,
+  resolveLlamaParseTier,
+} from "./llama-parse-tiers.js";
 
 export const ParseCredentialSchema = z.enum(["zipwiki", "llama", "local"]);
 export const OkfCredentialSchema = z.enum(["zipwiki", "anthropic", "local"]);
 export const ParseEngineSchema = z.enum(["liteparse", "llamaparse"]);
 export const ParserModeSchema = z.enum(["fixed", "auto"]);
 export const CompressionSchema = z.enum(["zstd", "deflate", "store"]);
+export const LlamaParseTierSchema = z.enum(LLAMA_PARSE_TIERS);
 
 export const AccountLiteParseSchema = z
   .object({
@@ -18,7 +24,10 @@ export const AccountLiteParseSchema = z
 
 export const AccountLlamaParseSchema = z
   .object({
-    tier: z.string().optional(),
+    tier: z
+      .string()
+      .optional()
+      .transform((v) => (v == null ? v : resolveLlamaParseTier(v))),
     version: z.string().optional(),
     expand: z.array(z.string()).optional(),
     region: z.string().nullable().optional(),
@@ -102,7 +111,7 @@ export const DEFAULT_ACCOUNT_SETTINGS: AccountSettingsBody =
         includeComplexity: true,
       },
       llamaparse: {
-        tier: "agentic",
+        tier: DEFAULT_LLAMA_PARSE_TIER,
         version: "latest",
         expand: ["markdown"],
         region: null,

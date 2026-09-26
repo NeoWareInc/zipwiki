@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { resolveLlamaParseTier } from "@zipwiki/api-client";
 import { loadEnvFiles } from "./env.js";
 import {
   DEFAULT_ZIPWIKI_CONFIG,
@@ -191,6 +192,10 @@ function resolveFromPartials(
     llamaparse: {
       ...DEFAULT_ZIPWIKI_CONFIG.parser.llamaparse,
       ...merged.parser.llamaparse,
+      tier: resolveLlamaParseTier(
+        merged.parser.llamaparse?.tier ??
+          DEFAULT_ZIPWIKI_CONFIG.parser.llamaparse.tier,
+      ),
     },
     escalate: {
       ...DEFAULT_ZIPWIKI_CONFIG.parser.escalate,

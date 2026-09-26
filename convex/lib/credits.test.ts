@@ -8,10 +8,14 @@ import {
   zipwikiCreditsForAnthropicTokens,
   resolveHostedOkfModel,
   approxAgenticPagesForUsd,
+  approxPagesForUsd,
   crossedLowCreditThreshold,
   isLowCredits,
+  llamaCreditsPerPageForTier,
   remainingCredits,
+  resolveLlamaParseTier,
   shouldStartAutoReload,
+  DEFAULT_LLAMA_PARSE_TIER,
   DEFAULT_USD_CENTS,
   DEFAULT_HOSTED_OKF_MODEL,
   MIN_USD_CENTS,
@@ -103,8 +107,26 @@ describe("credits", () => {
     );
   });
 
-  it("estimates ~640 Agentic pages for $10 at 20% margin", () => {
+  it("prices Parse tiers at distinct Llama credits/page", () => {
+    assert.equal(DEFAULT_LLAMA_PARSE_TIER, "cost_effective");
+    assert.equal(resolveLlamaParseTier("turbo"), "cost_effective");
+    assert.equal(llamaCreditsPerPageForTier("cost_effective"), 3);
+    assert.equal(llamaCreditsPerPageForTier("agentic"), 10);
+    assert.equal(llamaCreditsPerPageForTier("agentic_plus"), 45);
+    assert.ok(
+      zipwikiCreditsForLlamaCredits(3) <
+        zipwikiCreditsForLlamaCredits(10),
+    );
+    assert.ok(
+      zipwikiCreditsForLlamaCredits(10) <
+        zipwikiCreditsForLlamaCredits(45),
+    );
+  });
+
+  it("estimates pages for $10 by Parse tier at 20% margin", () => {
+    assert.equal(approxPagesForUsd(10, "cost_effective"), 2133);
     assert.equal(approxAgenticPagesForUsd(10), 640);
+    assert.equal(approxPagesForUsd(10, "agentic_plus"), 142);
     assert.equal(approxAgenticPagesForUsd(0), 0);
   });
 

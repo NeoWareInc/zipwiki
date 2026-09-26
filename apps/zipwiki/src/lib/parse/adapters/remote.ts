@@ -112,6 +112,12 @@ export class RemoteParseAdapter {
     if (cli?.dpi !== undefined) {
       form.append("dpi", String(cli.dpi));
     }
+    if (project.parser.llamaparse?.tier) {
+      form.append("tier", project.parser.llamaparse.tier);
+    }
+    if (project.parser.llamaparse?.version) {
+      form.append("version", project.parser.llamaparse.version);
+    }
     if (!resolveParseOcrEnabled(cli, project)) {
       form.append("noOcr", "true");
     }

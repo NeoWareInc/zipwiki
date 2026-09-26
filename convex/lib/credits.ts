@@ -18,8 +18,39 @@ export const LLAMA_USD_PER_1000_CREDITS = 1.25;
  */
 export const TARGET_PROFIT_MARGIN = 0.2;
 export const COST_MARKUP = 1 / (1 - TARGET_PROFIT_MARGIN);
-/** Default hosted tier (ZipWiki settings): Agentic = 10 Llama credits / page. */
-export const LLAMA_AGENTIC_CREDITS_PER_PAGE = 10;
+
+/**
+ * LlamaParse v2 Parse tiers (credits/page). Turbo is Extract-only — not listed.
+ * @see https://developers.llamaindex.ai/llamaparse/general/pricing/
+ */
+export const LLAMA_PARSE_TIERS = [
+  "cost_effective",
+  "agentic",
+  "agentic_plus",
+] as const;
+export type LlamaParseTier = (typeof LLAMA_PARSE_TIERS)[number];
+export const DEFAULT_LLAMA_PARSE_TIER: LlamaParseTier = "cost_effective";
+export const LLAMA_PARSE_TIER_CREDITS: Record<LlamaParseTier, number> = {
+  cost_effective: 3,
+  agentic: 10,
+  agentic_plus: 45,
+};
+/** @deprecated Prefer LLAMA_PARSE_TIER_CREDITS.agentic */
+export const LLAMA_AGENTIC_CREDITS_PER_PAGE =
+  LLAMA_PARSE_TIER_CREDITS.agentic;
+
+export function resolveLlamaParseTier(tier?: string | null): LlamaParseTier {
+  const t = tier?.trim();
+  if (t && (LLAMA_PARSE_TIERS as readonly string[]).includes(t)) {
+    return t as LlamaParseTier;
+  }
+  if (t === "turbo" || t === "fast") return DEFAULT_LLAMA_PARSE_TIER;
+  return DEFAULT_LLAMA_PARSE_TIER;
+}
+
+export function llamaCreditsPerPageForTier(tier?: string | null): number {
+  return LLAMA_PARSE_TIER_CREDITS[resolveLlamaParseTier(tier)];
+}
 
 /** Default hosted ZipWiki OKF model (cheapest Claude). */
 export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-4-5";
@@ -111,15 +142,24 @@ export function zipwikiCreditsForLlamaCredits(llamaCredits: number): number {
 }
 
 /**
- * Approximate Agentic pages covered by `usd` at TARGET_PROFIT_MARGIN
+ * Approximate pages covered by `usd` at TARGET_PROFIT_MARGIN for a Parse tier
  * (fractional sell rate; per-job ceil may yield slightly fewer pages).
  */
-export function approxAgenticPagesForUsd(usd: number): number {
+export function approxPagesForUsd(
+  usd: number,
+  tier: string | null = DEFAULT_LLAMA_PARSE_TIER,
+): number {
   if (!Number.isFinite(usd) || usd <= 0) return 0;
+  const llamaPerPage = llamaCreditsPerPageForTier(tier);
   const costPerPage =
-    (LLAMA_AGENTIC_CREDITS_PER_PAGE * LLAMA_USD_PER_1000_CREDITS) / 1000;
+    (llamaPerPage * LLAMA_USD_PER_1000_CREDITS) / 1000;
   const sellPerPage = costPerPage * COST_MARKUP;
   return Math.floor(usd / sellPerPage + 1e-9);
+}
+
+/** @deprecated Prefer approxPagesForUsd(usd, tier). */
+export function approxAgenticPagesForUsd(usd: number): number {
+  return approxPagesForUsd(usd, "agentic");
 }
 
 export const CREDIT_PRESETS_USD = [5, 10, 25, 50, 100] as const;

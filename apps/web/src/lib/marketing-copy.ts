@@ -314,7 +314,7 @@ export const PLANS = [
     name: "Credits",
     price: "From $10",
     blurb:
-      "Buy prepaid credits for high-quality hosted parsing and ZipWiki OKF when you need more than the local path. About $10 covers roughly 640 pages of high-quality (Agentic) results after a 20% margin on LlamaParse cost. When the balance runs out, packs soft-fall back to Free.",
+      "Buy prepaid credits for hosted LlamaParse and ZipWiki OKF when you need more than the local path. Default Parse tier is Cost Effective (~2,100 pages per $10); Agentic is ~640; Agentic Plus costs more per page for harder docs. When the balance runs out, packs soft-fall back to Free.",
     cta: "Buy credits",
     href: "/dashboard/billing",
   },

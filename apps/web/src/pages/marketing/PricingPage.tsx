@@ -8,7 +8,7 @@ export default function PricingPage() {
         <PageHero
           kicker="Pricing"
           title="Free locally. Credits for high-quality hosted parse."
-          lead="Start with the plugin, local LiteParse, and your agent’s LLM. Add prepaid credits when documents need high-quality hosted parsing or ZipWiki OKF. About $10 covers roughly 640 pages of high-quality (Agentic) results."
+          lead="Start with the plugin, local LiteParse, and your agent’s LLM. Add prepaid credits when documents need hosted LlamaParse or ZipWiki OKF. Default Parse tier is Cost Effective (~2,100 pages per $10); Agentic is ~640 pages per $10; Agentic Plus is higher accuracy at a higher rate."
         />
 
         <ul className="mt-10 grid gap-8 md:grid-cols-2">

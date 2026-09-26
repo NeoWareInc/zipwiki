@@ -20,6 +20,9 @@ export type LlamaParseRequest = {
   filename: string;
   bytes: Uint8Array;
   noOcr?: boolean;
+  /** LlamaParse v2 Parse tier (not Extract Turbo). */
+  tier?: string;
+  version?: string;
 };
 
 export type LlamaParseOutput = {
@@ -66,7 +69,6 @@ type LlamaJob = {
 };
 
 type LlamaPage = { page?: number; md?: string; markdown?: string; text?: string };
-type LlamaJson = { pages?: LlamaPage[]; markdown?: string };
 
 function normalizeStatus(raw: string | undefined): string {
   const s = (raw ?? "PENDING").trim().toUpperCase();
@@ -108,15 +110,28 @@ export async function invokeLlamaParse(
     wait?.progressEveryMs ?? LLAMA_PARSE_PROGRESS_EVERY_MS;
   const pollIntervalMs = wait?.pollIntervalMs ?? POLL_INTERVAL_MS;
 
+  const tier = (request.tier?.trim() || "cost_effective").toLowerCase();
+  const version = request.version?.trim() || "latest";
+  // Fast cannot expand markdown — ZipWiki always needs markdown for wiki/parsed/.
+  const parseTier =
+    tier === "fast" || tier === "turbo" ? "cost_effective" : tier;
+
   const form = new FormData();
   form.append(
     "file",
     new Blob([request.bytes]),
     request.filename || "document",
   );
-  if (request.noOcr) form.append("disable_ocr", "true");
+  const configuration: Record<string, unknown> = {
+    tier: parseTier,
+    version,
+  };
+  if (request.noOcr) {
+    configuration.disable_ocr = true;
+  }
+  form.append("configuration", JSON.stringify(configuration));
 
-  const upload = await fetchImpl(`${LLAMA_BASE}/api/parsing/upload`, {
+  const upload = await fetchImpl(`${LLAMA_BASE}/api/v2/parse/upload`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -125,7 +140,10 @@ export async function invokeLlamaParse(
     body: form,
   });
   if (!upload.ok) {
-    throw new Error(`LlamaParse upload failed (${upload.status})`);
+    const detail = await upload.text().catch(() => "");
+    throw new Error(
+      `LlamaParse upload failed (${upload.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+    );
   }
   const job = (await upload.json()) as LlamaJob;
   const jobId = job.id ?? job.job?.id;
@@ -154,12 +172,15 @@ export async function invokeLlamaParse(
     }
 
     await sleep(pollIntervalMs);
-    const polled = await fetchImpl(`${LLAMA_BASE}/api/parsing/job/${jobId}`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
+    const polled = await fetchImpl(
+      `${LLAMA_BASE}/api/v2/parse/${jobId}?expand=markdown,usage`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          Accept: "application/json",
+        },
       },
-    });
+    );
     if (!polled.ok) throw new Error(`LlamaParse poll failed (${polled.status})`);
     lastBody = (await polled.json()) as LlamaJob;
     status = normalizeStatus(lastBody.status ?? lastBody.job?.status);
@@ -178,34 +199,63 @@ export async function invokeLlamaParse(
     }
   }
 
-  const result = await fetchImpl(
-    `${LLAMA_BASE}/api/parsing/job/${jobId}/result/json`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
+  // Prefer the last poll body when it already expanded markdown.
+  const expanded = lastBody as LlamaJob & {
+    markdown?: { pages?: Array<{ page?: number; page_number?: number; markdown?: string }> };
+    markdown_full?: string;
+    pages?: LlamaPage[];
+  };
+  let pages: Array<{ pageNum: number; markdown: string }> = [];
+  let text = "";
+  if (expanded.markdown?.pages?.length) {
+    pages = expanded.markdown.pages.map((page, index) => ({
+      pageNum: page.page_number ?? page.page ?? index + 1,
+      markdown: page.markdown ?? "",
+    }));
+    text =
+      (typeof expanded.markdown_full === "string" && expanded.markdown_full) ||
+      pages.map((p) => p.markdown).filter(Boolean).join("\n\n");
+  } else {
+    const result = await fetchImpl(
+      `${LLAMA_BASE}/api/v2/parse/${jobId}?expand=markdown,markdown_full,usage`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          Accept: "application/json",
+        },
       },
-    },
-  );
-  if (!result.ok) {
-    throw new Error(`LlamaParse result failed (${result.status})`);
+    );
+    if (!result.ok) {
+      throw new Error(`LlamaParse result failed (${result.status})`);
+    }
+    const json = (await result.json()) as {
+      markdown?: {
+        pages?: Array<{ page?: number; page_number?: number; markdown?: string }>;
+      };
+      markdown_full?: string;
+      pages?: LlamaPage[];
+    };
+    pages = (json.markdown?.pages ?? json.pages ?? []).map((page, index) => ({
+      pageNum:
+        (page as { page_number?: number }).page_number ??
+        (page as LlamaPage).page ??
+        index + 1,
+      markdown:
+        (page as { markdown?: string }).markdown ??
+        (page as LlamaPage).md ??
+        (page as LlamaPage).text ??
+        "",
+    }));
+    text =
+      (typeof json.markdown_full === "string" && json.markdown_full.trim()
+        ? json.markdown_full
+        : pages.map((p) => p.markdown).filter(Boolean).join("\n\n")) || "";
   }
-  const json = (await result.json()) as LlamaJson;
-  const pages = (json.pages ?? []).map((page, index) => ({
-    pageNum: page.page ?? index + 1,
-    markdown: page.md ?? page.markdown ?? page.text ?? "",
-  }));
-  const text =
-    pages.map((page) => page.markdown).filter(Boolean).join("\n\n") ||
-    json.markdown ||
-    "";
+
   if (!text.trim()) throw new Error("LlamaParse returned empty markdown");
-  const llamaCredits = await readLlamaJobCredits(
-    jobId,
-    apiKey,
-    fetchImpl,
-    sleep,
-  );
+  const llamaCredits =
+    llamaCreditsFromPayload(lastBody) ??
+    (await readLlamaJobCredits(jobId, apiKey, fetchImpl, sleep));
   return { text, pageCount: pages.length, pages, llamaCredits, jobId };
 }
 

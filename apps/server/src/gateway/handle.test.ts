@@ -83,18 +83,21 @@ describe("hosted gateway", () => {
         sleep: async () => {},
         fetchImpl: async (url) => {
           const href = String(url);
-          if (href.endsWith("/upload")) {
+          if (href.includes("/api/v2/parse/upload")) {
             return json({ id: "job1", status: "PENDING" });
           }
-          if (href.endsWith("/job/job1")) {
-            return json({ id: "job1", status: "SUCCESS" });
+          if (href.includes("/api/v2/parse/job1")) {
+            return json({
+              job: { id: "job1", status: "COMPLETED", usage: { credits: 20 } },
+              markdown: {
+                pages: [
+                  { page_number: 1, markdown: "# Deed" },
+                  { page_number: 2, markdown: "Grantor" },
+                ],
+              },
+            });
           }
-          if (href.includes("expand=usage")) {
-            return json({ job: { id: "job1", usage: { credits: 20 } } });
-          }
-          return json({
-            pages: [{ page: 1, md: "# Deed" }, { page: 2, md: "Grantor" }],
-          });
+          throw new Error(`unexpected ${href}`);
         },
       },
       { token: "zw", filename: "deed.pdf", bytes: new Uint8Array([1, 2, 3]) },
@@ -140,11 +143,13 @@ describe("hosted gateway", () => {
           },
           fetchImpl: async (url) => {
             const href = String(url);
-            if (href.endsWith("/upload")) {
+            if (href.includes("/api/v2/parse/upload")) {
               return json({ id: "slow", status: "PENDING" });
             }
-            if (href.includes("/job/slow")) {
-              return json({ id: "slow", status: "PENDING", progress: 12 });
+            if (href.includes("/api/v2/parse/slow")) {
+              return json({
+                job: { id: "slow", status: "PENDING" },
+              });
             }
             throw new Error(`unexpected ${href}`);
           },

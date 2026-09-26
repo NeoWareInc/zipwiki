@@ -3,6 +3,8 @@ import { useMutation, useQuery } from "convex/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   DEFAULT_ACCOUNT_SETTINGS,
+  llamaParseTierSelectOptions,
+  resolveLlamaParseTier,
   type AccountSettingsBody,
 } from "@zipwiki/api-client";
 import { api } from "@convex/_generated/api";
@@ -113,7 +115,11 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
           Parse sources into the Knowledge Archive
         </h2>
         <p className="text-sm text-(--muted)">
-          ZipWiki account uses LlamaParse and prepaid credits.
+          ZipWiki account uses LlamaParse and prepaid credits. Higher Parse
+          tiers cost more Llama credits per page (billed to your ZipWiki
+          balance with a 20% margin). Default is Cost Effective — the fastest
+          markdown tier. LlamaIndex Turbo is Extract-only and cannot produce
+          wiki markdown, so it is not offered here.
         </p>
         {isFreePlan && (
           <p className="rounded-lg border border-(--border) bg-(--paper) p-3 text-sm text-(--muted)">
@@ -152,6 +158,26 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
               : []),
           ]}
         />
+        {(form.parseCredential === "zipwiki" ||
+          form.parseCredential === "llama") && (
+          <Select
+            label="LlamaParse tier"
+            value={resolveLlamaParseTier(form.parser.llamaparse?.tier)}
+            onChange={(v) =>
+              setForm((f) => ({
+                ...f,
+                parser: {
+                  ...f.parser,
+                  llamaparse: {
+                    ...f.parser.llamaparse,
+                    tier: resolveLlamaParseTier(v),
+                  },
+                },
+              }))
+            }
+            options={llamaParseTierSelectOptions()}
+          />
+        )}
         {form.parseCredential === "local" && (
           <>
             <Select

@@ -31,6 +31,8 @@ export async function handleParse(
     filename: string;
     bytes: Uint8Array;
     noOcr?: boolean;
+    tier?: string;
+    version?: string;
     onProgress?: (info: LlamaParseProgress) => void;
   },
 ): Promise<GatewayResponse> {
@@ -62,7 +64,13 @@ export async function handleParse(
   let parsed;
   try {
     parsed = await invokeLlamaParse(
-      { filename: args.filename, bytes: args.bytes, noOcr: args.noOcr },
+      {
+        filename: args.filename,
+        bytes: args.bytes,
+        noOcr: args.noOcr,
+        tier: args.tier,
+        version: args.version,
+      },
       apiKey,
       fetchImpl,
       deps.sleep,

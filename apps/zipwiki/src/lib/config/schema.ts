@@ -150,7 +150,7 @@ export const DEFAULT_ZIPWIKI_CONFIG: ResolvedZipwikiConfig = {
       includeComplexity: true,
     },
     llamaparse: {
-      tier: "agentic",
+      tier: "cost_effective",
       version: "latest",
       expand: ["markdown"],
       region: null,

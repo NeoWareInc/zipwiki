@@ -32,6 +32,18 @@ export {
   type AccountSettingsResponse,
 } from "./account-settings.js";
 export {
+  DEFAULT_LLAMA_PARSE_TIER,
+  LLAMA_PARSE_TIERS,
+  LLAMA_PARSE_TIER_INFO,
+  isLlamaParseTier,
+  approxZipwikiCreditsPerPage,
+  llamaCreditsPerPageForTier,
+  llamaParseTierSelectOptions,
+  resolveLlamaParseTier,
+  type LlamaParseTier,
+  type LlamaParseTierInfo,
+} from "./llama-parse-tiers.js";
+export {
   fetchAccountSettings,
   putAccountSettingsBearer,
   waitForSetupComplete,

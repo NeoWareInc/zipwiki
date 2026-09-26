@@ -31,7 +31,7 @@ describe("zipwiki config", () => {
     assert.equal(config.parser.mode, "auto");
     assert.equal(config.parser.escalate.enabled, true);
     assert.equal(config.okf.useAi, false);
-    assert.equal(config.parser.llamaparse.tier, "agentic");
+    assert.equal(config.parser.llamaparse.tier, "cost_effective");
     assert.equal(config.pack.compression, DEFAULT_ZIPWIKI_CONFIG.pack.compression);
   });
 

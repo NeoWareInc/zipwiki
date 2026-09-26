@@ -178,6 +178,8 @@ export async function registerGateway(
     const bytes = await file.toBuffer();
     const fields = file.fields;
     const noOcr = readField(fields, "noOcr") === "true";
+    const tier = readField(fields, "tier") || undefined;
+    const version = readField(fields, "version") || undefined;
     const stream =
       (req.query as { stream?: string }).stream === "1" ||
       String(req.headers.accept ?? "").includes("application/x-ndjson");
@@ -188,6 +190,8 @@ export async function registerGateway(
         filename: file.filename,
         bytes,
         noOcr,
+        tier,
+        version,
       });
       return reply.code(result.status).send(result.body);
     }
@@ -211,6 +215,8 @@ export async function registerGateway(
         filename: file.filename,
         bytes,
         noOcr,
+        tier,
+        version,
         onProgress: (info) => {
           writeLine({
             event: "progress",
