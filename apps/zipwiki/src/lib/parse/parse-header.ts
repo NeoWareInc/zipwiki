@@ -1,5 +1,18 @@
-import { isLlamaCloudConfigured } from "../config/index.js";
 import type { CliParseOptions } from "./config.js";
+
+/** Defaults used to hide unchanged parse-header lines. */
+const HEADER_DEFAULTS = {
+  mode: "fixed" as const,
+  ocr: true,
+  format: "markdown",
+  ocrLanguage: "eng",
+  maxPages: 1000,
+  dpi: 150,
+  concurrency: 2,
+  phase: "all",
+  escalateNeedsOcrRatio: 0.25,
+  escalateLayoutRatio: 0.5,
+};
 
 export type ParseHeaderInfo = {
   /** Command context label, e.g. batch-parse | parse-file | pack. */
@@ -30,82 +43,117 @@ function onOff(v: boolean): string {
   return v ? "on" : "off";
 }
 
-/** Build stderr lines for a parse session header (no trailing blank). */
+/** Short labels for the selectable LlamaParse tier. */
+function shortLlamaTier(tier?: string): string | undefined {
+  const t = tier?.trim().toLowerCase();
+  if (!t) return undefined;
+  if (t === "cost_effective" || t === "turbo" || t === "fast") return "fast";
+  if (t === "agentic") return "agentic";
+  if (t === "agentic_plus") return "agentic+";
+  return t;
+}
+
+/** Selectable parser summary, e.g. `llamaparse, fast` or `liteparse`. */
+export function formatParseEngineSummary(info: ParseHeaderInfo): string {
+  if (info.engine === "llamaparse") {
+    const tier = shortLlamaTier(info.llamaTier);
+    return tier ? `llamaparse, ${tier}` : "llamaparse";
+  }
+  if (info.engine === "auto") {
+    const tier = shortLlamaTier(info.llamaTier);
+    return tier
+      ? `auto → liteparse / llamaparse, ${tier}`
+      : "auto → liteparse / llamaparse";
+  }
+  return "liteparse";
+}
+
+function pushIf(
+  lines: string[],
+  key: string,
+  value: string | number | boolean | undefined,
+): void {
+  if (value === undefined) return;
+  lines.push(`[parse] ${key.padEnd(11)} ${value}`);
+}
+
+/**
+ * Parse session header: selectable engine, a few basics, and only non-default
+ * options. Skips tessdata paths, key presence, and other unchanged noise.
+ */
 export function formatParseHeader(info: ParseHeaderInfo): string[] {
-  const lines: string[] = [
-    "[parse] ────────────────────────────────",
-    `[parse] session     ${info.command}`,
-    `[parse] engine      ${info.engine}`,
-  ];
-  if (info.mode) {
-    lines.push(`[parse] mode        ${info.mode}`);
+  const lines: string[] = [`[parse] ${formatParseEngineSummary(info)}`];
+
+  if (info.fileCount !== undefined) {
+    pushIf(lines, "files", info.fileCount);
   }
-  lines.push(`[parse] ocr         ${onOff(info.ocr)}`);
-  if (info.format) {
-    lines.push(`[parse] format      ${info.format}`);
+
+  // OCR is a basic control; always show on/off.
+  pushIf(lines, "ocr", onOff(info.ocr));
+
+  if (info.mode && info.mode !== HEADER_DEFAULTS.mode) {
+    pushIf(lines, "mode", info.mode);
   }
-  if (info.ocr && info.ocrLanguage) {
-    lines.push(`[parse] ocrLanguage ${info.ocrLanguage}`);
-  }
-  if (info.ocr && info.tessdataPath) {
-    lines.push(`[parse] tessdata    ${info.tessdataPath}`);
-  }
-  if (info.ocr && info.ocrServerUrl) {
-    lines.push(`[parse] ocrServer   ${info.ocrServerUrl}`);
-  }
-  if (info.maxPages !== undefined) {
-    lines.push(`[parse] maxPages    ${info.maxPages}`);
-  }
-  if (info.dpi !== undefined) {
-    lines.push(`[parse] dpi         ${info.dpi}`);
-  }
-  if (info.targetPages) {
-    lines.push(`[parse] targetPages ${info.targetPages}`);
-  }
-  if (info.numWorkers !== undefined) {
-    lines.push(`[parse] numWorkers  ${info.numWorkers}`);
-  }
-  if (info.recursive !== undefined) {
-    lines.push(`[parse] recursive   ${onOff(info.recursive)}`);
-  }
-  if (info.complexity !== undefined) {
-    lines.push(`[parse] complexity  ${onOff(info.complexity)}`);
+  if (info.format && info.format !== HEADER_DEFAULTS.format) {
+    pushIf(lines, "format", info.format);
   }
   if (
-    (info.engine === "llamaparse" || info.engine === "auto") &&
-    info.llamaTier
+    info.ocr &&
+    info.ocrLanguage &&
+    info.ocrLanguage !== HEADER_DEFAULTS.ocrLanguage
   ) {
-    lines.push(`[parse] llamaTier   ${info.llamaTier}`);
+    pushIf(lines, "ocrLanguage", info.ocrLanguage);
+  }
+  if (info.ocrServerUrl) {
+    pushIf(lines, "ocrServer", info.ocrServerUrl);
+  }
+  if (
+    info.maxPages !== undefined &&
+    info.maxPages !== HEADER_DEFAULTS.maxPages
+  ) {
+    pushIf(lines, "maxPages", info.maxPages);
+  }
+  if (info.dpi !== undefined && info.dpi !== HEADER_DEFAULTS.dpi) {
+    pushIf(lines, "dpi", info.dpi);
+  }
+  if (info.targetPages) {
+    pushIf(lines, "targetPages", info.targetPages);
+  }
+  if (info.numWorkers !== undefined) {
+    pushIf(lines, "numWorkers", info.numWorkers);
+  }
+  if (info.recursive === true) {
+    pushIf(lines, "recursive", onOff(true));
+  }
+  if (info.complexity === true) {
+    pushIf(lines, "complexity", onOff(true));
   }
   if (info.mode === "auto") {
-    if (info.escalateNeedsOcrRatio !== undefined) {
-      lines.push(
-        `[parse] escalateOCR  >= ${info.escalateNeedsOcrRatio}`,
-      );
+    if (
+      info.escalateNeedsOcrRatio !== undefined &&
+      info.escalateNeedsOcrRatio !== HEADER_DEFAULTS.escalateNeedsOcrRatio
+    ) {
+      pushIf(lines, "escalateOCR", `>= ${info.escalateNeedsOcrRatio}`);
     }
-    if (info.escalateLayoutRatio !== undefined) {
-      lines.push(
-        `[parse] escalateLay  >= ${info.escalateLayoutRatio}`,
-      );
+    if (
+      info.escalateLayoutRatio !== undefined &&
+      info.escalateLayoutRatio !== HEADER_DEFAULTS.escalateLayoutRatio
+    ) {
+      pushIf(lines, "escalateLay", `>= ${info.escalateLayoutRatio}`);
     }
-    lines.push(
-      `[parse] llamaKey     ${isLlamaCloudConfigured() ? "set" : "missing"}`,
-    );
-  } else if (info.engine === "llamaparse") {
-    lines.push(
-      `[parse] llamaKey     ${isLlamaCloudConfigured() ? "set" : "missing"}`,
-    );
   }
-  if (info.fileCount !== undefined) {
-    lines.push(`[parse] files       ${info.fileCount}`);
-  }
+
   if (info.extra) {
     for (const [k, v] of Object.entries(info.extra)) {
       if (v === undefined) continue;
-      lines.push(`[parse] ${k.padEnd(11)} ${v}`);
+      if (k === "concurrency" && v === HEADER_DEFAULTS.concurrency) continue;
+      if (k === "phase" && v === HEADER_DEFAULTS.phase) continue;
+      // Pack plan already covers OKF; skip the default-on noise.
+      if (k === "okfAi" && v === true) continue;
+      pushIf(lines, k, v);
     }
   }
-  lines.push("[parse] ────────────────────────────────");
+
   return lines;
 }
 

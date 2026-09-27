@@ -27,8 +27,6 @@ export type PackPlan = PackPlanSettings & {
   phase: string;
 };
 
-const FILE_LIST_CAP = 15;
-
 export class PackAbortedError extends Error {
   constructor() {
     super("Pack aborted.");
@@ -113,9 +111,9 @@ function okfLabel(mode: PackOkfMode): string {
   return "AI enrichment";
 }
 
-/** Configuration and file list printed after the parse session header. */
+/** Pack configuration printed after the parse session header (no file paths). */
 export function formatPackPlan(plan: PackPlan): string {
-  const lines = [
+  return [
     "[zipwiki] ────────────────────────────────",
     `[zipwiki] output      ${plan.outputPath ? displayPath(plan.outputPath) : "(set -o, or change settings)"}`,
     `[zipwiki] files       ${plan.files.length} (${formatBytes(plan.fileBytes)})`,
@@ -125,14 +123,7 @@ export function formatPackPlan(plan: PackPlan): string {
     `[zipwiki] recurse     ${plan.recurse ? "on" : "off"}`,
     `[zipwiki] parser      ${plan.parser}`,
     "[zipwiki] ────────────────────────────────",
-  ];
-  const shown = plan.files.slice(0, FILE_LIST_CAP);
-  for (const file of shown) {
-    lines.push(`  ${displayPath(file)}`);
-  }
-  const rest = plan.files.length - shown.length;
-  if (rest > 0) lines.push(`  … and ${rest} more`);
-  return lines.join("\n");
+  ].join("\n");
 }
 
 function cancelMeansAbort(value: unknown): boolean {

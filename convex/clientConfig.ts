@@ -94,6 +94,8 @@ export const forApiKey = internalQuery({
         okfCount: period?.okfCount ?? 0,
         liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,
         liteparseFailCount: period?.liteparseFailCount ?? 0,
+        parseCreditsSpent: period?.parseCreditsSpent ?? 0,
+        okfCreditsSpent: period?.okfCreditsSpent ?? 0,
         periodStart: new Date(periodStart).toISOString(),
         periodEnd: new Date(periodEndMs).toISOString(),
       },

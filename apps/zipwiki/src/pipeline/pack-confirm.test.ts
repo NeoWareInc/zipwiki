@@ -42,7 +42,7 @@ describe("pack confirm", () => {
     );
   });
 
-  it("prints the output archive and the files that will be packed", () => {
+  it("prints the output archive and pack settings without listing files", () => {
     const text = formatPackPlan({
       outputPath: "/tmp/knowledge/docs.zipwiki",
       files: ["/tmp/knowledge/a.docx", "/tmp/knowledge/b.pdf"],
@@ -60,8 +60,8 @@ describe("pack confirm", () => {
     assert.match(text, /parsed text only/);
     assert.match(text, /deterministic/);
     assert.match(text, /zstd 7/);
-    assert.match(text, /a\.docx/);
-    assert.match(text, /b\.pdf/);
+    assert.doesNotMatch(text, /a\.docx/);
+    assert.doesNotMatch(text, /b\.pdf/);
   });
 
   it("labels OKF from the flags that will actually run", () => {

@@ -23,12 +23,6 @@ export type HostedClientConfigResult = {
   okfHostFallback: boolean;
 };
 
-function formatQuota(used: number, max: number): string {
-  if (max <= 0) return `${used}/0 (none)`;
-  if (max >= Number.MAX_SAFE_INTEGER) return `${used}/no limit`;
-  return `${used}/${max} (remaining ${Math.max(0, max - used)})`;
-}
-
 function creditBalance(config: ClientConfig) {
   return {
     creditsRemaining:
@@ -47,45 +41,66 @@ function usageSlice(config: ClientConfig) {
     okf: config.usage?.okfCount ?? 0,
     liteOk: config.usage?.liteparseSuccessCount ?? 0,
     liteFail: config.usage?.liteparseFailCount ?? 0,
+    parseCredits: config.usage?.parseCreditsSpent ?? 0,
+    okfCredits: config.usage?.okfCreditsSpent ?? 0,
   };
 }
 
-/** Human-readable plan usage line for stderr. */
+function serviceLine(
+  name: string,
+  files: number,
+  credits: number | null,
+): string {
+  const label = name.padEnd(12);
+  if (credits == null || credits <= 0) {
+    return `[zipwiki]   ${label} ${files} file${files === 1 ? "" : "s"}`;
+  }
+  return (
+    `[zipwiki]   ${label} ${files} file${files === 1 ? "" : "s"} · ` +
+    `${credits} credit${credits === 1 ? "" : "s"}`
+  );
+}
+
+/** Human-readable plan usage for stderr (multi-line). */
 export function formatClientUsageSummary(
   config: ClientConfig,
   label = "usage",
   previous?: ClientConfig | null,
 ): string {
-  const cur = usageSlice(config);
   const balance = creditBalance(config);
   const creditLabel = balance.creditsUnlimited
     ? "unlimited"
     : String(balance.creditsRemaining);
-  let line =
-    `[zipwiki] ${label} credits=${creditLabel} ` +
-    `LiteParse ${cur.liteOk} ok / ${cur.liteFail} fail · ` +
-    `LlamaParse ${formatQuota(cur.parse, config.plan.maxParsesPerMonth)} · ` +
-    `ZipWiki OKF ${formatQuota(cur.okf, config.plan.maxOkfPerMonth)}`;
 
-  if (previous?.usage) {
+  // Before a pack: only the balance — usage breakdown belongs at the end.
+  if (label === "start") {
+    return `[zipwiki] credits available ${creditLabel}`;
+  }
+
+  const lines = [`[zipwiki] ${label}`];
+
+  if (previous?.usage && config.usage) {
+    const cur = usageSlice(config);
     const prev = usageSlice(previous);
-    const parts: string[] = [];
     const dLite = cur.liteOk - prev.liteOk;
-    const dLiteFail = cur.liteFail - prev.liteFail;
     const dParse = cur.parse - prev.parse;
     const dOkf = cur.okf - prev.okf;
-    if (dLite !== 0) parts.push(`LiteParse +${dLite}`);
-    if (dLiteFail !== 0) parts.push(`LiteParse fail +${dLiteFail}`);
-    if (dParse !== 0) parts.push(`LlamaParse +${dParse}`);
-    if (dOkf !== 0) parts.push(`OKF +${dOkf}`);
-    if (parts.length > 0) {
-      line += ` · this run: ${parts.join(", ")}`;
-    } else {
-      line += " · this run: no billed/telemetry change";
+    const dParseCredits = cur.parseCredits - prev.parseCredits;
+    const dOkfCredits = cur.okfCredits - prev.okfCredits;
+
+    if (dLite > 0) {
+      lines.push(serviceLine("LiteParse", dLite, null));
+    }
+    if (dParse > 0) {
+      lines.push(serviceLine("LlamaParse", dParse, dParseCredits));
+    }
+    if (dOkf > 0) {
+      lines.push(serviceLine("ZipWiki OKF", dOkf, dOkfCredits));
     }
   }
 
-  return line;
+  lines.push(`[zipwiki]   ${"remaining".padEnd(12)} ${creditLabel}`);
+  return lines.join("\n");
 }
 
 export function printClientUsageSummary(
