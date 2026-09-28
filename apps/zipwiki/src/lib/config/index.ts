@@ -25,6 +25,16 @@ export {
   type ManagedHomeEnvKey,
 } from "./home.js";
 export {
+  activateCliAccount,
+  activeCliAccountFromEnv,
+  loadCliAccounts,
+  normalizeAccountEmail,
+  rememberCliAccount,
+  seedCliAccountsFromEnv,
+  zipwikiAccountsPath,
+  type SavedCliAccount,
+} from "./accounts.js";
+export {
   ONBOARDING_FILENAME,
   ONBOARDING_VERSION,
   isOnboardingComplete,
@@ -126,6 +136,8 @@ export {
 export {
   applyAccountSettingsToEnv,
   applyCachedAccountSettingsToEnv,
+  cachedSettingsMatchActiveAccount,
+  discardCachedAccountSettings,
   isZipwikiAccountConnected,
   loadCachedAccountSettings,
   pullAccountSettings,

@@ -16,7 +16,18 @@ describe("zipwiki config", () => {
     assert.equal(cfg.okf, undefined);
   });
 
-  it("merges file over defaults", () => {
+  it("does not load a zipwiki.config.json unless --config points at it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "zc-cfg-skip-"));
+    writeFileSync(
+      join(dir, "zipwiki.config.json"),
+      JSON.stringify({ pack: { compression: "store", level: 0 } }),
+    );
+    const { config, configPath } = loadZipwikiConfig({}, dir);
+    assert.equal(configPath, undefined);
+    assert.equal(config.pack.compression, DEFAULT_ZIPWIKI_CONFIG.pack.compression);
+  });
+
+  it("merges an explicit config file over defaults", () => {
     const dir = mkdtempSync(join(tmpdir(), "zc-cfg-"));
     writeFileSync(
       join(dir, "zipwiki.config.json"),
@@ -25,7 +36,10 @@ describe("zipwiki config", () => {
         okf: { useAi: false },
       }),
     );
-    const { config, configPath } = loadZipwikiConfig({}, dir);
+    const { config, configPath } = loadZipwikiConfig(
+      { configPath: join(dir, "zipwiki.config.json") },
+      dir,
+    );
     assert.ok(configPath?.endsWith("zipwiki.config.json"));
     assert.equal(config.parser.engine, "llamaparse");
     assert.equal(config.parser.mode, "auto");
@@ -54,7 +68,11 @@ describe("zipwiki config", () => {
       JSON.stringify({ parser: { engine: "llamaparse" } }),
     );
     const { config } = loadZipwikiConfig(
-      { parserEngine: "liteparse", noAiOkf: true },
+      {
+        configPath: join(dir, "zipwiki.config.json"),
+        parserEngine: "liteparse",
+        noAiOkf: true,
+      },
       dir,
     );
     assert.equal(config.parser.engine, "liteparse");

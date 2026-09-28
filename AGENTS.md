@@ -30,6 +30,19 @@ This checkout includes Phase 2: `@zipwiki/zipwiki` (pack and query) and
 LiteParse). Home is `~/.zipwiki`. Hosted auth is Phase 3. A Rust CLI is
 Phase 4 — see [PHASES.md](PHASES.md).
 
+## Deploy targets
+
+The CLI dev login talks to Convex `dashing-cod-224` and Fly `zipwiki-api-dev`. `pnpm convex:deploy` updates production Convex (`festive-hare-381`) and does not change that dev site.
+
+| Change | Command |
+| --- | --- |
+| Convex functions the dev CLI calls | `npx convex dev --once` (deployment in `.env.local`: `dev:dashing-cod-224`) |
+| Convex functions for production | `pnpm convex:deploy` (`festive-hare-381`) |
+| Dev API on Fly | `pnpm deploy:fly:dev` |
+| Production API on Fly | `pnpm deploy:fly:prod` |
+
+After a task that changes Convex HTTP, the Fly API, or the website the CLI opens, name the matching command. Do not treat `pnpm convex:deploy` as the dev push.
+
 <!-- convex-ai-start -->
 
 This project uses [Convex](https://convex.dev) as its backend.

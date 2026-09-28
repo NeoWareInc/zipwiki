@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import * as p from "@clack/prompts";
 import {
   fetchAccountSettings,
   fetchClientConfig,
@@ -8,6 +9,12 @@ import {
   waitForSetupComplete,
   type ClientConfig,
 } from "@zipwiki/api-client";
+import {
+  activateCliAccount,
+  rememberCliAccount,
+  seedCliAccountsFromEnv,
+  type SavedCliAccount,
+} from "./lib/config/accounts.js";
 import {
   dashboardSettingsUrl,
   deviceApprovalPage,
@@ -21,6 +28,7 @@ import {
   zipwikiDeviceAuthUrl,
   zipwikiHomeEnvPath,
 } from "./lib/config/index.js";
+import { isInteractiveTty } from "./interactive/tty.js";
 import {
   applyAccountSettingsToEnv,
   saveCachedAccountSettings,
@@ -49,15 +57,82 @@ function applyConnectionToProcess(url: string, key: string): void {
   process.env.ZIPWIKI_API_KEY = key;
 }
 
+type LoginAccountChoice =
+  | { action: "keep" }
+  | { action: "activate"; email: string }
+  | { action: "browser" }
+  | { action: "cancel" };
+
+const OTHER_ACCOUNT = "__other__";
+
+/** When this CLI already has a saved login, ask which email to use. */
+export async function chooseCliLoginAccount(): Promise<LoginAccountChoice> {
+  const accounts = seedCliAccountsFromEnv();
+  if (!isInteractiveTty() || accounts.length === 0) {
+    return { action: "browser" };
+  }
+  const active = process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim().toLowerCase();
+  const choice = await p.select({
+    message: active
+      ? `This CLI is signed in as ${active}. Which account should it use?`
+      : "Which account should this CLI use?",
+    options: [
+      ...accounts.map((account) => ({
+        value: account.email,
+        label:
+          account.email === active
+            ? `${account.email} (signed in)`
+            : account.email,
+      })),
+      {
+        value: OTHER_ACCOUNT,
+        label: "Sign in as a different user",
+      },
+    ],
+  });
+  if (p.isCancel(choice)) return { action: "cancel" };
+  if (choice === OTHER_ACCOUNT) return { action: "browser" };
+  if (choice === active) return { action: "keep" };
+  return { action: "activate", email: String(choice) };
+}
+
+function printActiveAccount(account: SavedCliAccount): void {
+  console.error(`[zipwiki] This CLI is signed in as ${account.email}`);
+  console.error(`[zipwiki] Saved in ${zipwikiHomeEnvPath()}`);
+}
+
 export async function runAuthLogin(opts: {
   env?: string;
   noBrowser?: boolean;
 }): Promise<void> {
+  const choice = await chooseCliLoginAccount();
+  if (choice.action === "cancel") {
+    console.error("[zipwiki] Login cancelled.");
+    process.exitCode = 1;
+    return;
+  }
+  if (choice.action === "keep") {
+    const current = seedCliAccountsFromEnv().find(
+      (account) =>
+        account.email ===
+        process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim().toLowerCase(),
+    );
+    if (current) printActiveAccount(current);
+    return;
+  }
+  if (choice.action === "activate") {
+    printActiveAccount(activateCliAccount(choice.email));
+    return;
+  }
+
   const target = resolveAuthLoginTarget(opts.env);
   const apiUrl = zipwikiApiUrlForTarget(target);
   const deviceAuthUrl = zipwikiDeviceAuthUrl(target);
 
   console.error(`[zipwiki] Logging in to ${formatZipwikiApiTarget(apiUrl)}…`);
+  console.error(
+    "[zipwiki] Approve in the browser as the account this CLI should use. On that page, choose Log in as a different user to switch.",
+  );
 
   const device = await requestDeviceCode(deviceAuthUrl);
   const openUrl = deviceApprovalPage({
@@ -83,17 +158,46 @@ export async function runAuthLogin(opts: {
 
   const url = loginApiUrlForTarget(approved.api_url, target);
   const accountId = approved.account_id.trim();
+  let email = approved.email?.trim().toLowerCase();
+  if (!email) {
+    try {
+      const settings = await fetchAccountSettings(deviceAuthUrl, approved.api_key);
+      email = settings.email?.trim().toLowerCase();
+    } catch {
+      try {
+        const settings = await fetchAccountSettings(url, approved.api_key);
+        email = settings.email?.trim().toLowerCase();
+      } catch {
+        email = undefined;
+      }
+    }
+  }
   const path = saveZipwikiHomeEnv({
     ZIPWIKI_API_URL: url,
     ZIPWIKI_API_KEY: approved.api_key,
     ZIPWIKI_ACCOUNT_ID: accountId,
-    ...(approved.email ? { ZIPWIKI_ACCOUNT_EMAIL: approved.email } : {}),
+    ...(email ? { ZIPWIKI_ACCOUNT_EMAIL: email } : {}),
   });
   applyConnectionToProcess(url, approved.api_key);
   process.env.ZIPWIKI_ACCOUNT_ID = accountId;
-  if (approved.email) process.env.ZIPWIKI_ACCOUNT_EMAIL = approved.email;
+  if (email) {
+    process.env.ZIPWIKI_ACCOUNT_EMAIL = email;
+    rememberCliAccount({
+      email,
+      accountId,
+      apiUrl: url,
+      apiKey: approved.api_key,
+    });
+  }
 
   console.error(`[zipwiki] Saved connection to ${path}`);
+  if (email) {
+    console.error(`[zipwiki] Account email ${email}`);
+  } else {
+    console.error(
+      "[zipwiki] Login did not return an account email. Run: zipwiki login",
+    );
+  }
   console.error(`[zipwiki] Key prefix ${approved.key_prefix}…`);
 
   await maybeMigrateLocalOnboarding({ url, apiKey: approved.api_key });
@@ -199,6 +303,8 @@ export async function runAuthStatus(): Promise<void> {
   const key = resolveZipwikiApiKey();
   const accountId = process.env.ZIPWIKI_ACCOUNT_ID?.trim();
   const email = process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim();
+  const saved = seedCliAccountsFromEnv();
+  const active = email?.toLowerCase();
   console.error(`Home env:  ${zipwikiHomeEnvPath()}`);
   console.error(`API URL:   ${formatZipwikiApiTarget(url)}`);
   console.error(
@@ -206,6 +312,15 @@ export async function runAuthStatus(): Promise<void> {
   );
   console.error(`Account:   ${accountId || "(unset)"}`);
   console.error(`Email:     ${email || "(unset)"}`);
+  if (saved.length > 0) {
+    console.error(
+      `Saved:     ${saved
+        .map((account) =>
+          account.email === active ? `${account.email} (this CLI)` : account.email,
+        )
+        .join(", ")}`,
+    );
+  }
   if (!url || !key) {
     console.error("Not fully connected. Run: zipwiki login");
     return;

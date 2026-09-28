@@ -1,7 +1,5 @@
-import { writeFileSync } from "node:fs";
 import pc from "picocolors";
 import {
-  CONFIG_FILENAME,
   MANAGED_HOME_ENV_KEYS,
   applyCachedAccountSettingsToEnv,
   buildEffectiveConfigView,
@@ -268,30 +266,6 @@ export function runConfigApiKeyCommand(
   const key = providerApiKeyEnv(id) as ManagedHomeEnvKey;
   runConfigSetCommand(key, apiKey, opts);
   runConfigSetCommand("ZIPWIKI_OKF_PROVIDER", id, { ...opts, quiet: true });
-}
-
-/** Scaffold a minimal project config when missing. */
-export function scaffoldProjectConfig(
-  startDir: string = process.cwd(),
-): string | undefined {
-  const existing = findConfigPath(startDir);
-  if (existing) return undefined;
-  const path = `${startDir}/${CONFIG_FILENAME}`;
-  const body = {
-    parser: {
-      engine: "liteparse",
-      mode: "fixed",
-    },
-    okf: {
-      useAi: true,
-    },
-    pack: {
-      compression: "zstd",
-      level: 7,
-    },
-  };
-  writeFileSync(path, `${JSON.stringify(body, null, 2)}\n`, "utf-8");
-  return path;
 }
 
 export { shellAtStartup, providerApiKeyEnv };

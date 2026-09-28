@@ -64,12 +64,12 @@ export async function runMainMenu(): Promise<void> {
       [
         "zipwiki pack <files…>      Create a .zipwiki Knowledge Archive",
         "zipwiki open|search|read   Query a .zipwiki already on disk",
-        "zipwiki login               Connect account (pulls Settings: parser + ZipWiki OKF)",
-        "zipwiki auth                Show the saved API connection",
+        "zipwiki login               Choose a saved account, or sign in in the browser",
+        "zipwiki auth                Show the signed-in email and saved accounts",
         "zipwiki settings show|pull|open",
         "zipwiki config api-key     Local BYO secrets only",
         "",
-        "Account pack defaults live on the dashboard after login; zipwiki.config.json overlays.",
+        "Account pack defaults live on the dashboard after login.",
       ].join("\n"),
     );
     return;

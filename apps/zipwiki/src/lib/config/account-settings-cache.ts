@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AccountSettingsBodySchema,
@@ -54,6 +54,34 @@ export function saveCachedAccountSettings(
   return path;
 }
 
+/** Drop cached portal settings so a switched CLI user does not reuse them. */
+export function discardCachedAccountSettings(): void {
+  const path = zipwikiSettingsCachePath();
+  if (!existsSync(path)) return;
+  unlinkSync(path);
+}
+
+/**
+ * Cached settings belong to this CLI user when the saved account id and email
+ * agree. A cache with no stamp still applies until the next pull.
+ */
+export function cachedSettingsMatchActiveAccount(
+  cached: Pick<CachedAccountSettings, "accountId" | "email">,
+): boolean {
+  if (
+    accountStampConflicts(
+      process.env.ZIPWIKI_ACCOUNT_ID,
+      cached.accountId,
+    )
+  ) {
+    return false;
+  }
+  const savedEmail = process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim().toLowerCase();
+  const cachedEmail = cached.email?.trim().toLowerCase();
+  if (savedEmail && cachedEmail && savedEmail !== cachedEmail) return false;
+  return true;
+}
+
 /** Apply credential prefs into process.env (BYO secrets stay local). */
 export function applyAccountSettingsToEnv(
   settings: AccountSettingsBody,
@@ -81,6 +109,7 @@ export function applyCachedAccountSettingsToEnv(opts?: {
 }): AccountSettingsBody | null {
   const cached = loadCachedAccountSettings();
   if (!cached?.setupComplete) return null;
+  if (!cachedSettingsMatchActiveAccount(cached)) return null;
   applyAccountSettingsToEnv(cached.settings, { persist: opts?.persist });
   return cached.settings;
 }
@@ -177,8 +206,16 @@ export async function pullAccountSettings(opts?: {
   }
 
   enforceAccountStamp(payload);
+  const email = payload.email?.trim().toLowerCase();
+  if (email && process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim().toLowerCase() !== email) {
+    saveZipwikiHomeEnv({ ZIPWIKI_ACCOUNT_EMAIL: email });
+    process.env.ZIPWIKI_ACCOUNT_EMAIL = email;
+  }
   const path = saveCachedAccountSettings(payload);
   if (!opts?.quiet) {
+    const who =
+      email || process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim() || "(email not saved)";
+    console.error(`[zipwiki] account ${who}`);
     console.error(`[zipwiki] settings synced → ${path}`);
   }
   applyAccountSettingsToEnv(payload.settings);
@@ -294,7 +331,7 @@ export async function syncAccountSettingsForPack(opts?: {
     if (/Account setup incomplete/i.test(msg)) throw err;
 
     const cached = loadCachedAccountSettings();
-    if (cached?.setupComplete) {
+    if (cached?.setupComplete && cachedSettingsMatchActiveAccount(cached)) {
       if (!opts?.quiet) {
         console.error(
           `[zipwiki] settings sync failed (${msg}); using cached settings`,

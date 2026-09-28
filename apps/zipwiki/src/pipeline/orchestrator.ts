@@ -222,7 +222,7 @@ export async function runStage(
     }
 
     if (!opts.quiet && configPath) {
-      console.error(`[zipwiki] config ${configPath}`);
+      console.error(`[zipwiki] project config ${configPath}`);
     }
 
     const onboarding = loadZipwikiOnboarding();
@@ -381,6 +381,7 @@ export async function runStage(
               fileBytes: fileBytes(expanded),
               level: opts.level ?? project.pack.level,
               phase,
+              accountEmail: process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim(),
             }),
           );
         },

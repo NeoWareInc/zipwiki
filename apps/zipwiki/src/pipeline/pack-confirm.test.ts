@@ -55,6 +55,7 @@ describe("pack confirm", () => {
       level: 7,
       parser: "liteparse",
     });
+    assert.match(text, /account\s+\(not signed in\)/);
     assert.match(text, /docs\.zipwiki/);
     assert.match(text, /files\s+2/);
     assert.match(text, /parsed text only/);
@@ -62,6 +63,21 @@ describe("pack confirm", () => {
     assert.match(text, /zstd 7/);
     assert.doesNotMatch(text, /a\.docx/);
     assert.doesNotMatch(text, /b\.pdf/);
+    assert.match(
+      formatPackPlan({
+        outputPath: "/tmp/knowledge/docs.zipwiki",
+        files: ["/tmp/knowledge/a.docx"],
+        fileBytes: 10,
+        phase: "all",
+        recurse: false,
+        omitOriginalDocuments: false,
+        okf: "ai",
+        compression: "zstd",
+        parser: "liteparse",
+        accountEmail: "steve@neoware.io",
+      }),
+      /account\s+steve@neoware\.io/,
+    );
   });
 
   it("labels OKF from the flags that will actually run", () => {

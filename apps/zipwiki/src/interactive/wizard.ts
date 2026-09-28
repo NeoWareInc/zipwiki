@@ -24,7 +24,7 @@ import {
   type ZipwikiApiTarget,
 } from "../lib/config/index.js";
 import { isAiOkfConfigured } from "../lib/okf/index.js";
-import { scaffoldProjectConfig, shellAtStartup } from "../config-cmd.js";
+import { shellAtStartup } from "../config-cmd.js";
 import {
   fetchZipWikiHealth,
   obtainZipwikiApiKey,
@@ -567,17 +567,6 @@ async function runConfigureSteps(): Promise<{
     recurse,
     omitOriginalDocuments,
   });
-
-  const scaffold = await p.confirm({
-    message: "Write zipwiki.config.json in this directory if missing?",
-    initialValue: true,
-  });
-  cancelIf(scaffold);
-  if (scaffold) {
-    const path = scaffoldProjectConfig();
-    if (path) p.log.success(`Created ${path}`);
-    else p.log.message("Project config already present.");
-  }
 
   return { recurse, omitOriginalDocuments };
 }

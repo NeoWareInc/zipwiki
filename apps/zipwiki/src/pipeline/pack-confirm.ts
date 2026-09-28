@@ -25,6 +25,8 @@ export type PackPlan = PackPlanSettings & {
   fileBytes: number;
   level?: number;
   phase: string;
+  /** Signed-in CLI account. Display only. */
+  accountEmail?: string;
 };
 
 export class PackAbortedError extends Error {
@@ -115,6 +117,7 @@ function okfLabel(mode: PackOkfMode): string {
 export function formatPackPlan(plan: PackPlan): string {
   return [
     "[zipwiki] ────────────────────────────────",
+    `[zipwiki] account     ${plan.accountEmail?.trim() || "(not signed in)"}`,
     `[zipwiki] output      ${plan.outputPath ? displayPath(plan.outputPath) : "(set -o, or change settings)"}`,
     `[zipwiki] files       ${plan.files.length} (${formatBytes(plan.fileBytes)})`,
     `[zipwiki] contents    ${plan.omitOriginalDocuments ? "parsed text only" : "parsed text + original files"}`,

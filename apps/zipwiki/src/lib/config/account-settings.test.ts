@@ -27,7 +27,7 @@ describe("account settings merge", () => {
     assert.equal(overlay.parser?.engine, "llamaparse");
   });
 
-  it("project file wins over account; CLI wins over project", () => {
+  it("account settings win over a project file; CLI wins over the account", () => {
     const dir = mkdtempSync(join(tmpdir(), "zipwiki-cfg-"));
     writeFileSync(
       join(dir, "zipwiki.config.json"),
@@ -52,7 +52,8 @@ describe("account settings merge", () => {
       },
       dir,
     );
-    assert.equal(config.pack.compression, "deflate");
+    assert.equal(config.pack.compression, "store");
+    assert.equal(config.pack.level, 1);
     assert.equal(config.pack.omitOriginalDocuments, false);
   });
 

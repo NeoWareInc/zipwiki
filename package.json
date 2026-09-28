@@ -27,6 +27,8 @@
     "certs:fly:dev": "fly certs check api-dev.zipwiki.ai -c deploy/fly/fly.dev.toml",
     "certs:fly:prod": "fly certs check api.zipwiki.ai -c deploy/fly/fly.prod.toml",
     "zipwiki": "pnpm --filter @zipwiki/api-client build && pnpm --filter @zipwiki/zipwiki exec tsx src/cli.ts",
+    "zipwiki:login": "pnpm zipwiki -- login",
+    "zipwiki:auth": "pnpm zipwiki -- auth",
     "dev:mcp": "pnpm --filter @zipwiki/mcp dev",
     "build:zipwiki": "pnpm --filter @zipwiki/api-client build && pnpm --filter @zipwiki/zipwiki build",
     "build:mcp": "pnpm build:zipwiki && pnpm --filter @zipwiki/mcp build",

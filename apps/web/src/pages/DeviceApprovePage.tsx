@@ -1,16 +1,23 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { AuthCard, FormError } from "../components/AuthChrome";
+import { rememberAuthNext } from "../components/AuthSession";
 
 export default function DeviceApprovePage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signOut } = useAuthActions();
+  const me = useQuery(api.profiles.me);
   const initial = (params.get("user_code") ?? "").toUpperCase();
   const [userCode, setUserCode] = useState(initial);
   const [error, setError] = useState("");
+  const [switching, setSwitching] = useState(false);
   const [done, setDone] = useState<"approved" | "denied" | null>(null);
+  const signedInEmail = me?.user.email?.trim() ?? "";
 
   const pending = useQuery(
     api.deviceAuth.pendingByUserCode,
@@ -48,6 +55,20 @@ export default function DeviceApprovePage() {
     setError("");
   }
 
+  async function useDifferentAccount() {
+    const returnTo = `${location.pathname}${location.search}`;
+    setSwitching(true);
+    setError("");
+    rememberAuthNext(returnTo);
+    try {
+      await signOut();
+      navigate("/login", { replace: true, state: { from: returnTo } });
+    } catch (err) {
+      setSwitching(false);
+      setError(err instanceof Error ? err.message : "Could not switch account");
+    }
+  }
+
   if (done === "approved") {
     return (
       <AuthCard title="CLI linked">
@@ -79,8 +100,19 @@ export default function DeviceApprovePage() {
   return (
     <AuthCard title="Authorize ZipWiki CLI">
       <p className="mb-4 text-sm text-(--muted)">
-        Confirm the code shown in your terminal to mint an API key for zipwiki.
+        Confirm the code shown in your terminal. The CLI saves this login as{" "}
+        {signedInEmail ? (
+          <strong className="text-(--ink)">{signedInEmail}</strong>
+        ) : (
+          "the account you are signed in as"
+        )}
+        .
       </p>
+      {signedInEmail && (
+        <p className="mb-4 text-sm text-(--ink)">
+          Signed in as <strong>{signedInEmail}</strong>
+        </p>
+      )}
       <form onSubmit={onSubmit} className="space-y-3">
         <input
           value={userCode}
@@ -97,22 +129,32 @@ export default function DeviceApprovePage() {
             Client: <strong>{pending.clientName}</strong>
           </p>
         )}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!pending || switching}
+              onClick={() => void decide(false)}
+              className="flex-1 rounded-md bg-(--accent) py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-(--accent-bright) disabled:opacity-50 disabled:hover:bg-(--accent)"
+            >
+              Approve
+            </button>
+            <button
+              type="button"
+              disabled={!pending || switching}
+              onClick={() => void decide(true)}
+              className="flex-1 rounded-md border border-(--border) py-2 text-sm font-semibold disabled:opacity-50"
+            >
+              Deny
+            </button>
+          </div>
           <button
             type="button"
-            disabled={!pending}
-            onClick={() => void decide(false)}
-            className="flex-1 rounded-md bg-(--accent) py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-(--accent-bright) disabled:opacity-50 disabled:hover:bg-(--accent)"
+            disabled={switching}
+            onClick={() => void useDifferentAccount()}
+            className="w-full rounded-md border border-(--border) py-2 text-sm font-semibold disabled:opacity-50"
           >
-            Approve
-          </button>
-          <button
-            type="button"
-            disabled={!pending}
-            onClick={() => void decide(true)}
-            className="flex-1 rounded-md border border-(--border) py-2 text-sm font-semibold disabled:opacity-50"
-          >
-            Deny
+            {switching ? "Switching…" : "Log in as a different user"}
           </button>
         </div>
       </form>

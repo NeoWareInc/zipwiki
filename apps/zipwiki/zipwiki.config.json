@@ -1,9 +1,0 @@
-{
-  "okf": {
-    "useAi": true
-  },
-  "pack": {
-    "compression": "zstd",
-    "level": 7
-  }
-}

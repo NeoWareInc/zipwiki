@@ -85,7 +85,7 @@ export type ZipwikiConfigOverrides = {
   omitOriginalDocuments?: boolean;
   okfModel?: string;
   okfProvider?: string;
-  /** Account settings mapped to config (wins over defaults, loses to project file). */
+  /** Account settings mapped to config (wins over defaults and an explicit config file). */
   accountOverlay?: ZipwikiConfigInput;
 };
 
@@ -165,19 +165,16 @@ function resolveFromPartials(
       deepMerge(
         deepMerge(
           DEFAULT_ZIPWIKI_CONFIG as unknown as Record<string, unknown>,
-          account as unknown as Record<string, unknown>,
+          fileConfig as unknown as Record<string, unknown>,
         ),
-        fileConfig as unknown as Record<string, unknown>,
+        account as unknown as Record<string, unknown>,
       ),
       env as unknown as Record<string, unknown>,
     ),
     cli as unknown as Record<string, unknown>,
   ) as ResolvedZipwikiConfig;
 
-  // The website/account parser choice beats a project file. `--parser` is in
-  // `cli` and was merged last, so re-apply it after the account engine.
-  if (account.parser?.engine) merged.parser.engine = account.parser.engine;
-  if (account.parser?.mode) merged.parser.mode = account.parser.mode;
+  // `--parser` is the per-command override and wins over the account.
   if (cli.parser?.engine) merged.parser.engine = cli.parser.engine;
   if (cli.parser?.mode) merged.parser.mode = cli.parser.mode;
 
@@ -217,8 +214,8 @@ function resolveFromPartials(
 
 /**
  * Load ZipWiki config.
- * Precedence (later wins): defaults → project file → account parser → env → CLI.
- * Pack compression in a project file still beats the account. Parser engine does not.
+ * Precedence (later wins): defaults → explicit `--config` file → account settings → env → CLI flags.
+ * A `zipwiki.config.json` next to the working directory is not loaded.
  * Loads `.env` / `.env.local` from the project root before reading env.
  */
 export function loadZipwikiConfig(
@@ -235,8 +232,6 @@ export function loadZipwikiConfig(
     if (!existsSync(configPath)) {
       throw new Error(`ZipWiki config not found: ${configPath}`);
     }
-  } else {
-    configPath = findConfigPath(startDir);
   }
 
   const fileConfig = configPath

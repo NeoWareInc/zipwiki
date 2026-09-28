@@ -47,6 +47,7 @@ export default function LoginPage() {
   const from =
     (location.state as { from?: string } | null)?.from || "/dashboard";
   const safeFrom = from.startsWith("/") ? from : "/dashboard";
+  const cliLogin = safeFrom.startsWith("/cli/device");
 
   async function finishSignIn() {
     sessionStorage.removeItem("zipwiki.auth.next");
@@ -101,7 +102,9 @@ export default function LoginPage() {
         title="Sign in to ZipWiki"
         subtitle={
           step === "email"
-            ? "Enter your email — we'll send a one-time code."
+            ? cliLogin
+              ? "Sign in as the account this CLI should use. We'll send a one-time code."
+              : "Enter your email — we'll send a one-time code."
             : `Enter the code we sent to ${email.trim()}.`
         }
         footer={

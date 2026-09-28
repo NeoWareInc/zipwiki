@@ -586,9 +586,6 @@ program
   console.error(
     "[zipwiki] Local LiteParse pack works without login; account unlocks hosted parse/OKF.",
   );
-  console.error(
-    "[zipwiki] Optional project overlay: zipwiki.config.json in the repo.",
-  );
     try {
       await runSettingsOpen({ noBrowser: opts?.browser === false });
     } catch (err) {
@@ -633,7 +630,7 @@ program
   .command("login")
   .helpGroup("Account")
   .description(
-    "Browser device login (release → production; dev builds: --env local|dev|production)",
+    "Choose a saved account or sign in with the browser (release → production; dev builds: --env local|dev|production)",
   )
   .option(
     "--env <target>",

@@ -40,6 +40,20 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
       setForm({
         ...structuredClone(DEFAULT_ACCOUNT_SETTINGS),
         ...saved,
+        parser: {
+          ...DEFAULT_ACCOUNT_SETTINGS.parser,
+          ...saved.parser,
+        },
+        okf: {
+          ...DEFAULT_ACCOUNT_SETTINGS.okf,
+          ...saved.okf,
+        },
+        pack: {
+          ...DEFAULT_ACCOUNT_SETTINGS.pack,
+          ...saved.pack,
+          compression: saved.pack?.compression ?? "zstd",
+          level: saved.pack?.level ?? 7,
+        },
         byo: {
           llama: saved.byo?.llama === true || saved.parseCredential === "llama",
           anthropic:

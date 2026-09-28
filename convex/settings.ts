@@ -7,7 +7,7 @@ const DEFAULT_SETTINGS = JSON.stringify({
   parseCredential: "local",
   okfCredential: "local",
   parser: { engine: "liteparse", mode: "fixed" },
-  pack: { compression: "deflate" },
+  pack: { compression: "zstd", level: 7 },
   okf: { useAi: false, model: "claude-haiku-4-5" },
 });
 
