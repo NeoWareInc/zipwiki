@@ -238,7 +238,7 @@ function withPipelineFlags(cmd: Command): Command {
     )
     .option(
       "--origin-sha256",
-      "Include SHA-256 of original primary bytes in Extra Field 0x014F (omit CRC-32)",
+      "Include SHA-256 of original document bytes in Extra Field 0x014F (omit CRC-32)",
     )
     .option("--dry-run", "Plan discover only; do not parse or write")
     .option(
@@ -721,7 +721,7 @@ program
   .command("update")
   .helpGroup("Create")
   .description(
-    "Add, update, or delete primaries in a .zipwiki (full rewrite; copies unchanged compressed members)",
+    "Add, update, or delete documents in a .zipwiki (full rewrite; copies unchanged compressed members)",
   )
   .argument("<archive>", "Existing .zipwiki / .nzip")
   .option("-o, --output <file>", "Output path (default: replace archive in place)")
@@ -733,13 +733,13 @@ program
   )
   .option(
     "--del <entry>",
-    "Delete a primary (ZIP path, wiki/parsed/P.md, unique basename or stem, repeatable)",
+    "Delete a document (ZIP path, wiki/parsed/P.md, unique basename or stem, repeatable)",
     collectFlag,
     [] as string[],
   )
   .option(
     "--update <spec>",
-    "Update an existing primary: FILE (basename match) or ZIPPATH=FILE (repeatable)",
+    "Update an existing document: FILE (basename match) or ZIPPATH=FILE (repeatable)",
     collectFlag,
     [] as string[],
   )
@@ -771,7 +771,7 @@ program
   )
   .option(
     "--origin-sha256",
-    "Include SHA-256 of original primary bytes in Extra Field 0x014F (omit CRC-32)",
+    "Include SHA-256 of original document bytes in Extra Field 0x014F (omit CRC-32)",
   )
   .option(
     "--stage-dir <dir>",
@@ -826,7 +826,7 @@ program
   .option("-m, --metadata", "Only META-INF / wiki / codex paths")
   .option(
     "-c, --catalog",
-    "Primary catalog (OKF / parsed / original / next-read hints)",
+    "Document catalog (OKF / parsed / original / next-read hints)",
   )
   .action((archive: string, opts) => {
     if (opts.catalog === true) {

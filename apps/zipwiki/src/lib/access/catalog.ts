@@ -1,5 +1,5 @@
 /**
- * Human / agent catalog: one row per primary with OKF, parse, original, next-read hints.
+ * Human / agent catalog: one row per input document with OKF, parse, original, next-read hints.
  */
 import { basename } from "node:path";
 import {
@@ -239,11 +239,11 @@ export function formatCatalogText(catalog: CatalogResult): string {
   const digest = catalog.digest?.trim();
   if (digest) lines.push(`Digest:  ${digest}`);
   lines.push(
-    `Primaries: ${catalog.primaryCount}  |  OKF: ${catalog.okfPresent ? `yes (${catalog.conceptCount} concepts)` : "no"}`,
+    `Documents: ${catalog.primaryCount}  |  OKF: ${catalog.okfPresent ? `yes (${catalog.conceptCount} concepts)` : "no"}`,
   );
   lines.push("");
   if (catalog.rows.length === 0) {
-    lines.push("(no primaries)");
+    lines.push("(no documents)");
     return `${lines.join("\n")}\n`;
   }
 
@@ -253,7 +253,7 @@ export function formatCatalogText(catalog: CatalogResult): string {
   );
   const colOkf = 28;
   lines.push(
-    `${pad("PRIMARY", colPrimary)}  ${pad("OKF", colOkf)}  PARSED  ORIG  NEXT`,
+    `${pad("DOCUMENT", colPrimary)}  ${pad("OKF", colOkf)}  PARSED  ORIG  NEXT`,
   );
   lines.push(
     `${"-".repeat(colPrimary)}  ${"-".repeat(colOkf)}  ------  ----  ----`,

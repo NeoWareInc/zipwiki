@@ -178,7 +178,7 @@ export function resolveExistingPrimaryPath(
   if (baseMatches.length === 1) return baseMatches[0]!;
   if (baseMatches.length > 1) {
     throw new Error(
-      `Ambiguous primary "${key}": ${baseMatches.join(", ")} — use the full ZIP path`,
+      `Ambiguous document "${key}": ${baseMatches.join(", ")} — use the full ZIP path`,
     );
   }
   const stem = primaryStem(norm);
@@ -186,14 +186,14 @@ export function resolveExistingPrimaryPath(
   if (stemMatches.length === 1) return stemMatches[0]!;
   if (stemMatches.length > 1) {
     throw new Error(
-      `Ambiguous primary "${key}": ${stemMatches.join(", ")} — use the full ZIP path`,
+      `Ambiguous document "${key}": ${stemMatches.join(", ")} — use the full ZIP path`,
     );
   }
   const have =
     primaryPaths.length > 0
       ? ` (have: ${primaryPaths.join(", ")})`
-      : " (package has no primaries)";
-  throw new Error(`Primary not found: ${key}${have}`);
+      : " (package has no documents)";
+  throw new Error(`Document not found: ${key}${have}`);
 }
 
 export function writeArchiveAtomic(destPath: string, zipBuf: Buffer): void {

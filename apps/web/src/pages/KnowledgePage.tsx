@@ -72,6 +72,11 @@ export default function KnowledgePage() {
   function onFiles(files: FileList | null) {
     const file = files?.[0];
     if (!file) return;
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith(".zipwiki") && !lower.endsWith(".nzip")) {
+      setError("Choose a .zipwiki or .nzip file.");
+      return;
+    }
     void loadFile(file);
   }
 
@@ -131,7 +136,7 @@ export default function KnowledgePage() {
         }`}
       >
         <p className="text-sm text-[var(--ink)]">
-          Drop a <strong>.zipwiki</strong> here, or
+          Drop a <strong>.zipwiki</strong> or <strong>.nzip</strong> here, or
         </p>
         <label
           htmlFor={inputId}
@@ -143,7 +148,7 @@ export default function KnowledgePage() {
           ref={inputRef}
           id={inputId}
           type="file"
-          accept=".nzip,.zip,application/zip"
+          accept=".zipwiki,.nzip,application/zip"
           className="sr-only"
           disabled={loading}
           onChange={(e) => onFiles(e.target.files)}
@@ -194,7 +199,7 @@ export default function KnowledgePage() {
             />
             <OverviewRow label="AI root" value={summary.aiRoot} />
             <OverviewRow
-              label="Primaries"
+              label="Documents"
               value={String(summary.primaryCount)}
             />
             <OverviewRow
@@ -219,9 +224,9 @@ export default function KnowledgePage() {
             />
           </dl>
 
-          <ContentsSection title="Primaries">
+          <ContentsSection title="Input documents">
             {summary.primaries.length === 0 ? (
-              <Empty>No primaries listed in the manifest.</Empty>
+              <Empty>No input documents listed in the manifest.</Empty>
             ) : (
               <ul className="space-y-1 text-sm">
                 {summary.primaries.map((p, i) => (

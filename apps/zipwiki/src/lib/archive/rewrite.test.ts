@@ -76,11 +76,11 @@ describe("rewrite helpers", () => {
           "content/2/report.pdf",
           "content/3/report.pdf",
         ]),
-      /Ambiguous primary/,
+      /Ambiguous document/,
     );
     assert.throws(
       () => resolveExistingPrimaryPath("missing.pdf", ["a.txt"]),
-      /Primary not found: missing\.pdf \(have: a\.txt\)/,
+      /Document not found: missing\.pdf \(have: a\.txt\)/,
     );
   });
 

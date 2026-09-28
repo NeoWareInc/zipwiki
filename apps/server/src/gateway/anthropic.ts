@@ -66,7 +66,7 @@ function promptFor(input: OkfRequest): string {
     `Suggested type: ${input.documentType ?? "Document"}`,
     `Title hint: ${input.title ?? "(none)"}`,
     `Digest hint: ${input.digest ?? "(none)"}`,
-    "Primaries:",
+    "Documents:",
     primaries || "(none)",
     "",
     "Parsed text sample:",
