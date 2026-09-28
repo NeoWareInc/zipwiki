@@ -39,7 +39,7 @@ export default function HowItWorksPage() {
         </h2>
         <p className="mt-3 max-w-3xl text-(--muted)">
           ZipWiki does not upload your folder to a hosted vector store. It
-          converts each primary into whole-document markdown under{" "}
+          converts each document into whole-document markdown under{" "}
           <code className="text-sm">wiki/parsed/</code> and keeps the original
           in the same archive. The agent streams that markdown when it needs
           evidence—not the binary Word file.

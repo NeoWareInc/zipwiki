@@ -45,7 +45,7 @@ export function registerTools(server: McpServer): void {
     "open",
     {
       description:
-        "Open a local .zipwiki: catalog (one row per primary with OKF title/type, parsed?, original?, next-read hints), manifest summary, and open sequence.",
+        "Open a local .zipwiki: catalog (one row per input document with OKF title/type, parsed?, original?, next-read hints), manifest summary, and open sequence.",
       inputSchema: {
         package: packageArg,
       },
@@ -211,7 +211,7 @@ export function registerTools(server: McpServer): void {
         path: z
           .string()
           .optional()
-          .describe("Parsed entry, primary path, or wiki/parsed/… name"),
+          .describe("Parsed entry, document path, or wiki/parsed/… name"),
         name: z.string().optional().describe("Alias for path"),
         fetch: z
           .boolean()
@@ -306,7 +306,7 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe(
-            "Include SHA-256 of original primary bytes in Extra Field 0x014F (omit CRC-32)",
+            "Include SHA-256 of original document bytes in Extra Field 0x014F (omit CRC-32)",
           ),
       },
     },
@@ -317,7 +317,7 @@ export function registerTools(server: McpServer): void {
     "update",
     {
       description:
-        "Add, update, or delete primaries in a local .zipwiki (one full rewrite; copies unchanged compressed members). Parse + optional OKF for add/update; delete drops parse/assets/OKF. AI OKF skipped by default.",
+        "Add, update, or delete documents in a local .zipwiki (one full rewrite; copies unchanged compressed members). Parse + optional OKF for add/update; delete drops parse/assets/OKF. AI OKF skipped by default.",
       inputSchema: {
         package: z.string().describe("Path to existing .zipwiki"),
         output: z
@@ -344,7 +344,7 @@ export function registerTools(server: McpServer): void {
           )
           .optional()
           .describe(
-            "Update an existing primary from a local file (basename match or ZIPPATH=FILE)",
+            "Update an existing document from a local file (basename match or ZIPPATH=FILE)",
           ),
         noAiOkf: z
           .boolean()
@@ -374,7 +374,7 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe(
-            "Include SHA-256 of original primary bytes in Extra Field 0x014F (omit CRC-32)",
+            "Include SHA-256 of original document bytes in Extra Field 0x014F (omit CRC-32)",
           ),
       },
     },
@@ -390,7 +390,10 @@ export function registerTools(server: McpServer): void {
         package: packageArg,
         path: z.string().optional().describe("wiki/okf/….md"),
         stem: z.string().optional().describe("Concept stem"),
-        primaryPath: z.string().optional().describe("Primary entry path for sources"),
+        primaryPath: z
+          .string()
+          .optional()
+          .describe("Input document path for sources"),
         enrichment: enrichmentSchema,
       },
     },

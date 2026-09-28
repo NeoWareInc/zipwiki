@@ -174,7 +174,7 @@ export async function runManifestCommand(
       console.error(
         `[zipwiki manifest] stage ${relative(process.cwd(), outputDir) || "."}: ` +
           `removed ${removed} stale root entr${removed === 1 ? "y" : "ies"} ` +
-          `(primaries referenced from input, not copied)`,
+          `(documents referenced from input, not copied)`,
       );
     }
 
@@ -244,7 +244,7 @@ export async function runManifestCommand(
       const parsed = primaries.filter((p) => p.hasParsed).length;
       console.error(
         `[zipwiki manifest] wrote ${relative(process.cwd(), outFile)} ` +
-          `(primaries=${primaries.length} parsed=${parsed} okf=${okfPresent ? "yes" : "no"})`,
+          `(documents=${primaries.length} parsed=${parsed} okf=${okfPresent ? "yes" : "no"})`,
       );
     }
 

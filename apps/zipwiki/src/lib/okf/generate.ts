@@ -169,7 +169,7 @@ export async function fetchOkfEnrichment(
       `Suggested classifier category: ${input.documentType ?? "Generic"}`,
       `Package title hint: ${input.title ?? "(none)"}`,
       `Existing digest hint: ${input.digest ?? "(none)"}`,
-      "Primaries:",
+      "Documents:",
       primaryList || "(none)",
       "",
       "Parsed text sample:",

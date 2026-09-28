@@ -31,7 +31,7 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 | `extract` | Verified extract to disk (`fetchOrigin` also downloads 0x014F originals) | zipaccess lib |
 | `origin` | Extra Field `0x014F` URI/CRC; `fetch` downloads and verifies CRC-32 | zipaccess lib |
 | `pack` | Pack sources → `.zipwiki` (default **no AI OKF**) | zipwiki |
-| `update` | Add / update / delete primaries (one rewrite; copies unchanged compressed members) | zipwiki |
+| `update` | Add / update / delete documents (one rewrite; copies unchanged compressed members) | zipwiki |
 | `okf_enrich` | Apply host-LLM OKF enrichment into `.zipwiki` | zipaccess lib |
 
 ### Create workflow (default)

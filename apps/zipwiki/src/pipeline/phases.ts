@@ -187,7 +187,7 @@ function stubMarkdownForFailedParse(
   return [
     `# ${originalName}`,
     "",
-    `${originalName} is included as a primary document in this NeoZip package.`,
+    `${originalName} is included as an input document in this package.`,
     `Text extract was unavailable (${reason}).`,
     "",
   ].join("\n");
@@ -237,7 +237,7 @@ export async function okfOneFile(input: {
   });
   const digest = parseAvailable
     ? undefined
-    : `${input.originalName} is included as a primary in this NeoZip package (text extract unavailable).`;
+    : `${input.originalName} is included as an input document in this package (text extract unavailable).`;
 
   const started = Date.now();
   const result = await buildOkfDocument({

@@ -283,8 +283,8 @@ function sourcesFor(
     sources.push({
       resource: relativeFromOkfRoot(p.path),
       description: p.contentSha256
-        ? `Primary content in this package (sha256:${p.contentSha256.slice(0, 16)}…)`
-        : `Primary content in this package (${p.path})`,
+        ? `Document in this package (sha256:${p.contentSha256.slice(0, 16)}…)`
+        : `Document in this package (${p.path})`,
     });
     sources.push({
       resource: relativeParseFromOkf(p.path),

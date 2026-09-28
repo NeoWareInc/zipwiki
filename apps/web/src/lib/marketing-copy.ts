@@ -66,7 +66,7 @@ export const TRUST_BULLETS = [
   },
   {
     title: "Manifest first",
-    body: "META-INF/manifest.json is the discovery file: primaries, parse counts, and whether OKF is present.",
+    body: "META-INF/manifest.json is the discovery file: documents, parse counts, and whether OKF is present.",
   },
   {
     title: "Verified reads",
@@ -150,7 +150,7 @@ export const HOW_STEPS = [
     prompt:
       "Open ./knowledge/florida-laws.zipwiki and tell me what’s inside—titles, types, OKF, parsed files, and origin URLs.",
     detail:
-      "Each primary shows whether it has OKF and parsed markdown, plus the path the agent will open. Unparsed scans still appear so nothing is silently dropped.",
+      "Each document shows whether it has OKF and parsed markdown, plus the path the agent will open. Unparsed scans still appear so nothing is silently dropped.",
   },
   {
     title: "Search",
@@ -267,7 +267,7 @@ export const AGENT_PROMPTS: AgentPrompt[] = [
     title: "Pack Florida session laws",
     description: "Create the sample archive and attach official origin URLs.",
     prompt:
-      "Using ZipWiki, pack ./florida-laws into ./knowledge/florida-laws.zipwiki, enrich every primary with AI OKF, map Ch_{year}-{chapter}.pdf to https://laws.flrules.org/{year}/{chapter}, and tell me the output path.",
+      "Using ZipWiki, pack ./florida-laws into ./knowledge/florida-laws.zipwiki, enrich every document with AI OKF, map Ch_{year}-{chapter}.pdf to https://laws.flrules.org/{year}/{chapter}, and tell me the output path.",
   },
   {
     id: "open",
