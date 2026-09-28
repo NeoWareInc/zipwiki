@@ -36,8 +36,6 @@ import {
   resumeLoginIfSavedSettings,
 } from "./interactive/resume-login.js";
 import {
-  runAuthExportEnv,
-  runAuthImport,
   runAuthLogin,
   runAuthStatus,
 } from "./auth-cmd.js";
@@ -596,7 +594,7 @@ program
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`[zipwiki] ${msg}`);
-      console.error("Run: zipwiki auth login");
+      console.error("Run: zipwiki login");
       process.exitCode = 1;
     }
   });
@@ -631,13 +629,9 @@ settingsCmd
     await runSettingsOpen({ noBrowser: opts.browser === false });
   });
 
-const authCmd = program
-  .command("auth")
-  .helpGroup("Account")
-  .description("Connect zipwiki to the ZipWiki hosted API");
-
-authCmd
+program
   .command("login")
+  .helpGroup("Account")
   .description(
     "Browser device login (release → production; dev builds: --env local|dev|production)",
   )
@@ -653,26 +647,12 @@ authCmd
     });
   });
 
-authCmd
-  .command("import")
-  .description("Import a downloaded zipwiki-cli.env (or JSON); use - for stdin")
-  .argument("<file>", "Path to .env / .json, or - for stdin")
-  .action(async (file: string) => {
-    await runAuthImport(file);
-  });
-
-authCmd
-  .command("status")
-  .description("Show saved API connection and plan/usage")
+program
+  .command("auth")
+  .helpGroup("Account")
+  .description("Show the saved API connection, account, and plan usage")
   .action(async () => {
     await runAuthStatus();
-  });
-
-authCmd
-  .command("export-env")
-  .description("Print ZIPWIKI_API_URL / KEY as a CLI env file")
-  .action(() => {
-    runAuthExportEnv();
   });
 
 const configCmd = program

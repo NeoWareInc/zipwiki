@@ -106,6 +106,42 @@ export function warnMissingByoSecrets(settings: AccountSettingsBody): void {
   }
 }
 
+/** The API key belongs to a different account than the one saved at login. */
+export class AccountMismatchError extends Error {
+  constructor(savedEmail?: string) {
+    const who = savedEmail?.trim();
+    super(
+      `This API key belongs to a different ZipWiki account than this CLI login${who ? ` (${who})` : ""}.\nRun: zipwiki login`,
+    );
+    this.name = "AccountMismatchError";
+  }
+}
+
+/**
+ * True when a saved account id and a returned account id are both set and differ.
+ * A missing stamp is not a conflict; the caller may record the returned id.
+ */
+export function accountStampConflicts(
+  savedAccountId: string | undefined,
+  returnedAccountId: string | undefined,
+): boolean {
+  const saved = savedAccountId?.trim();
+  const got = returnedAccountId?.trim();
+  return Boolean(saved && got && saved !== got);
+}
+
+function enforceAccountStamp(payload: AccountSettingsResponse): void {
+  const saved = process.env.ZIPWIKI_ACCOUNT_ID?.trim();
+  const got = payload.accountId?.trim();
+  if (accountStampConflicts(saved, got)) {
+    throw new AccountMismatchError(process.env.ZIPWIKI_ACCOUNT_EMAIL);
+  }
+  if (!saved && got) {
+    saveZipwikiHomeEnv({ ZIPWIKI_ACCOUNT_ID: got });
+    process.env.ZIPWIKI_ACCOUNT_ID = got;
+  }
+}
+
 /** Pull settings from API and cache. Throws on auth/network errors. */
 export async function pullAccountSettings(opts?: {
   quiet?: boolean;
@@ -113,7 +149,7 @@ export async function pullAccountSettings(opts?: {
   const url = resolveZipwikiApiUrl();
   const key = resolveZipwikiApiKey();
   if (!url || !key) {
-    throw new Error("Not connected — run: zipwiki auth login");
+    throw new Error("Not connected — run: zipwiki login");
   }
 
   let payload: AccountSettingsResponse;
@@ -140,6 +176,7 @@ export async function pullAccountSettings(opts?: {
     }
   }
 
+  enforceAccountStamp(payload);
   const path = saveCachedAccountSettings(payload);
   if (!opts?.quiet) {
     console.error(`[zipwiki] settings synced → ${path}`);
@@ -149,7 +186,7 @@ export async function pullAccountSettings(opts?: {
   return payload;
 }
 
-/** True when both API URL and API key are configured (post `auth login`). */
+/** True when both API URL and API key are configured (post `zipwiki login`). */
 export function isZipwikiAccountConnected(): boolean {
   return Boolean(resolveZipwikiApiUrl() && resolveZipwikiApiKey());
 }
@@ -176,7 +213,7 @@ export function requireAccountConnected(opts?: {
   const reason = opts?.forFeature?.trim();
   throw new Error(
     (reason ? `${reason}\n` : "") +
-      "ZipWiki account required (verified email via login). Run: zipwiki auth login\n" +
+      "ZipWiki account required (verified email via login). Run: zipwiki login\n" +
       "Local pack with LiteParse and --no-ai-okf works without an account.",
   );
 }
@@ -209,14 +246,14 @@ export function requireSetupComplete(
   const c = cached ?? loadCachedAccountSettings();
   if (c && !c.setupComplete) {
     const url =
-      c.setupUrl ?? "Open Settings in the dashboard after zipwiki auth login.";
+      c.setupUrl ?? "Open Settings in the dashboard after zipwiki login.";
     throw new Error(
       `Finish account setup in the browser, then: zipwiki settings pull\n  ${url}`,
     );
   }
   if (!c) {
     throw new Error(
-      "No account settings cache — run: zipwiki auth login  or  zipwiki settings pull",
+      "No account settings cache — run: zipwiki login  or  zipwiki settings pull",
     );
   }
 }
@@ -233,7 +270,7 @@ export async function syncAccountSettingsForPack(opts?: {
     if (!opts?.quiet) {
       console.error(
         "[zipwiki] CLI is not signed in, so portal parser and OKF settings were not loaded.\n" +
-          "  Run: zipwiki auth login",
+          "  Run: zipwiki login",
       );
     }
     return offlineLocalSettingsResponse();
@@ -252,7 +289,8 @@ export async function syncAccountSettingsForPack(opts?: {
     return payload;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Incomplete setup from a successful pull should still hard-fail.
+    // Incomplete setup and a different account must not fall back to cache.
+    if (err instanceof AccountMismatchError) throw err;
     if (/Account setup incomplete/i.test(msg)) throw err;
 
     const cached = loadCachedAccountSettings();

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { DEFAULT_ACCOUNT_SETTINGS } from "@zipwiki/api-client";
 import {
+  accountStampConflicts,
   isZipwikiAccountConnected,
   requireAccountConnected,
   requireAccountForHostedCredential,
@@ -22,6 +23,15 @@ afterEach(() => {
   else process.env.ZIPWIKI_PARSE_CREDENTIAL = savedParse;
   if (savedOkf === undefined) delete process.env.ZIPWIKI_OKF_CREDENTIAL;
   else process.env.ZIPWIKI_OKF_CREDENTIAL = savedOkf;
+});
+
+describe("account stamp", () => {
+  it("conflicts only when both ids are set and differ", () => {
+    assert.equal(accountStampConflicts(undefined, "acct_a"), false);
+    assert.equal(accountStampConflicts("acct_a", undefined), false);
+    assert.equal(accountStampConflicts("acct_a", "acct_a"), false);
+    assert.equal(accountStampConflicts("acct_a", "acct_b"), true);
+  });
 });
 
 describe("account optional for local pack", () => {

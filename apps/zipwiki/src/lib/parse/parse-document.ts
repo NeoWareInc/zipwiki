@@ -42,7 +42,7 @@ async function parseFixedLlama(
   if (!canLlama) {
     throw new Error(
       "LlamaParse is selected, but LLAMA_CLOUD_API_KEY is not set. ZipWiki will not switch to LiteParse.\n" +
-        "  Hosted LlamaParse: zipwiki auth login\n" +
+        "  Hosted LlamaParse: zipwiki login\n" +
         "  This machine: zipwiki config api-key llama <LLAMA_CLOUD_API_KEY>",
     );
   }

@@ -51,7 +51,7 @@ export async function runMainMenu(): Promise<void> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       p.log.error(msg);
-      p.log.message("Run: zipwiki auth login");
+      p.log.message("Run: zipwiki login");
     }
     return;
   }
@@ -64,7 +64,8 @@ export async function runMainMenu(): Promise<void> {
       [
         "zipwiki pack <files…>      Create a .zipwiki Knowledge Archive",
         "zipwiki open|search|read   Query a .zipwiki already on disk",
-        "zipwiki auth login         Connect account (pulls Settings: parser + ZipWiki OKF)",
+        "zipwiki login               Connect account (pulls Settings: parser + ZipWiki OKF)",
+        "zipwiki auth                Show the saved API connection",
         "zipwiki settings show|pull|open",
         "zipwiki config api-key     Local BYO secrets only",
         "",

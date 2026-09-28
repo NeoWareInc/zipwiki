@@ -71,7 +71,7 @@ describe("onboarding + credentials", () => {
       const text = formatNonInteractiveSetupError(
         needsCredentialSetup({ useAi: true, env: process.env }),
       );
-      assert.match(text, /zipwiki auth login/);
+      assert.match(text, /zipwiki login/);
       assert.doesNotMatch(text, /ANTHROPIC_API_KEY/);
       assert.doesNotMatch(text, /OKF_API_KEY/);
       assert.doesNotMatch(text, /No ZipWiki account/);

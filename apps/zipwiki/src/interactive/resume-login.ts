@@ -3,6 +3,7 @@ import type { Command } from "commander";
 import { ZipwikiApiError, type AccountSettingsResponse } from "@zipwiki/api-client";
 import { runAuthLogin } from "../auth-cmd.js";
 import {
+  AccountMismatchError,
   isZipwikiAccountConnected,
   loadCachedAccountSettings,
   pullAccountSettings,
@@ -13,6 +14,7 @@ import { isInteractiveTty } from "./tty.js";
 /** Offline and auth/config commands must not be blocked by a login prompt. */
 const SKIP_LOGIN_PROMPT = new Set([
   "auth",
+  "login",
   "config",
   "list",
   "catalog",
@@ -117,7 +119,7 @@ async function defaultConfirm(message: string): Promise<boolean> {
 }
 
 /**
- * Print why login is required, ask clearly, then run auth login (which pulls Settings).
+ * Print why login is required, ask clearly, then run `zipwiki login` (which pulls Settings).
  */
 export async function promptAndRunLogin(opts: {
   reason: LoginPromptReason;
@@ -142,13 +144,13 @@ export async function promptAndRunLogin(opts: {
   if (!interactive) {
     if (!opts.quiet) {
       console.error(
-        "[zipwiki] Non-interactive session — starting login (or run: zipwiki auth login).",
+        "[zipwiki] Non-interactive session — starting login (or run: zipwiki login).",
       );
     }
     await login();
     if (!isZipwikiAccountConnected()) {
       throw new Error(
-        `${explainer}\nLogin did not connect. Run: zipwiki auth login`,
+        `${explainer}\nLogin did not connect. Run: zipwiki login`,
       );
     }
     return;
@@ -161,7 +163,7 @@ export async function promptAndRunLogin(opts: {
       [
         "Stopped — portal Settings were not loaded.",
         "When you are ready:",
-        "  zipwiki auth login",
+        "  zipwiki login",
         "  (login pulls Settings automatically)",
       ].join("\n"),
     );
@@ -170,7 +172,7 @@ export async function promptAndRunLogin(opts: {
   await login();
   if (!isZipwikiAccountConnected()) {
     throw new Error(
-      `${explainer}\nLogin did not connect. Run: zipwiki auth login`,
+      `${explainer}\nLogin did not connect. Run: zipwiki login`,
     );
   }
 }
@@ -229,6 +231,7 @@ export async function syncAccountSettingsForPackWithAuth(opts?: {
     return payload;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    if (err instanceof AccountMismatchError) throw err;
     if (/Account setup incomplete/i.test(msg)) throw err;
 
     if (isUnauthorizedApiError(err)) {

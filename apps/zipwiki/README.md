@@ -9,4 +9,4 @@ pnpm zipwiki -- open knowledge/sample-docs.zipwiki
 pnpm zipwiki -- search knowledge/sample-docs.zipwiki deed
 ```
 
-Hosted parse/OKF and `auth login` are Phase 3.
+Hosted parse/OKF and `zipwiki login` are Phase 3.

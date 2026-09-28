@@ -67,6 +67,7 @@ export {
   resolveZipwikiApiUrl,
   formatZipwikiApiTarget,
   accountApiUrlAfterLogin,
+  loginApiUrlForTarget,
   dashboardSettingsUrl,
   deviceApprovalPage,
   zipwikiApiUrlForTarget,

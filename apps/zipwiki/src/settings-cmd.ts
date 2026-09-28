@@ -50,7 +50,7 @@ async function recoverFromSettingsAuthFailure(err: unknown): Promise<never> {
     console.error(`  ${msg}`);
   }
   console.error("");
-  console.error("  Needed: zipwiki auth login");
+  console.error("  Needed: zipwiki login");
   console.error(
     "  (login pulls Settings automatically — no separate settings pull)",
   );
@@ -79,7 +79,7 @@ export async function runSettingsShow(opts?: {
   }
   if (!cached) {
     console.error(
-      "[zipwiki] No settings cache yet. Run: zipwiki auth login",
+      "[zipwiki] No settings cache yet. Run: zipwiki login",
     );
     process.exit(1);
   }

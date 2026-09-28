@@ -84,8 +84,8 @@ export default function SignupPage() {
         }
       >
         <p className="text-sm text-(--muted)">
-          Use it with <code className="text-xs">zipwiki auth import</code> or
-          device login. Next, finish pack preferences on Settings.
+          The CLI connects with <code className="text-xs">zipwiki login</code>.
+          Next, finish pack preferences on Settings.
         </p>
         <code className="block rounded-md border border-(--border) bg-(--paper) p-3 text-xs break-all">
           {apiKey}

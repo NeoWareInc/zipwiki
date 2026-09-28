@@ -1,23 +1,18 @@
 import { execFile } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { promisify } from "node:util";
 import {
   fetchAccountSettings,
   fetchClientConfig,
-  formatCliEnv,
-  parseCliEnv,
-  parseCliEnvJson,
   requestDeviceCode,
   waitForDeviceApproval,
   waitForSetupComplete,
   type ClientConfig,
 } from "@zipwiki/api-client";
 import {
-  accountApiUrlAfterLogin,
   dashboardSettingsUrl,
   deviceApprovalPage,
   formatZipwikiApiTarget,
+  loginApiUrlForTarget,
   resolveAuthLoginTarget,
   resolveZipwikiApiKey,
   resolveZipwikiApiUrl,
@@ -86,13 +81,16 @@ export async function runAuthLogin(opts: {
     expiresInSec: device.expires_in,
   });
 
-  const url = accountApiUrlAfterLogin(approved.api_url, target);
+  const url = loginApiUrlForTarget(approved.api_url, target);
+  const accountId = approved.account_id.trim();
   const path = saveZipwikiHomeEnv({
     ZIPWIKI_API_URL: url,
     ZIPWIKI_API_KEY: approved.api_key,
+    ZIPWIKI_ACCOUNT_ID: accountId,
     ...(approved.email ? { ZIPWIKI_ACCOUNT_EMAIL: approved.email } : {}),
   });
   applyConnectionToProcess(url, approved.api_key);
+  process.env.ZIPWIKI_ACCOUNT_ID = accountId;
   if (approved.email) process.env.ZIPWIKI_ACCOUNT_EMAIL = approved.email;
 
   console.error(`[zipwiki] Saved connection to ${path}`);
@@ -196,74 +194,20 @@ export async function runAuthLogin(opts: {
   }
 }
 
-export async function runAuthImport(filePath: string): Promise<void> {
-  const raw =
-    filePath === "-"
-      ? await readStdin()
-      : readFileSync(resolve(filePath), "utf-8");
-
-  let conn;
-  const trimmed = raw.trim();
-  if (trimmed.startsWith("{")) {
-    conn = parseCliEnvJson(JSON.parse(trimmed) as unknown);
-  } else {
-    conn = parseCliEnv(raw);
-  }
-
-  const path = saveZipwikiHomeEnv({
-    ZIPWIKI_API_URL: conn.ZIPWIKI_API_URL,
-    ZIPWIKI_API_KEY: conn.ZIPWIKI_API_KEY,
-  });
-  applyConnectionToProcess(conn.ZIPWIKI_API_URL, conn.ZIPWIKI_API_KEY);
-
-  console.error(`[zipwiki] Imported connection into ${path}`);
-
-  try {
-    const settings = await fetchAccountSettings(
-      conn.ZIPWIKI_API_URL,
-      conn.ZIPWIKI_API_KEY,
-    );
-    saveCachedAccountSettings(settings);
-    applyAccountSettingsToEnv(settings.settings);
-    warnMissingByoSecrets(settings.settings);
-    if (!settings.setupComplete) {
-      console.error(
-        `[zipwiki] Setup incomplete${settings.setupUrl ? `: ${settings.setupUrl}` : " — open dashboard Settings"}`,
-      );
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[zipwiki] Settings sync: ${msg}`);
-  }
-
-  await maybeMigrateLocalOnboarding({
-    url: conn.ZIPWIKI_API_URL,
-    apiKey: conn.ZIPWIKI_API_KEY,
-  });
-
-  try {
-    const cfg = await fetchClientConfig(
-      conn.ZIPWIKI_API_URL,
-      conn.ZIPWIKI_API_KEY,
-      { bypassCache: true },
-    );
-    printClientConfigSummary(cfg);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[zipwiki] Imported, but client-config failed: ${msg}`);
-  }
-}
-
 export async function runAuthStatus(): Promise<void> {
   const url = resolveZipwikiApiUrl();
   const key = resolveZipwikiApiKey();
+  const accountId = process.env.ZIPWIKI_ACCOUNT_ID?.trim();
+  const email = process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim();
   console.error(`Home env:  ${zipwikiHomeEnvPath()}`);
   console.error(`API URL:   ${formatZipwikiApiTarget(url)}`);
   console.error(
     `API key:   ${key ? `${key.slice(0, 12)}…` : "(unset)"}`,
   );
+  console.error(`Account:   ${accountId || "(unset)"}`);
+  console.error(`Email:     ${email || "(unset)"}`);
   if (!url || !key) {
-    console.error("Not fully connected. Run: zipwiki auth login");
+    console.error("Not fully connected. Run: zipwiki login");
     return;
   }
   try {
@@ -278,17 +222,6 @@ export async function runAuthStatus(): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[zipwiki] client-config error: ${msg}`);
   }
-}
-
-export function runAuthExportEnv(): void {
-  const url = resolveZipwikiApiUrl();
-  const key = resolveZipwikiApiKey();
-  if (!url || !key) {
-    throw new Error("No connection — run zipwiki auth login first");
-  }
-  process.stdout.write(
-    formatCliEnv({ ZIPWIKI_API_URL: url, ZIPWIKI_API_KEY: key }),
-  );
 }
 
 function printClientConfigSummary(cfg: ClientConfig): void {
@@ -309,15 +242,4 @@ function printClientConfigSummary(cfg: ClientConfig): void {
   console.error(
     `[zipwiki] Defaults: parse ${cfg.parse.defaults.engine}/${cfg.parse.defaults.mode}, okf ${cfg.okf.provider}/${cfg.okf.model}`,
   );
-}
-
-function readStdin(): Promise<string> {
-  return new Promise((resolvePromise, reject) => {
-    const chunks: Buffer[] = [];
-    process.stdin.on("data", (c) => chunks.push(Buffer.from(c)));
-    process.stdin.on("end", () =>
-      resolvePromise(Buffer.concat(chunks).toString("utf-8")),
-    );
-    process.stdin.on("error", reject);
-  });
 }

@@ -87,6 +87,7 @@ export type DeviceTokenSuccess = {
   api_key: string;
   key_prefix: string;
   api_url: string;
+  account_id: string;
   email?: string;
 };
 

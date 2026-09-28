@@ -77,6 +77,7 @@ export function createConvexGateway(options?: {
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
         account_id?: string;
+        email?: string;
         billable?: boolean;
         fallback?: boolean;
       };
@@ -93,6 +94,9 @@ export function createConvexGateway(options?: {
       return {
         ok: true,
         accountId: data.account_id,
+        ...(typeof data.email === "string" && data.email.trim()
+          ? { email: data.email.trim() }
+          : {}),
         billable: data.billable !== false,
         fallback: data.fallback === true,
       };

@@ -35,6 +35,12 @@ function parseSettingsResponse(body: unknown): AccountSettingsResponse {
   } catch {
     settings = AccountSettingsBodySchema.parse(DEFAULT_ACCOUNT_SETTINGS);
   }
+  const accountId =
+    typeof raw.accountId === "string"
+      ? raw.accountId
+      : typeof raw.account_id === "string"
+        ? raw.account_id
+        : undefined;
   return AccountSettingsResponseSchema.parse({
     settings,
     setupComplete: raw.setupComplete === true,
@@ -42,6 +48,10 @@ function parseSettingsResponse(body: unknown): AccountSettingsResponse {
       typeof raw.setupCompletedAt === "string" ? raw.setupCompletedAt : null,
     updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : null,
     setupUrl: typeof raw.setupUrl === "string" ? raw.setupUrl : null,
+    ...(accountId?.trim() ? { accountId: accountId.trim() } : {}),
+    ...(typeof raw.email === "string" && raw.email.trim()
+      ? { email: raw.email.trim() }
+      : {}),
   });
 }
 

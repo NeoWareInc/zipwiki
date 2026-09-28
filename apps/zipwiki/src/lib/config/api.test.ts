@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { credentialForRemoteOkf } from "./effective.js";
 import {
   accountApiUrlAfterLogin,
+  loginApiUrlForTarget,
   dashboardSettingsUrl,
   deviceApprovalPage,
   resolveAuthLoginTarget,
@@ -179,6 +180,25 @@ describe("credential source resolution", () => {
     assert.equal(
       dashboardSettingsUrl({ apiUrl: "https://api.zipwiki.ai" }),
       "https://zipwiki.ai/dashboard/settings",
+    );
+  });
+
+  it("accepts the dev API URL for a dev login and refuses localhost", () => {
+    assert.equal(
+      loginApiUrlForTarget("https://zipwiki-api-dev.fly.dev", "dev"),
+      ZIPWIKI_DEV_API_URL,
+    );
+    assert.equal(
+      loginApiUrlForTarget("https://api-dev.zipwiki.ai", "dev"),
+      ZIPWIKI_DEV_API_URL,
+    );
+    assert.throws(
+      () => loginApiUrlForTarget("http://localhost:3001", "dev"),
+      /not https:\/\/zipwiki-api-dev\.fly\.dev/,
+    );
+    assert.throws(
+      () => loginApiUrlForTarget("https://api.zipwiki.ai", "dev"),
+      /not https:\/\/zipwiki-api-dev\.fly\.dev/,
     );
   });
 

@@ -49,7 +49,7 @@ engine lands.
 - Sample: `pnpm sample-zipwiki` then `pnpm smoke:zipwiki` (`search deed`)
 
 Package names `@zipwiki/*`; home `~/.zipwiki`. Hosted auth is stubbed through
-for Phase 3 (`zipwiki auth login`).
+for Phase 3 (`zipwiki login`).
 
 ## Phase 3 — TypeScript Beta (full product)
 

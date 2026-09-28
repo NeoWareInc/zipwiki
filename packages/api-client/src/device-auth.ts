@@ -74,7 +74,9 @@ export async function pollDeviceToken(
   if (
     typeof body.api_key !== "string" ||
     typeof body.api_url !== "string" ||
-    typeof body.key_prefix !== "string"
+    typeof body.key_prefix !== "string" ||
+    typeof body.account_id !== "string" ||
+    !body.account_id.trim()
   ) {
     throw new ZipwikiApiError("invalid_device_token_response", res.status, body);
   }
@@ -84,6 +86,7 @@ export async function pollDeviceToken(
     api_key: body.api_key,
     key_prefix: body.key_prefix,
     api_url: body.api_url,
+    account_id: body.account_id.trim(),
     ...(typeof body.email === "string" && body.email.trim()
       ? { email: body.email.trim() }
       : {}),
@@ -115,7 +118,7 @@ export async function waitForDeviceApproval(
         (result.interval ?? opts.intervalSec) * 1000,
       );
     } else if (result.status === "expired_token") {
-      throw new Error("Device code expired — run auth login again");
+      throw new Error("Device code expired — run: zipwiki login");
     } else if (result.status === "access_denied") {
       throw new Error("Device login was denied in the browser");
     } else if (result.status === "error") {
@@ -123,5 +126,5 @@ export async function waitForDeviceApproval(
     }
     await sleep(intervalMs);
   }
-  throw new Error("Device code expired — run auth login again");
+  throw new Error("Device code expired — run: zipwiki login");
 }

@@ -12,7 +12,7 @@ export type ZipwikiApiConfig = {
   key?: string;
 };
 
-/** Named ZipWiki API deployments selectable in `zipwiki init` / `auth login --env`. */
+/** Named ZipWiki API deployments selectable in `zipwiki login --env`. */
 export type ZipwikiApiTarget = "local" | "dev" | "production";
 
 /**
@@ -72,7 +72,7 @@ export function zipwikiApiUrlForTarget(target: ZipwikiApiTarget): string {
   return ZIPWIKI_API_PRESETS[target].url;
 }
 
-/** Where `auth login` requests and polls a device code. */
+/** Where `zipwiki login` requests and polls a device code. */
 export function zipwikiDeviceAuthUrl(target: ZipwikiApiTarget): string {
   if (target === "local" || target === "dev") return ZIPWIKI_DEV_DEVICE_AUTH_URL;
   return zipwikiApiUrlForTarget(target);
@@ -147,6 +147,38 @@ export function dashboardSettingsUrl(input?: {
 }
 
 /**
+ * API URL to save after device approval.
+ * The returned host must be this login's deployment. Localhost and the other
+ * environment are refused instead of rewritten.
+ */
+export function loginApiUrlForTarget(
+  approvedUrl: string | undefined,
+  target: ZipwikiApiTarget,
+): string {
+  const expected = zipwikiApiUrlForTarget(target);
+  const url = approvedUrl?.trim().replace(/\/+$/, "") ?? "";
+  if (!loginApiUrlMatchesTarget(url, target)) {
+    throw new Error(
+      `Login returned ${url || "no API URL"}, which is not ${expected}. Run: zipwiki login`,
+    );
+  }
+  return expected;
+}
+
+function loginApiUrlMatchesTarget(
+  url: string,
+  target: ZipwikiApiTarget,
+): boolean {
+  if (!url || url.includes(",") || /localhost|127\.0\.0\.1/i.test(url)) {
+    return false;
+  }
+  const expected = zipwikiApiUrlForTarget(target);
+  if (normalizeApiUrl(url) === normalizeApiUrl(expected)) return true;
+  if (target === "dev" || target === "local") return isDevApiUrl(url);
+  return normalizeApiUrl(url) === normalizeApiUrl("https://zipwiki-api-prod.fly.dev");
+}
+
+/**
  * API base saved after login. A missing or local URL from Convex falls back
  * to the Fly host for this target.
  */
@@ -198,7 +230,7 @@ export function hasZipwikiApiCredentials(
 /**
  * Legacy flag. Prefer setting `ZIPWIKI_API_URL` (+ key when required).
  * When URL is set, parse/OKF already default to hosted without this flag.
- * Kept for older installs; do not write it from `auth login` / download.
+ * Kept for older installs; do not write it from `zipwiki login`.
  */
 export function isHostedMode(input?: {
   env?: NodeJS.ProcessEnv;
@@ -207,7 +239,7 @@ export function isHostedMode(input?: {
 }
 
 /**
- * CLI distribution channel. Release builds lock `auth login` to production.
+ * CLI distribution channel. Release builds lock `zipwiki login` to production.
  * Default in this monorepo is **dev** unless `ZIPWIKI_CLI_CHANNEL=release`.
  */
 export function zipCodexCliChannel(
@@ -226,7 +258,7 @@ export function isZipWikiCliReleaseChannel(
 }
 
 /**
- * Resolve which API preset `auth login` may target.
+ * Resolve which API preset `zipwiki login` may target.
  * Release → always production. Dev channel → local|dev both mean hosted Dev; default: dev.
  */
 export function resolveAuthLoginTarget(

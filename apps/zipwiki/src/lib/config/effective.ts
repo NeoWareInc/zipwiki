@@ -211,7 +211,7 @@ export function formatNonInteractiveSetupError(
   if (!cliSignedIn()) {
     return [
       "This CLI is not signed in, so the parser and OKF from the ZipWiki portal were not loaded.",
-      "Run: zipwiki auth login",
+      "Run: zipwiki login",
       "Then pack again. Parse and AI OKF follow the portal settings.",
     ].join("\n");
   }
@@ -233,7 +233,7 @@ export function formatNonInteractiveSetupError(
   if (status.useAi && !status.hasOkfKey) {
     return [
       "AI OKF is on in the portal, and this machine has no key for that OKF source.",
-      "Hosted ZipWiki OKF applies after zipwiki auth login.",
+      "Hosted ZipWiki OKF applies after zipwiki login.",
       "Anthropic on this machine: zipwiki config api-key anthropic <key>",
     ].join("\n");
   }

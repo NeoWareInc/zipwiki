@@ -50,7 +50,11 @@ export async function registerGateway(
     }
     try {
       const settings = await deps.convex.getAccountSettings(validated.accountId);
-      return reply.code(200).send(settings);
+      return reply.code(200).send({
+        ...settings,
+        accountId: validated.accountId,
+        ...(validated.email ? { email: validated.email } : {}),
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "settings_get_failed";
       return reply.code(502).send({ error: message });

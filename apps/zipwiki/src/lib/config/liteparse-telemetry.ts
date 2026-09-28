@@ -66,7 +66,7 @@ export async function maybeReportLlamaParseUsage(input: {
     if (!warnedUnbilledLlama && !input.quiet) {
       warnedUnbilledLlama = true;
       console.error(
-        "[zipwiki] LlamaParse was not charged to an account. Run `zipwiki auth login` so each job's Llama credits are deducted.",
+        "[zipwiki] LlamaParse was not charged to an account. Run `zipwiki login` so each job's Llama credits are deducted.",
       );
     }
     return;

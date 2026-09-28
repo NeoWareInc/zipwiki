@@ -129,7 +129,7 @@ export async function loginZipWikiAccount(input: {
   const sessionId = extractSessionCookie(rawCookie);
   if (!sessionId) {
     throw new Error(
-      "Login succeeded but no session cookie was returned. Prefer: zipwiki auth login (device code → Convex).",
+      "Login succeeded but no session cookie was returned. Prefer: zipwiki login (device code → Convex).",
     );
   }
   return { user: body.user, sessionId };

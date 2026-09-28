@@ -4,31 +4,6 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
-function apiBaseForCli(): string {
-  return (
-    import.meta.env.VITE_API_URL ?? "https://zipwiki-api-dev.fly.dev"
-  ).replace(/\/$/, "");
-}
-
-function formatCliEnvFile(apiUrl: string, apiKey: string): string {
-  return (
-    `# ZipWiki CLI connection — do not commit\n` +
-    `# Import: zipwiki auth import zipwiki-cli.env\n` +
-    `ZIPWIKI_API_URL=${JSON.stringify(apiUrl)}\n` +
-    `ZIPWIKI_API_KEY=${JSON.stringify(apiKey)}\n`
-  );
-}
-
-function downloadText(filename: string, text: string): void {
-  const blob = new Blob([text], { type: "text/plain;charset:utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 type KeyRow = {
   id: string;
   name: string;
@@ -42,7 +17,6 @@ export default function KeysPage() {
   const [newKey, setNewKey] = useState<string | null>(null);
   const [revealedById, setRevealedById] = useState<Record<string, string>>({});
   const [welcome, setWelcome] = useState(false);
-  const [cliEnvSnippet, setCliEnvSnippet] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const keys = useQuery(api.apiKeys.listMine);
   const createMine = useMutation(api.apiKeys.createMine);
@@ -56,15 +30,12 @@ export default function KeysPage() {
     }
   }, [params, setParams]);
 
-  async function create(name: string, download: boolean) {
+  async function create(name: string) {
     setBusy(true);
     try {
       const res = await createMine({ name });
       setNewKey(res.apiKey);
       setRevealedById((prev) => ({ ...prev, [res.id]: res.apiKey }));
-      const text = formatCliEnvFile(apiBaseForCli(), res.apiKey);
-      setCliEnvSnippet(text);
-      if (download) downloadText("zipwiki-cli.env", text);
     } finally {
       setBusy(false);
     }
@@ -76,42 +47,29 @@ export default function KeysPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="font-display text-3xl font-semibold">API keys</h1>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => void create("CLI download", true)}
-            disabled={busy}
-            className="rounded-md border border-(--border) bg-white px-4 py-2 text-sm font-semibold transition-colors hover:bg-(--paper)"
-          >
-            Download CLI config
-          </button>
-          <button
-            type="button"
-            onClick={() => void create("API key", false)}
-            disabled={busy}
-            className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-(--accent-bright)"
-          >
-            Create key
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => void create("API key")}
+          disabled={busy}
+          className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-(--accent-bright)"
+        >
+          Create key
+        </button>
       </div>
 
       {welcome && (
         <div className="rounded-xl border border-(--border) bg-(--paper) p-4 text-sm text-(--ink)">
-          Welcome — your account is ready. Prefer{" "}
-          <code className="text-xs">zipwiki auth login</code> in the terminal,
-          or download a CLI config here (
-          <code className="text-xs">zipwiki auth import</code>). The dashboard
-          uses your session and does not need a key.
+          Welcome — your account is ready. Connect the CLI with{" "}
+          <code className="text-xs">zipwiki login</code>. The dashboard uses
+          your session and does not need a key.
         </div>
       )}
 
       <p className="text-sm text-(--muted)">
         Full secrets are shown only once when created.{" "}
-        <code className="text-xs">zipwiki auth login</code> rotates the active{" "}
-        <code className="text-xs">CLI zipwiki</code> key and saves it to{" "}
-        <code className="text-xs">~/.zipwiki/.env</code>. Last used updates when
-        the key hits the hosted API (parse, OKF, whoami).
+        <code className="text-xs">zipwiki login</code> connects this same
+        account and writes the API URL and key on that machine. Last used
+        updates when the key hits the hosted API (parse, OKF, whoami).
       </p>
 
       {newKey && (
@@ -128,36 +86,11 @@ export default function KeysPage() {
             </code>
             <CopyButton value={newKey} label="Copy API key" />
           </div>
-          {cliEnvSnippet && (
-            <div className="mt-4 space-y-2">
-              <p className="font-medium">CLI env (URL + key only)</p>
-              <pre className="overflow-x-auto rounded-md bg-white/70 p-3 text-xs">
-                {cliEnvSnippet}
-              </pre>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="rounded-md border border-(--border) bg-white px-3 py-1.5 text-xs font-medium"
-                  onClick={() => void navigator.clipboard.writeText(cliEnvSnippet)}
-                >
-                  Copy CLI env
-                </button>
-                <button
-                  type="button"
-                  className="rounded-md border border-(--border) bg-white px-3 py-1.5 text-xs font-medium"
-                  onClick={() =>
-                    downloadText("zipwiki-cli.env", cliEnvSnippet)
-                  }
-                >
-                  Download zipwiki-cli.env
-                </button>
-              </div>
-              <p className="text-xs text-(--muted)">
-                Then:{" "}
-                <code>zipwiki auth import ~/Downloads/zipwiki-cli.env</code>
-              </p>
-            </div>
-          )}
+          <p className="mt-3 text-xs text-(--muted)">
+            This key is for HTTP clients. The CLI uses{" "}
+            <code>zipwiki login</code>, which saves the connection for this
+            account.
+          </p>
         </div>
       )}
 

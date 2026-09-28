@@ -68,9 +68,12 @@ export const pollToken = internalMutation({
     const apiKey = row.apiKeyOnce;
     if (!apiKey) return { status: "pending" as const };
 
+    const accountId = row.accountId;
+    if (!accountId) return { status: "pending" as const };
+
     let email: string | undefined;
-    if (row.accountId) {
-      const account = await ctx.db.get(row.accountId);
+    {
+      const account = await ctx.db.get(accountId);
       if (account) {
         const profile = await ctx.db
           .query("profiles")
@@ -101,6 +104,7 @@ export const pollToken = internalMutation({
       access_token: apiKey,
       token_type: "bearer" as const,
       key_prefix: row.keyPrefix,
+      accountId,
       email,
     };
   },

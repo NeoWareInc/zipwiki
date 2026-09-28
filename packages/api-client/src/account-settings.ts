@@ -155,6 +155,9 @@ export const AccountSettingsResponseSchema = z.object({
   setupCompletedAt: z.string().nullable(),
   updatedAt: z.string().nullable(),
   setupUrl: z.string().nullable().optional(),
+  /** Account that owns the API key. Absent on older servers. */
+  accountId: z.string().optional(),
+  email: z.string().optional(),
 });
 
 export type AccountSettingsResponse = z.infer<

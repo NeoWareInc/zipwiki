@@ -2,6 +2,7 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { auth } from "./auth";
+import { canonicalPublicApiUrl } from "./publicApiUrl";
 
 const http = httpRouter();
 
@@ -40,11 +41,7 @@ function workerAuthorized(req: Request): boolean {
 }
 
 function publicApiUrl(): string {
-  return (
-    process.env.ZIPWIKI_API_URL?.trim() ||
-    process.env.ZIPWIKI_PUBLIC_API_URL?.trim() ||
-    "http://localhost:3001"
-  ).replace(/\/+$/, "");
+  return canonicalPublicApiUrl();
 }
 
 http.route({
@@ -116,6 +113,7 @@ http.route({
       api_key: result.access_token,
       key_prefix: result.key_prefix,
       api_url: publicApiUrl(),
+      account_id: result.accountId,
       ...(result.email ? { email: result.email } : {}),
     });
   }),
@@ -190,6 +188,8 @@ http.route({
       setupCompletedAt: row.setupCompletedAt,
       updatedAt: row.updatedAt,
       setupUrl: row.setupUrl,
+      accountId: keyCtx.accountId,
+      ...(keyCtx.email ? { email: keyCtx.email } : {}),
     });
   }),
 });
@@ -305,6 +305,7 @@ http.route({
     return json({
       ok: true,
       account_id: keyCtx.accountId,
+      ...(keyCtx.email ? { email: keyCtx.email } : {}),
       plan: keyCtx.plan,
       credits_remaining: keyCtx.creditsRemaining,
       credits_unlimited: keyCtx.creditsUnlimited,

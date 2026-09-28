@@ -19,6 +19,7 @@ export type ValidateResult =
   | {
       ok: true;
       accountId: string;
+      email?: string;
       billable: boolean;
       fallback: boolean;
     };
