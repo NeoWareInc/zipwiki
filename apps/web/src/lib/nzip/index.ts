@@ -11,3 +11,8 @@ export {
   readZipEntryPayload,
   readZipEntryText,
 } from "./zip";
+export {
+  integritySummary,
+  testArchiveIntegrity,
+  type IntegrityLine,
+} from "./integrity";

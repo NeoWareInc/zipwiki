@@ -5,8 +5,11 @@ import { api } from "@convex/_generated/api";
 import { PromptSection } from "../components/ZipWikiPrompts";
 import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
+  integritySummary,
   openNzip,
+  testArchiveIntegrity,
   zipMethodLabel,
+  type IntegrityLine,
   type NzipOpenSummary,
 } from "../lib/nzip";
 
@@ -63,14 +66,24 @@ function extractedMarkdownSummary(summary: NzipOpenSummary): string {
   return `${markdown} text file${markdown === 1 ? "" : "s"} · ${originals} original${originals === 1 ? "" : "s"}`;
 }
 
-function okfConceptSummary(paths: string[]): string {
+function okfCounts(paths: string[]): { concepts: number; topics: number } {
   let concepts = 0;
   let topics = 0;
   for (const path of paths) {
     if (isOkfTopic(path)) topics += 1;
     else concepts += 1;
   }
+  return { concepts, topics };
+}
+
+function okfConceptSummary(paths: string[]): string {
+  const { concepts, topics } = okfCounts(paths);
   return `${concepts} concept${concepts === 1 ? "" : "s"} · ${topics} topic${topics === 1 ? "" : "s"}`;
+}
+
+function okfOverview(paths: string[]): string {
+  const { concepts, topics } = okfCounts(paths);
+  return `yes (${concepts} concept${concepts === 1 ? "" : "s"}/${topics} topic${topics === 1 ? "" : "s"})`;
 }
 
 function inputDocumentSummary(summary: NzipOpenSummary): string {
@@ -98,6 +111,9 @@ export default function KnowledgePage() {
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<NzipOpenSummary | null>(null);
   const [opened, setOpened] = useState<PackageSection[]>([]);
+  const [integrity, setIntegrity] = useState<IntegrityLine[] | null>(null);
+  const [testing, setTesting] = useState(false);
+  const archiveRef = useRef<ArrayBuffer | null>(null);
   const reportActivity = useMutation(api.usage.reportActivity);
 
   const loadFile = useCallback(
@@ -106,8 +122,11 @@ export default function KnowledgePage() {
       setLoading(true);
       setSummary(null);
       setOpened([]);
+      setIntegrity(null);
+      archiveRef.current = null;
       try {
         const buf = await file.arrayBuffer();
+        archiveRef.current = buf;
         const opened = await openNzip(buf, file.name);
         setSummary(opened);
         void reportActivity({
@@ -143,7 +162,24 @@ export default function KnowledgePage() {
     setSummary(null);
     setError("");
     setOpened([]);
+    setIntegrity(null);
+    setTesting(false);
+    archiveRef.current = null;
     if (inputRef.current) inputRef.current.value = "";
+  }
+
+  async function testIntegrity() {
+    const buf = archiveRef.current;
+    if (!buf || !summary || testing) return;
+    setTesting(true);
+    setIntegrity([]);
+    try {
+      await testArchiveIntegrity(buf, summary.entries, (line) => {
+        setIntegrity((current) => [...(current ?? []), line]);
+      });
+    } finally {
+      setTesting(false);
+    }
   }
 
   const sectionLinks: { id: PackageSection; label: string }[] = summary
@@ -249,13 +285,23 @@ export default function KnowledgePage() {
                 {summary.filename} · {formatBytes(summary.byteLength)}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={clear}
-              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--paper)]"
-            >
-              Close
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => void testIntegrity()}
+                disabled={testing}
+                className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {testing ? "Testing…" : "Test Integrity"}
+              </button>
+              <button
+                type="button"
+                onClick={clear}
+                className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--paper)]"
+              >
+                Close
+              </button>
+            </div>
           </div>
 
           <dl className="grid gap-3 rounded-xl border border-[var(--border)] bg-white p-5 text-sm sm:grid-cols-2">
@@ -280,7 +326,7 @@ export default function KnowledgePage() {
               label="OKF"
               value={
                 summary.okf.present
-                  ? `yes (${summary.okf.concepts.length} concepts)`
+                  ? okfOverview(summary.okf.concepts)
                   : "no"
               }
             />
@@ -297,6 +343,35 @@ export default function KnowledgePage() {
               value={summary.methods.join(", ") || "—"}
             />
           </dl>
+
+          {integrity && (
+            <section>
+              <h2 className="font-display text-xl font-semibold">
+                Integrity
+              </h2>
+              <div className="mt-3 rounded-xl border border-[var(--border)] bg-white p-4">
+                <ul className="space-y-1 font-mono text-xs">
+                  {integrity.map((line) => (
+                    <li key={line.name}>
+                      testing: {line.name} ...{" "}
+                      <span
+                        className={
+                          line.ok ? "text-green-700" : "text-red-700"
+                        }
+                      >
+                        {line.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {!testing && (
+                  <p className="mt-3 text-sm font-medium text-[var(--ink)]">
+                    {integritySummary(integrity)}
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
 
           {opened.map((id) => (
             <SectionBody key={id} summary={summary} section={id} />
