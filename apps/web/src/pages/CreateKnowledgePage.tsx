@@ -15,7 +15,7 @@ export default function CreateKnowledgePage() {
             to="/dashboard/knowledge"
             className="text-(--accent) hover:underline"
           >
-            Knowledge Archive
+            Query ZipWiki
           </Link>
           .
         </p>

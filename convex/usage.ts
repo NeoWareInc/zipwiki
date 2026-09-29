@@ -336,6 +336,164 @@ export const recordUsage = internalMutation({
   },
 });
 
+/** Credits and account id for a signed-in user about to ask a package question. */
+export const queryBilling = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const account = await ctx.db
+      .query("accounts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!account) return null;
+    return {
+      accountId: account._id,
+      creditsRemaining: remainingCredits(account),
+      creditsUnlimited: account.creditsUnlimited === true,
+    };
+  },
+});
+
+/**
+ * Debit a hosted package question. Counts as query activity, not an OKF pack.
+ * Unlimited accounts are logged and not charged.
+ */
+export const recordQueryDebit = internalMutation({
+  args: {
+    accountId: v.id("accounts"),
+    model: v.string(),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    filename: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const creditCost = zipwikiCreditsForAnthropicTokens({
+      model: args.model,
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+    });
+    const safeFilename =
+      typeof args.filename === "string" && args.filename.trim()
+        ? args.filename.trim().slice(0, 512)
+        : undefined;
+    const periodStart = startOfMonthMs();
+    let period = await ctx.db
+      .query("usagePeriods")
+      .withIndex("by_account_period", (q) =>
+        q.eq("accountId", args.accountId).eq("periodStart", periodStart),
+      )
+      .unique();
+    if (!period) {
+      const id = await ctx.db.insert("usagePeriods", {
+        accountId: args.accountId,
+        periodStart,
+        parseCount: 0,
+        okfCount: 0,
+        liteparseSuccessCount: 0,
+        liteparseFailCount: 0,
+        queryCount: 1,
+      });
+      period = (await ctx.db.get(id))!;
+    } else {
+      await ctx.db.patch(period._id, {
+        queryCount: (period.queryCount ?? 0) + 1,
+      });
+    }
+
+    await ctx.db.insert("usageEvents", {
+      accountId: args.accountId,
+      type: "query",
+      engine: "anthropic",
+      status: "success",
+      provider: "anthropic",
+      model: args.model,
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+      creditCost,
+      filename: safeFilename,
+    });
+
+    const providerAccount = await ctx.db
+      .query("providerAccounts")
+      .withIndex("by_slug", (q) => q.eq("slug", "anthropic"))
+      .unique();
+    if (providerAccount) {
+      await ctx.db.insert("providerFloatLedger", {
+        providerAccountId: providerAccount._id,
+        kind: "usage",
+        inputTokens: args.inputTokens,
+        outputTokens: args.outputTokens,
+        calls: 1,
+        accountId: args.accountId,
+      });
+    }
+
+    const account = await ctx.db.get(args.accountId);
+    if (!account || account.creditsUnlimited) {
+      return {
+        creditsCharged: 0,
+        creditsRemaining: account ? remainingCredits(account) : 0,
+        creditsUnlimited: account?.creditsUnlimited === true,
+      };
+    }
+
+    const before = remainingCredits(account);
+    const spent = (account.creditsSpent ?? 0) + creditCost;
+    const after = Math.max(0, (account.creditsPurchased ?? 0) - spent);
+    const notify = crossedLowCreditThreshold({
+      before,
+      after,
+      notifiedAt: account.lowCreditNotifiedAt,
+    });
+    const now = Date.now();
+    const reload = shouldStartAutoReload({
+      enabled: account.autoReloadEnabled,
+      remaining: after,
+      threshold: account.autoReloadThresholdCredits,
+      pending: account.autoReloadPending,
+      pendingAt: account.autoReloadPendingAt,
+      hasPaymentMethod: Boolean(account.stripePaymentMethodId),
+      now,
+    });
+    await ctx.db.patch(args.accountId, {
+      creditsSpent: spent,
+      ...(notify ? { lowCreditNotifiedAt: now } : {}),
+      ...(reload
+        ? {
+            autoReloadPending: true,
+            autoReloadPendingAt: now,
+            autoReloadLastError: "",
+          }
+        : {}),
+    });
+    await ctx.db.insert("creditLedger", {
+      accountId: args.accountId,
+      kind: "spend_llm",
+      credits: -creditCost,
+      engine: "anthropic",
+      provider: "anthropic",
+      model: args.model,
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+      filename: safeFilename,
+    });
+    if (notify) {
+      await ctx.scheduler.runAfter(0, internal.mail.sendLowCredit, {
+        accountId: args.accountId,
+      });
+    }
+    if (reload) {
+      await ctx.scheduler.runAfter(0, internal.stripe.maybeAutoReload, {
+        accountId: args.accountId,
+      });
+    }
+    return {
+      creditsCharged: creditCost,
+      creditsRemaining: after,
+      creditsUnlimited: false,
+    };
+  },
+});
+
 export const recordLiteparse = internalMutation({
   args: {
     accountId: v.id("accounts"),

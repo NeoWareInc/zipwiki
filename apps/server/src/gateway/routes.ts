@@ -1,11 +1,33 @@
+import { timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { createConvexGateway } from "./convex.js";
-import { handleOkf, handleParse, type GatewayDeps } from "./handle.js";
+import {
+  handleOkf,
+  handleParse,
+  handleQueryAnswer,
+  type GatewayDeps,
+  type QueryExcerptInput,
+} from "./handle.js";
 
 function bearer(header: string | undefined): string {
   if (!header) return "";
   const match = /^Bearer\s+(.+)$/i.exec(header.trim());
   return match?.[1]?.trim() ?? "";
+}
+
+function headerText(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0]?.trim() ?? "";
+  return value?.trim() ?? "";
+}
+
+/** Fail closed. A missing worker secret does not open the model route. */
+function workerSecretMatches(got: string, expected: string | undefined): boolean {
+  const want = expected?.trim() ?? "";
+  if (!want || !got) return false;
+  const left = Buffer.from(got);
+  const right = Buffer.from(want);
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
 }
 
 export function gatewayDeps(overrides?: Partial<GatewayDeps>): GatewayDeps {
@@ -332,6 +354,44 @@ export async function registerGateway(
           typeof raw.documentType === "string" ? raw.documentType : undefined,
       },
     });
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.post("/api/query/answer", async (req, reply) => {
+    const env = deps.env ?? process.env;
+    const secret = headerText(req.headers["x-zipwiki-worker-secret"]);
+    if (!workerSecretMatches(secret, env.ZIPWIKI_WORKER_SECRET)) {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+    const body = req.body;
+    if (!body || typeof body !== "object") {
+      return reply.code(400).send({ error: "invalid_request" });
+    }
+    const raw = body as Record<string, unknown>;
+    const question = typeof raw.question === "string" ? raw.question : "";
+    const excerpts = Array.isArray(raw.excerpts)
+      ? raw.excerpts.flatMap((item): QueryExcerptInput[] => {
+          if (!item || typeof item !== "object") return [];
+          const row = item as Record<string, unknown>;
+          const path = typeof row.path === "string" ? row.path : "";
+          const text = typeof row.text === "string" ? row.text : "";
+          const kind = row.kind === "parsed" ? "parsed" : row.kind === "okf" ? "okf" : null;
+          if (!path || !kind) return [];
+          const documents = Array.isArray(row.documents)
+            ? row.documents.filter((path): path is string => typeof path === "string")
+            : [];
+          return [
+            {
+              path,
+              text,
+              kind,
+              ...(typeof row.title === "string" ? { title: row.title } : {}),
+              ...(documents.length > 0 ? { documents } : {}),
+            },
+          ];
+        })
+      : [];
+    const result = await handleQueryAnswer(deps, { question, excerpts });
     return reply.code(result.status).send(result.body);
   });
 }

@@ -92,7 +92,7 @@ function SidebarNav({
         className={() => navClass({ isActive: knowledgeActive })}
         onClick={onNavigate}
       >
-        Knowledge Archive
+        Query ZipWiki
       </NavLink>
       {isAdmin && (
         <NavLink
@@ -132,7 +132,7 @@ function SidebarBody({
             alt=""
             width={26}
             height={26}
-            className="h-[26px] w-[26px] rounded-[7px] shadow-sm"
+            className="h-6.5 w-6.5 rounded-[7px] shadow-sm"
           />
           ZipWiki
         </Link>
@@ -217,7 +217,7 @@ export function DashboardLayout() {
               alt=""
               width={22}
               height={22}
-              className="h-[22px] w-[22px] rounded-[6px] shadow-sm"
+              className="h-5.5 w-5.5 rounded-md shadow-sm"
             />
             ZipWiki
           </Link>

@@ -1,4 +1,8 @@
-import { invokeAnthropic, type OkfRequest } from "./anthropic.js";
+import {
+  invokeAnthropic,
+  invokeQueryAnswer,
+  type OkfRequest,
+} from "./anthropic.js";
 import {
   invokeLlamaParse,
   LlamaParseTimeoutError,
@@ -192,4 +196,57 @@ export async function handleOkf(
   }
 
   return { status: 200, body: completion.enrichment };
+}
+
+const QUERY_BODY_CHARS = 12_000;
+const QUERY_QUESTION_CHARS = 2_000;
+
+export type QueryExcerptInput = {
+  path: string;
+  title?: string;
+  kind: "okf" | "parsed";
+  text: string;
+  documents?: string[];
+};
+
+/**
+ * Answer a package question with the Fly-held Anthropic key.
+ * Credit checks stay in Convex; this route only runs the model.
+ */
+export async function handleQueryAnswer(
+  deps: GatewayDeps,
+  args: { question: string; excerpts: QueryExcerptInput[] },
+): Promise<GatewayResponse> {
+  const env = deps.env ?? process.env;
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  const apiKey = masterKey(env, "ANTHROPIC_API_KEY");
+  if (!apiKey) return { status: 503, body: { error: "anthropic_not_configured" } };
+
+  const question = args.question.trim().slice(0, QUERY_QUESTION_CHARS);
+  const excerpts = args.excerpts.slice(0, 3).map((excerpt) => ({
+    path: excerpt.path.slice(0, 512),
+    title: excerpt.title?.slice(0, 240),
+    kind: excerpt.kind,
+    text: excerpt.text.slice(0, QUERY_BODY_CHARS),
+    documents: (excerpt.documents ?? [])
+      .filter((path) => path.trim())
+      .slice(0, 8)
+      .map((path) => path.slice(0, 512)),
+  }));
+  if (!question || excerpts.every((excerpt) => !excerpt.text.trim())) {
+    return { status: 400, body: { error: "invalid_request" } };
+  }
+
+  try {
+    const completion = await invokeQueryAnswer(
+      question,
+      excerpts,
+      apiKey,
+      fetchImpl,
+    );
+    return { status: 200, body: completion };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "query_failed";
+    return { status: 502, body: { error: message } };
+  }
 }

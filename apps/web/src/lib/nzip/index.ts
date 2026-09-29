@@ -11,3 +11,10 @@ export {
   readZipEntryPayload,
   readZipEntryText,
 } from "./zip";
+export {
+  integritySummary,
+  payloadCrcMatches,
+  testArchiveIntegrity,
+  type IntegrityLine,
+} from "./integrity";
+export { queryPackage, type PackageQuery, type QueryExcerpt, type QueryHit } from "./query";
