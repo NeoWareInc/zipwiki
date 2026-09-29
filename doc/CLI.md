@@ -7,7 +7,7 @@ compile for.
 | Command group | Job |
 | --- | --- |
 | **Create** | `zipwiki pack` / `update` — build a `.zipwiki` knowledge base |
-| **Query** | `zipwiki open` / `search` / `read` / `extract` / `origin` |
+| **Query** | `zipwiki open` / `search` / `read` / `extract` / `origin` — see **[QUERY.md](QUERY.md)** |
 
 Agent query of a finished package is **stdio MCP** ([MCP.md](MCP.md)), backed by
 the zipaccess library ([ZIPACCESS.md](ZIPACCESS.md)). Query commands do not
@@ -39,6 +39,8 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 members are copied compressed.
 
 ## zipwiki query
+
+Full flag reference and evaluation shortcuts: **[QUERY.md](QUERY.md)**.
 
 ```bash
 zipwiki open ./knowledge/docs.zipwiki
