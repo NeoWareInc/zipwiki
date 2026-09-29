@@ -206,6 +206,7 @@ export type QueryExcerptInput = {
   title?: string;
   kind: "okf" | "parsed";
   text: string;
+  documents?: string[];
 };
 
 /**
@@ -227,6 +228,10 @@ export async function handleQueryAnswer(
     title: excerpt.title?.slice(0, 240),
     kind: excerpt.kind,
     text: excerpt.text.slice(0, QUERY_BODY_CHARS),
+    documents: (excerpt.documents ?? [])
+      .filter((path) => path.trim())
+      .slice(0, 8)
+      .map((path) => path.slice(0, 512)),
   }));
   if (!question || excerpts.every((excerpt) => !excerpt.text.trim())) {
     return { status: 400, body: { error: "invalid_request" } };

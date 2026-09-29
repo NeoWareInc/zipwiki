@@ -21,6 +21,8 @@ export type QueryHit = {
   snippet: string;
   /** Parsed text used because no concept card matched. */
   evidence?: boolean;
+  /** Full extracted-text files this concept cites. */
+  documents?: string[];
 };
 
 export type QueryExcerpt = {
@@ -29,6 +31,8 @@ export type QueryExcerpt = {
   kind: "okf" | "parsed";
   text: string;
   truncated: boolean;
+  /** Full extracted-text files this concept cites. */
+  documents?: string[];
 };
 
 export type QuerySkipped = {
@@ -51,6 +55,7 @@ type ScoredFile = {
   snippet: string;
   evidence?: boolean;
   text: string;
+  documents?: string[];
 };
 
 function tokenize(text: string): string[] {
@@ -186,10 +191,63 @@ async function readVerifiedText(
   }
 }
 
+function parseSourceResources(block: string): string[] {
+  const resources: string[] = [];
+  let inSources = false;
+  for (const line of block.split(/\r?\n/)) {
+    if (/^sources:\s*$/.test(line)) {
+      inSources = true;
+      continue;
+    }
+    if (inSources && /^\S/.test(line)) break;
+    if (!inSources) continue;
+    const match = /^\s+(?:-\s+)?resource:\s*(.+)$/.exec(line);
+    if (match) resources.push(unquote(match[1]!));
+  }
+  return resources;
+}
+
+function resolveResource(fromFile: string, resource: string): string | null {
+  const raw = resource.trim();
+  if (!raw || raw.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(raw)) return null;
+  const stack = fromFile.split("/").slice(0, -1);
+  for (const segment of raw.split("/")) {
+    if (!segment || segment === ".") continue;
+    if (segment === "..") {
+      if (stack.length === 0) return null;
+      stack.pop();
+    } else {
+      stack.push(segment);
+    }
+  }
+  const path = stack.join("/");
+  return path || null;
+}
+
+/** Parsed markdown files cited by a concept and present in the archive. */
+function parsedDocuments(
+  conceptPath: string,
+  markdown: string,
+  names: Set<string>,
+): string[] {
+  const { frontmatter } = splitFrontmatter(markdown);
+  if (!frontmatter) return [];
+  const found: string[] = [];
+  for (const resource of parseSourceResources(frontmatter)) {
+    const resolved = resolveResource(conceptPath, resource);
+    if (!resolved?.startsWith(BUNDLE_PATHS.parsed)) continue;
+    if (!resolved.toLowerCase().endsWith(".md")) continue;
+    if (!names.has(resolved) || found.includes(resolved)) continue;
+    found.push(resolved);
+  }
+  return found;
+}
+
 function hitFromConcept(
   path: string,
   markdown: string,
   tokens: string[],
+  names: Set<string>,
 ): ScoredFile | null {
   const { frontmatter, body } = splitFrontmatter(markdown);
   const fields = frontmatter ? parseConceptFields(frontmatter) : {};
@@ -210,6 +268,7 @@ function hitFromConcept(
     score,
     snippet: snippetAround(blob, tokens),
     text: markdown,
+    documents: parsedDocuments(path, markdown, names),
   };
 }
 
@@ -262,6 +321,7 @@ export async function queryPackage(
   }
   const tokens = tokenize(trimmed);
   const byName = new Map(entries.map((entry) => [entry.name, entry]));
+  const entryNames = new Set(byName.keys());
   const scored: ScoredFile[] = [];
 
   const indexEntry = byName.get(SEARCH_INDEX);
@@ -281,7 +341,7 @@ export async function queryPackage(
         if (!entry) continue;
         const markdown = await readVerifiedText(buf, entry, skipped);
         if (!markdown) continue;
-        const hit = hitFromConcept(doc.path, markdown, tokens);
+        const hit = hitFromConcept(doc.path, markdown, tokens, entryNames);
         if (hit) scored.push(hit);
       }
     }
@@ -292,7 +352,7 @@ export async function queryPackage(
       if (!isConceptPath(entry.name)) continue;
       const markdown = await readVerifiedText(buf, entry, skipped);
       if (!markdown) continue;
-      const hit = hitFromConcept(entry.name, markdown, tokens);
+      const hit = hitFromConcept(entry.name, markdown, tokens, entryNames);
       if (hit) scored.push(hit);
     }
   }
@@ -321,6 +381,7 @@ export async function queryPackage(
         snippet: snippetAround(sample, tokens),
         evidence: true,
         text: markdown,
+        documents: [entry.name],
       });
     }
   }
@@ -345,6 +406,9 @@ export async function queryPackage(
       kind: hit.kind,
       text,
       truncated: hit.text.length > QUERY_BODY_CHARS,
+      ...(hit.documents && hit.documents.length > 0
+        ? { documents: hit.documents }
+        : {}),
     };
   });
 
@@ -357,6 +421,9 @@ export async function queryPackage(
       title: hit.title,
       snippet: hit.snippet,
       ...(hit.evidence ? { evidence: true } : {}),
+      ...(hit.documents && hit.documents.length > 0
+        ? { documents: hit.documents }
+        : {}),
     })),
     excerpts,
     skipped,

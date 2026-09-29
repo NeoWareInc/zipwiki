@@ -13,6 +13,7 @@ const excerptValidator = v.object({
   title: v.optional(v.string()),
   kind: v.union(v.literal("okf"), v.literal("parsed")),
   text: v.string(),
+  documents: v.optional(v.array(v.string())),
 });
 
 export const ask = action({
@@ -39,6 +40,10 @@ export const ask = action({
       title: excerpt.title?.slice(0, 240),
       kind: excerpt.kind,
       text: excerpt.text.slice(0, BODY_CHARS),
+      documents: (excerpt.documents ?? [])
+        .filter((path) => path.trim())
+        .slice(0, 8)
+        .map((path) => path.slice(0, 512)),
     }));
     if (excerpts.length === 0 || excerpts.every((excerpt) => !excerpt.text.trim())) {
       throw new Error("no_excerpts");

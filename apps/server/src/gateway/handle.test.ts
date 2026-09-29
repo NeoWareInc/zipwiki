@@ -267,14 +267,20 @@ describe("POST /api/query/answer", () => {
   });
 
   it("returns the model answer when the worker secret matches", async () => {
+    let prompt = "";
     const app = await buildApp({
       env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
-      fetchImpl: async () =>
-        json({
+      fetchImpl: async (_url, init) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          messages?: Array<{ content?: string }>;
+        };
+        prompt = body.messages?.[0]?.content ?? "";
+        return json({
           model: "claude-haiku-4-5",
           content: [{ type: "text", text: "The grantor signed the deed." }],
           usage: { input_tokens: 12, output_tokens: 8 },
-        }),
+        });
+      },
     });
     const res = await app.inject({
       method: "POST",
@@ -285,13 +291,21 @@ describe("POST /api/query/answer", () => {
       },
       payload: {
         question: "Who signed it?",
-        excerpts: [{ path: "wiki/okf/deed.md", kind: "okf", text: "Grantor signed." }],
+        excerpts: [
+          {
+            path: "wiki/okf/deed.md",
+            kind: "okf",
+            text: "Grantor signed.",
+            documents: ["wiki/parsed/deed.pdf.md"],
+          },
+        ],
       },
     });
     assert.equal(res.statusCode, 200);
     const body = res.json() as { answer: string; inputTokens: number };
     assert.equal(body.answer, "The grantor signed the deed.");
     assert.equal(body.inputTokens, 12);
+    assert.match(prompt, /wiki\/parsed\/deed\.pdf\.md/);
     await app.close();
   });
 

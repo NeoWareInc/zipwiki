@@ -373,12 +373,16 @@ export async function registerGateway(
           const text = typeof row.text === "string" ? row.text : "";
           const kind = row.kind === "parsed" ? "parsed" : row.kind === "okf" ? "okf" : null;
           if (!path || !kind) return [];
+          const documents = Array.isArray(row.documents)
+            ? row.documents.filter((path): path is string => typeof path === "string")
+            : [];
           return [
             {
               path,
               text,
               kind,
               ...(typeof row.title === "string" ? { title: row.title } : {}),
+              ...(documents.length > 0 ? { documents } : {}),
             },
           ];
         })

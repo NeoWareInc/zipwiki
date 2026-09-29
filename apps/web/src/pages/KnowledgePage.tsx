@@ -8,6 +8,7 @@ import {
   integritySummary,
   openNzip,
   queryPackage,
+  readZipEntryPayload,
   testArchiveIntegrity,
   zipMethodLabel,
   type IntegrityLine,
@@ -210,6 +211,31 @@ export default function KnowledgePage() {
     }
   }
 
+  function entryNamed(path: string) {
+    const key = path.replace(/\\/g, "/").replace(/^\/+/, "");
+    return summary?.entries.find((entry) => entry.name === key) ?? null;
+  }
+
+  async function downloadEntry(entryName: string) {
+    const buf = archiveRef.current;
+    const entry = entryNamed(entryName);
+    if (!buf || !entry) return;
+    try {
+      const data = await readZipEntryPayload(buf, entry);
+      const bytes = new Uint8Array(data.byteLength);
+      bytes.set(data);
+      const blob = new Blob([bytes]);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = entryName.split("/").pop() || entryName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   async function askPackage() {
     const buf = archiveRef.current;
     const q = question.trim();
@@ -231,6 +257,7 @@ export default function KnowledgePage() {
           title: excerpt.title,
           kind: excerpt.kind,
           text: excerpt.text,
+          ...(excerpt.documents?.length ? { documents: excerpt.documents } : {}),
         })),
       });
       setAnswer({
@@ -390,7 +417,7 @@ export default function KnowledgePage() {
             />
             <OverviewRow label="AI root" value={summary.aiRoot} />
             <OverviewRow
-              label="Documents"
+              label="Original documents"
               value={String(summary.primaryCount)}
             />
             <OverviewRow
@@ -402,7 +429,7 @@ export default function KnowledgePage() {
               }
             />
             <OverviewRow
-              label="Parsed files"
+              label="Extracted text files"
               value={String(summary.parsed.length)}
             />
             <OverviewRow
@@ -490,16 +517,40 @@ export default function KnowledgePage() {
                   const excerpt = packageQuery.excerpts.find(
                     (item) => item.path === hit.path,
                   );
+                  const documents =
+                    hit.kind === "parsed"
+                      ? [hit.path]
+                      : (hit.documents ?? []);
                   return (
-                    <li key={hit.path}>
-                      <span className="font-mono text-xs">{hit.path}</span>
-                      <span className="text-[var(--muted)]">
-                        {" "}
-                        · {hit.kind === "okf" ? "OKF" : "parsed"}
-                        {excerpt?.truncated ? " · truncated" : ""}
-                      </span>
+                    <li key={hit.path} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs">{hit.path}</span>
+                        {hit.kind === "parsed" && entryNamed(hit.path) ? (
+                          <DownloadIconButton
+                            path={hit.path}
+                            onDownload={() => void downloadEntry(hit.path)}
+                          />
+                        ) : null}
+                        <span className="text-[var(--muted)]">
+                          · {hit.kind === "okf" ? "OKF" : "parsed"}
+                          {excerpt?.truncated ? " · truncated" : ""}
+                        </span>
+                      </div>
+                      {hit.kind === "okf"
+                        ? documents.map((doc) => (
+                            <div key={doc} className="flex items-center gap-2">
+                              <span className="font-mono text-xs">{doc}</span>
+                              {entryNamed(doc) ? (
+                                <DownloadIconButton
+                                  path={doc}
+                                  onDownload={() => void downloadEntry(doc)}
+                                />
+                              ) : null}
+                            </div>
+                          ))
+                        : null}
                       {hit.snippet && (
-                        <p className="mt-0.5 text-[var(--muted)]">{hit.snippet}</p>
+                        <p className="text-[var(--muted)]">{hit.snippet}</p>
                       )}
                     </li>
                   );
@@ -547,7 +598,13 @@ export default function KnowledgePage() {
           )}
 
           {opened.map((id) => (
-            <SectionBody key={id} summary={summary} section={id} />
+            <SectionBody
+              key={id}
+              summary={summary}
+              section={id}
+              entryNamed={entryNamed}
+              onDownload={(name) => void downloadEntry(name)}
+            />
           ))}
 
           {sectionLinks.some((link) => !opened.includes(link.id)) && (
@@ -584,9 +641,13 @@ export default function KnowledgePage() {
 function SectionBody({
   summary,
   section,
+  entryNamed,
+  onDownload,
 }: {
   summary: NzipOpenSummary;
   section: PackageSection;
+  entryNamed: (path: string) => NzipOpenSummary["entries"][number] | null;
+  onDownload: (entryName: string) => void;
 }) {
   if (section === "documents") {
     return (
@@ -601,15 +662,24 @@ function SectionBody({
             {summary.primaries.map((p, i) => {
               const path = primaryPath(p);
               const origin = documentOrigin(summary, p);
+              const stored = entryNamed(path);
               return (
-                <li key={`${path}-${i}`} className="font-mono text-xs">
-                  {path}
-                  {origin.uri ? `: ${origin.uri}` : ""}
-                  {origin.bits.length > 0 ? (
-                    <span className="text-[var(--muted)]">
-                      {" "}
-                      ({origin.bits.join(", ")})
-                    </span>
+                <li
+                  key={`${path}-${i}`}
+                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+                >
+                  <span className="font-mono text-xs">
+                    {path}
+                    {origin.uri ? `: ${origin.uri}` : ""}
+                    {origin.bits.length > 0 ? (
+                      <span className="text-[var(--muted)]">
+                        {" "}
+                        ({origin.bits.join(", ")})
+                      </span>
+                    ) : null}
+                  </span>
+                  {stored ? (
+                    <DownloadButton onClick={() => onDownload(stored.name)} />
                   ) : null}
                 </li>
               );
@@ -628,12 +698,26 @@ function SectionBody({
         {summary.okf.concepts.length === 0 ? (
           <Empty>No OKF concept files under wiki/okf/.</Empty>
         ) : (
-          <ul className="space-y-1 text-sm">
-            {summary.okf.concepts.map((c) => (
-              <li key={c} className="font-mono text-xs">
-                {c}
-              </li>
-            ))}
+          <ul className="space-y-3 text-sm">
+            {summary.okf.concepts.map((c) => {
+              const stored = entryNamed(c);
+              return (
+                <li key={c} className="flex items-center gap-2">
+                  <span className="font-mono text-xs">{c}</span>
+                  {stored ? (
+                    <button
+                      type="button"
+                      onClick={() => onDownload(stored.name)}
+                      aria-label={`Download ${c.split("/").pop() ?? c}`}
+                      title="Download"
+                      className="shrink-0 text-[var(--accent)] hover:opacity-80"
+                    >
+                      <DownloadIcon />
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </ContentsSection>
@@ -648,12 +732,27 @@ function SectionBody({
         {summary.parsed.length === 0 ? (
           <Empty>No extracted text in this package.</Empty>
         ) : (
-          <ul className="space-y-1 text-sm">
-            {summary.parsed.map((c) => (
-              <li key={c} className="font-mono text-xs">
-                {c}
-              </li>
-            ))}
+          <ul className="space-y-3 text-sm">
+            {summary.parsed.map((c) => {
+              const markdown = c.toLowerCase().endsWith(".md");
+              const stored = markdown ? entryNamed(c) : null;
+              return (
+                <li key={c} className="flex items-center gap-2">
+                  <span className="font-mono text-xs">{c}</span>
+                  {stored ? (
+                    <button
+                      type="button"
+                      onClick={() => onDownload(stored.name)}
+                      aria-label={`Download ${c.split("/").pop() ?? c}`}
+                      title="Download"
+                      className="shrink-0 text-[var(--accent)] hover:opacity-80"
+                    >
+                      <DownloadIcon />
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </ContentsSection>
@@ -684,6 +783,59 @@ function SectionBody({
         </table>
       </div>
     </ContentsSection>
+  );
+}
+
+function DownloadIconButton({
+  path,
+  onDownload,
+}: {
+  path: string;
+  onDownload: () => void;
+}) {
+  const name = path.split("/").pop() ?? path;
+  return (
+    <button
+      type="button"
+      onClick={onDownload}
+      aria-label={`Download ${name}`}
+      title="Download"
+      className="shrink-0 text-[var(--accent)] hover:opacity-80"
+    >
+      <DownloadIcon />
+    </button>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 3v12" />
+      <path d="m7 11 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+function DownloadButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 text-xs font-medium text-[var(--accent)] hover:underline"
+    >
+      Download
+    </button>
   );
 }
 
