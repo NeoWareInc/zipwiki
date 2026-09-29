@@ -335,16 +335,16 @@ export default function KnowledgePage() {
             }}
             className={`rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
               dragging
-                ? "border-[var(--accent)] bg-[var(--paper-deep)]"
-                : "border-[var(--border)] bg-white"
+                ? "border-(--accent) bg-(--paper-deep)"
+                : "border-(--border) bg-white"
             }`}
           >
-            <p className="text-sm text-[var(--ink)]">
+            <p className="text-sm text-(--ink)">
               Drop a <strong>.zipwiki</strong> or <strong>.nzip</strong> here, or
             </p>
             <label
               htmlFor={inputId}
-              className="mt-3 inline-block cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+              className="mt-3 inline-block cursor-pointer rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white"
             >
               {loading ? "Opening…" : "Choose file"}
             </label>
@@ -357,7 +357,7 @@ export default function KnowledgePage() {
               disabled={loading}
               onChange={(e) => onFiles(e.target.files)}
             />
-            <p className="mt-3 text-xs text-[var(--muted)]">
+            <p className="mt-3 text-xs text-(--muted)">
               Stays in your browser — nothing is uploaded for this preview.
             </p>
           </div>
@@ -379,7 +379,7 @@ export default function KnowledgePage() {
               <h1 className="font-display text-3xl font-semibold">
                 Package overview
               </h1>
-              <p className="mt-1 text-sm text-[var(--muted)]">
+              <p className="mt-1 text-sm text-(--muted)">
                 {summary.filename} · {formatBytes(summary.byteLength)}
               </p>
             </div>
@@ -388,21 +388,21 @@ export default function KnowledgePage() {
                 type="button"
                 onClick={() => void testIntegrity()}
                 disabled={testing}
-                className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-md bg-(--accent) px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {testing ? "Testing…" : "Test Integrity"}
               </button>
               <button
                 type="button"
                 onClick={clear}
-                className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--paper)]"
+                className="rounded-md border border-(--border) px-3 py-1.5 text-sm hover:bg-(--paper)"
               >
                 Close
               </button>
             </div>
           </div>
 
-          <dl className="grid gap-3 rounded-xl border border-[var(--border)] bg-white p-5 text-sm sm:grid-cols-2">
+          <dl className="grid gap-3 rounded-xl border border-(--border) bg-white p-5 text-sm sm:grid-cols-2">
             <OverviewRow
               label="Spec"
               value={
@@ -444,7 +444,7 @@ export default function KnowledgePage() {
 
           <section>
             <h2 className="font-display text-xl font-semibold">Ask this package</h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+            <p className="mt-1 text-sm text-(--muted)">
               The archive stays in your browser. Matching concept excerpts are
               sent to answer the question.
             </p>
@@ -460,12 +460,12 @@ export default function KnowledgePage() {
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
                 placeholder="Ask about the concepts in this package"
-                className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-md border border-(--border) bg-white px-3 py-2 text-sm"
               />
               <button
                 type="submit"
                 disabled={asking !== null || !question.trim() || outOfCredits}
-                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {asking === "reading"
                   ? "Reading concepts…"
@@ -475,15 +475,15 @@ export default function KnowledgePage() {
               </button>
             </form>
             {outOfCredits && (
-              <p className="mt-2 text-sm text-[var(--ink)]">
+              <p className="mt-2 text-sm text-(--ink)">
                 Credits are required to ask a question.{" "}
-                <Link to="/dashboard/billing" className="text-[var(--accent)] hover:underline">
+                <Link to="/dashboard/billing" className="text-(--accent) hover:underline">
                   Buy credits
                 </Link>
               </p>
             )}
             {asking && (
-              <p className="mt-2 text-sm text-[var(--muted)]">
+              <p className="mt-2 text-sm text-(--muted)">
                 {asking === "reading"
                   ? "Reading concepts…"
                   : "Answering from the matching concepts…"}
@@ -495,16 +495,16 @@ export default function KnowledgePage() {
               </p>
             )}
             {packageQuery && packageQuery.hits.length === 0 && !asking && (
-              <p className="mt-3 text-sm text-[var(--ink)]">
+              <p className="mt-3 text-sm text-(--ink)">
                 No concept matched this question.
               </p>
             )}
             {answer && (
-              <div className="mt-4 rounded-xl border border-[var(--border)] bg-white p-4">
-                <p className="whitespace-pre-wrap text-sm text-[var(--ink)]">
+              <div className="mt-4 rounded-xl border border-(--border) bg-white p-4">
+                <p className="whitespace-pre-wrap text-sm text-(--ink)">
                   {answer.text}
                 </p>
-                <p className="mt-3 text-sm font-medium text-[var(--ink)]">
+                <p className="mt-3 text-sm font-medium text-(--ink)">
                   {answer.creditsUnlimited
                     ? "Unlimited · no charge"
                     : `Charged ${answer.creditsCharged} credit${answer.creditsCharged === 1 ? "" : "s"} · ${answer.creditsRemaining.toLocaleString()} remaining`}
@@ -531,7 +531,7 @@ export default function KnowledgePage() {
                             onDownload={() => void downloadEntry(hit.path)}
                           />
                         ) : null}
-                        <span className="text-[var(--muted)]">
+                        <span className="text-(--muted)">
                           · {hit.kind === "okf" ? "OKF" : "parsed"}
                           {excerpt?.truncated ? " · truncated" : ""}
                         </span>
@@ -550,7 +550,7 @@ export default function KnowledgePage() {
                           ))
                         : null}
                       {hit.snippet && (
-                        <p className="text-[var(--muted)]">{hit.snippet}</p>
+                        <p className="text-(--muted)">{hit.snippet}</p>
                       )}
                     </li>
                   );
@@ -573,7 +573,7 @@ export default function KnowledgePage() {
               <h2 className="font-display text-xl font-semibold">
                 Integrity
               </h2>
-              <div className="mt-3 rounded-xl border border-[var(--border)] bg-white p-4">
+              <div className="mt-3 rounded-xl border border-(--border) bg-white p-4">
                 <ul className="space-y-1 font-mono text-xs">
                   {integrity.map((line) => (
                     <li key={line.name}>
@@ -589,7 +589,7 @@ export default function KnowledgePage() {
                   ))}
                 </ul>
                 {!testing && (
-                  <p className="mt-3 text-sm font-medium text-[var(--ink)]">
+                  <p className="mt-3 text-sm font-medium text-(--ink)">
                     {integritySummary(integrity)}
                   </p>
                 )}
@@ -609,7 +609,7 @@ export default function KnowledgePage() {
 
           {sectionLinks.some((link) => !opened.includes(link.id)) && (
             <>
-              <p className="text-sm text-[var(--muted)]">
+              <p className="text-sm text-(--muted)">
                 To show more details click a link below.
               </p>
               <nav aria-label="Package sections" className="flex flex-col gap-2">
@@ -624,7 +624,7 @@ export default function KnowledgePage() {
                           current.includes(link.id) ? current : [...current, link.id],
                         )
                       }
-                      className="text-left text-sm font-medium text-[var(--accent)] hover:underline"
+                      className="text-left text-sm font-medium text-(--accent) hover:underline"
                     >
                       {link.label}
                     </button>
@@ -672,7 +672,7 @@ function SectionBody({
                     {path}
                     {origin.uri ? `: ${origin.uri}` : ""}
                     {origin.bits.length > 0 ? (
-                      <span className="text-[var(--muted)]">
+                      <span className="text-(--muted)">
                         {" "}
                         ({origin.bits.join(", ")})
                       </span>
@@ -710,7 +710,7 @@ function SectionBody({
                       onClick={() => onDownload(stored.name)}
                       aria-label={`Download ${c.split("/").pop() ?? c}`}
                       title="Download"
-                      className="shrink-0 text-[var(--accent)] hover:opacity-80"
+                      className="shrink-0 text-(--accent) hover:opacity-80"
                     >
                       <DownloadIcon />
                     </button>
@@ -745,7 +745,7 @@ function SectionBody({
                       onClick={() => onDownload(stored.name)}
                       aria-label={`Download ${c.split("/").pop() ?? c}`}
                       title="Download"
-                      className="shrink-0 text-[var(--accent)] hover:opacity-80"
+                      className="shrink-0 text-(--accent) hover:opacity-80"
                     >
                       <DownloadIcon />
                     </button>
@@ -761,8 +761,8 @@ function SectionBody({
   return (
     <ContentsSection title="All entries">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[36rem] text-left text-xs">
-          <thead className="border-b border-[var(--border)] text-[var(--muted)]">
+        <table className="w-full min-w-xl text-left text-xs">
+          <thead className="border-b border-(--border) text-(--muted)">
             <tr>
               <th className="px-3 py-2 font-medium">Path</th>
               <th className="px-3 py-2 font-medium">Method</th>
@@ -772,7 +772,7 @@ function SectionBody({
           </thead>
           <tbody>
             {summary.entries.map((e) => (
-              <tr key={e.name} className="border-b border-[var(--border)] last:border-0">
+              <tr key={e.name} className="border-b border-(--border) last:border-0">
                 <td className="max-w-md truncate px-3 py-1.5 font-mono">{e.name}</td>
                 <td className="px-3 py-1.5">{zipMethodLabel(e.method)}</td>
                 <td className="px-3 py-1.5 tabular-nums">{e.uncompressedSize}</td>
@@ -800,7 +800,7 @@ function DownloadIconButton({
       onClick={onDownload}
       aria-label={`Download ${name}`}
       title="Download"
-      className="shrink-0 text-[var(--accent)] hover:opacity-80"
+      className="shrink-0 text-(--accent) hover:opacity-80"
     >
       <DownloadIcon />
     </button>
@@ -832,7 +832,7 @@ function DownloadButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="shrink-0 text-xs font-medium text-[var(--accent)] hover:underline"
+      className="shrink-0 text-xs font-medium text-(--accent) hover:underline"
     >
       Download
     </button>
@@ -842,8 +842,8 @@ function DownloadButton({ onClick }: { onClick: () => void }) {
 function OverviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[var(--muted)]">{label}</dt>
-      <dd className="mt-0.5 font-medium text-[var(--ink)]">{value}</dd>
+      <dt className="text-(--muted)">{label}</dt>
+      <dd className="mt-0.5 font-medium text-(--ink)">{value}</dd>
     </div>
   );
 }
@@ -861,9 +861,9 @@ function ContentsSection({
     <section>
       <h2 className="font-display text-xl font-semibold">{title}</h2>
       {subtitle ? (
-        <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
+        <p className="mt-1 text-sm text-(--muted)">{subtitle}</p>
       ) : null}
-      <div className="mt-3 rounded-xl border border-[var(--border)] bg-white p-4">
+      <div className="mt-3 rounded-xl border border-(--border) bg-white p-4">
         {children}
       </div>
     </section>
@@ -871,5 +871,5 @@ function ContentsSection({
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-[var(--muted)]">{children}</p>;
+  return <p className="text-sm text-(--muted)">{children}</p>;
 }
