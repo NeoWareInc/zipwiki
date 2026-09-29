@@ -1,16 +1,18 @@
 import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { PromptSection } from "../components/ZipWikiPrompts";
 import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
   integritySummary,
   openNzip,
+  queryPackage,
   testArchiveIntegrity,
   zipMethodLabel,
   type IntegrityLine,
   type NzipOpenSummary,
+  type PackageQuery,
 } from "../lib/nzip";
 
 function formatOriginMtime(seconds: number): string {
@@ -113,8 +115,24 @@ export default function KnowledgePage() {
   const [opened, setOpened] = useState<PackageSection[]>([]);
   const [integrity, setIntegrity] = useState<IntegrityLine[] | null>(null);
   const [testing, setTesting] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState<"reading" | "answering" | null>(null);
+  const [askError, setAskError] = useState("");
+  const [packageQuery, setPackageQuery] = useState<PackageQuery | null>(null);
+  const [answer, setAnswer] = useState<{
+    text: string;
+    creditsCharged: number;
+    creditsRemaining: number;
+    creditsUnlimited: boolean;
+  } | null>(null);
   const archiveRef = useRef<ArrayBuffer | null>(null);
   const reportActivity = useMutation(api.usage.reportActivity);
+  const ask = useAction(api.queryAnswer.ask);
+  const usage = useQuery(api.usage.myUsage);
+  const outOfCredits =
+    usage != null &&
+    usage.creditsUnlimited !== true &&
+    usage.creditsRemaining < 1;
 
   const loadFile = useCallback(
     async (file: File) => {
@@ -123,6 +141,11 @@ export default function KnowledgePage() {
       setSummary(null);
       setOpened([]);
       setIntegrity(null);
+      setQuestion("");
+      setAsking(null);
+      setAskError("");
+      setPackageQuery(null);
+      setAnswer(null);
       archiveRef.current = null;
       try {
         const buf = await file.arrayBuffer();
@@ -164,6 +187,11 @@ export default function KnowledgePage() {
     setOpened([]);
     setIntegrity(null);
     setTesting(false);
+    setQuestion("");
+    setAsking(null);
+    setAskError("");
+    setPackageQuery(null);
+    setAnswer(null);
     archiveRef.current = null;
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -179,6 +207,49 @@ export default function KnowledgePage() {
       });
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function askPackage() {
+    const buf = archiveRef.current;
+    const q = question.trim();
+    if (!buf || !summary || !q || asking || outOfCredits) return;
+    setAskError("");
+    setAnswer(null);
+    setPackageQuery(null);
+    setAsking("reading");
+    try {
+      const found = await queryPackage(buf, summary.entries, q);
+      setPackageQuery(found);
+      if (found.excerpts.length === 0) return;
+      setAsking("answering");
+      const result = await ask({
+        question: q,
+        filename: summary.filename,
+        excerpts: found.excerpts.map((excerpt) => ({
+          path: excerpt.path,
+          title: excerpt.title,
+          kind: excerpt.kind,
+          text: excerpt.text,
+        })),
+      });
+      setAnswer({
+        text: result.answer,
+        creditsCharged: result.creditsCharged,
+        creditsRemaining: result.creditsRemaining,
+        creditsUnlimited: result.creditsUnlimited,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/credits_exhausted/.test(message)) {
+        setAskError("Credits are required to ask a question.");
+      } else if (/anthropic_not_configured/.test(message)) {
+        setAskError("Hosted answers are not configured on this deployment.");
+      } else {
+        setAskError(message);
+      }
+    } finally {
+      setAsking(null);
     }
   }
 
@@ -343,6 +414,108 @@ export default function KnowledgePage() {
               value={summary.methods.join(", ") || "—"}
             />
           </dl>
+
+          <section>
+            <h2 className="font-display text-xl font-semibold">Ask this package</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              The archive stays in your browser. Matching concept excerpts are
+              sent to answer the question.
+            </p>
+            <form
+              className="mt-3 flex flex-col gap-2 sm:flex-row"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void askPackage();
+              }}
+            >
+              <input
+                type="text"
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                placeholder="Ask about the concepts in this package"
+                className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-white px-3 py-2 text-sm"
+              />
+              <button
+                type="submit"
+                disabled={asking !== null || !question.trim() || outOfCredits}
+                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {asking === "reading"
+                  ? "Reading concepts…"
+                  : asking === "answering"
+                    ? "Answering…"
+                    : "Ask"}
+              </button>
+            </form>
+            {outOfCredits && (
+              <p className="mt-2 text-sm text-[var(--ink)]">
+                Credits are required to ask a question.{" "}
+                <Link to="/dashboard/billing" className="text-[var(--accent)] hover:underline">
+                  Buy credits
+                </Link>
+              </p>
+            )}
+            {asking && (
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                {asking === "reading"
+                  ? "Reading concepts…"
+                  : "Answering from the matching concepts…"}
+              </p>
+            )}
+            {askError && (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {askError}
+              </p>
+            )}
+            {packageQuery && packageQuery.hits.length === 0 && !asking && (
+              <p className="mt-3 text-sm text-[var(--ink)]">
+                No concept matched this question.
+              </p>
+            )}
+            {answer && (
+              <div className="mt-4 rounded-xl border border-[var(--border)] bg-white p-4">
+                <p className="whitespace-pre-wrap text-sm text-[var(--ink)]">
+                  {answer.text}
+                </p>
+                <p className="mt-3 text-sm font-medium text-[var(--ink)]">
+                  {answer.creditsUnlimited
+                    ? "Unlimited · no charge"
+                    : `Charged ${answer.creditsCharged} credit${answer.creditsCharged === 1 ? "" : "s"} · ${answer.creditsRemaining.toLocaleString()} remaining`}
+                </p>
+              </div>
+            )}
+            {packageQuery && packageQuery.hits.length > 0 && (
+              <ul className="mt-3 space-y-2 text-sm">
+                {packageQuery.hits.map((hit) => {
+                  const excerpt = packageQuery.excerpts.find(
+                    (item) => item.path === hit.path,
+                  );
+                  return (
+                    <li key={hit.path}>
+                      <span className="font-mono text-xs">{hit.path}</span>
+                      <span className="text-[var(--muted)]">
+                        {" "}
+                        · {hit.kind === "okf" ? "OKF" : "parsed"}
+                        {excerpt?.truncated ? " · truncated" : ""}
+                      </span>
+                      {hit.snippet && (
+                        <p className="mt-0.5 text-[var(--muted)]">{hit.snippet}</p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {packageQuery && packageQuery.skipped.length > 0 && (
+              <ul className="mt-2 space-y-1 text-xs text-red-800">
+                {packageQuery.skipped.map((item) => (
+                  <li key={item.path}>
+                    {item.path}: {item.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           {integrity && (
             <section>

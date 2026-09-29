@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildApp } from "../app.js";
-import { handleOkf, handleParse } from "./handle.js";
+import { handleOkf, handleParse, handleQueryAnswer } from "./handle.js";
 import type { ConvexGateway } from "./types.js";
 
 function convex(partial: Partial<ConvexGateway> & Pick<ConvexGateway, "validateKey">): ConvexGateway {
@@ -242,6 +242,79 @@ describe("hosted gateway", () => {
     const body = result.body as { title: string };
     assert.equal(body.title, "Warranty deed");
     assert.deepEqual(recorded, ["anthropic"]);
+  });
+});
+
+describe("POST /api/query/answer", () => {
+  it("rejects a caller that does not present the worker secret", async () => {
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () => {
+        throw new Error("should not call Claude");
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: { "content-type": "application/json" },
+      payload: {
+        question: "Who signed it?",
+        excerpts: [{ path: "wiki/okf/deed.md", kind: "okf", text: "Grantor signed." }],
+      },
+    });
+    assert.equal(res.statusCode, 401);
+    await app.close();
+  });
+
+  it("returns the model answer when the worker secret matches", async () => {
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () =>
+        json({
+          model: "claude-haiku-4-5",
+          content: [{ type: "text", text: "The grantor signed the deed." }],
+          usage: { input_tokens: 12, output_tokens: 8 },
+        }),
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "Who signed it?",
+        excerpts: [{ path: "wiki/okf/deed.md", kind: "okf", text: "Grantor signed." }],
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as { answer: string; inputTokens: number };
+    assert.equal(body.answer, "The grantor signed the deed.");
+    assert.equal(body.inputTokens, 12);
+    await app.close();
+  });
+
+  it("reports the key missing without calling Claude", async () => {
+    const result = await handleQueryAnswer(
+      {
+        convex: convex({
+          async validateKey() {
+            return { ok: true, accountId: "acc", billable: true, fallback: false };
+          },
+        }),
+        env: { ZIPWIKI_WORKER_SECRET: "worker" },
+        fetchImpl: async () => {
+          throw new Error("should not call Claude");
+        },
+      },
+      {
+        question: "Who signed it?",
+        excerpts: [{ path: "wiki/okf/deed.md", kind: "okf", text: "Grantor signed." }],
+      },
+    );
+    assert.equal(result.status, 503);
+    assert.equal((result.body as { error: string }).error, "anthropic_not_configured");
   });
 });
 

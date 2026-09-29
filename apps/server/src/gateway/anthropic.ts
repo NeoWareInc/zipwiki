@@ -100,6 +100,80 @@ function asEnrichment(value: unknown): OkfEnrichment {
   return { title, description, type: type || "Document", tags, keyFacts, contents };
 }
 
+export type QueryAnswer = {
+  answer: string;
+  model: string;
+  inputTokens?: number;
+  outputTokens?: number;
+};
+
+function queryPrompt(
+  question: string,
+  excerpts: Array<{ path: string; title?: string; kind: string; text: string }>,
+): string {
+  const blocks = excerpts
+    .map((excerpt, index) => {
+      const title = excerpt.title ? ` — ${excerpt.title}` : "";
+      return [
+        `Excerpt ${index + 1} (${excerpt.kind}): ${excerpt.path}${title}`,
+        excerpt.text,
+      ].join("\n");
+    })
+    .join("\n\n");
+  return [
+    "Answer the question using only the ZipWiki concept excerpts below.",
+    "If the excerpts do not contain the answer, say that they do not.",
+    "Do not use outside knowledge and do not invent amounts, dates, or names.",
+    "Mention the excerpt path when you rely on it.",
+    "",
+    `Question: ${question}`,
+    "",
+    blocks,
+  ].join("\n");
+}
+
+/** Plain-text answer over concept excerpts. The Anthropic key stays on this API. */
+export async function invokeQueryAnswer(
+  question: string,
+  excerpts: Array<{ path: string; title?: string; kind: string; text: string }>,
+  apiKey: string,
+  fetchImpl: typeof fetch,
+  model?: string | null,
+): Promise<QueryAnswer> {
+  const resolved = resolveHostedOkfModel(model);
+  const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: resolved,
+      max_tokens: 1024,
+      messages: [{ role: "user", content: queryPrompt(question, excerpts) }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Anthropic failed (${res.status})`);
+  const body = (await res.json()) as {
+    model?: string;
+    content?: Array<{ type?: string; text?: string }>;
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
+  const answer = (body.content ?? [])
+    .filter((block) => block.type === "text" && block.text)
+    .map((block) => block.text)
+    .join("\n")
+    .trim();
+  if (!answer) throw new Error("Claude returned an empty answer");
+  return {
+    answer,
+    model: body.model ?? resolved,
+    inputTokens: body.usage?.input_tokens,
+    outputTokens: body.usage?.output_tokens,
+  };
+}
+
 export async function invokeAnthropic(
   input: OkfRequest,
   apiKey: string,

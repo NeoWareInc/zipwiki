@@ -13,6 +13,10 @@ export type IntegrityLine = {
   status: string;
 };
 
+export function payloadCrcMatches(data: Uint8Array, expected: number): boolean {
+  return crc32(data) === (expected >>> 0);
+}
+
 function crc32(buf: Uint8Array): number {
   let crc = 0xffffffff;
   for (let i = 0; i < buf.length; i++) {

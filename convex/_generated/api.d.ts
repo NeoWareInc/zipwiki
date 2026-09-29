@@ -27,6 +27,7 @@ import type * as lib_crypto from "../lib/crypto.js";
 import type * as mail from "../mail.js";
 import type * as otp_ResendOTP from "../otp/ResendOTP.js";
 import type * as profiles from "../profiles.js";
+import type * as queryAnswer from "../queryAnswer.js";
 import type * as settings from "../settings.js";
 import type * as stripe from "../stripe.js";
 import type * as stripeMutations from "../stripeMutations.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   mail: typeof mail;
   "otp/ResendOTP": typeof otp_ResendOTP;
   profiles: typeof profiles;
+  queryAnswer: typeof queryAnswer;
   settings: typeof settings;
   stripe: typeof stripe;
   stripeMutations: typeof stripeMutations;
