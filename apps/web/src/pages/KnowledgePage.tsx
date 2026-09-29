@@ -10,26 +10,85 @@ import {
   type NzipOpenSummary,
 } from "../lib/nzip";
 
+function formatOriginMtime(seconds: number): string {
+  const date = new Date(seconds * 1000);
+  if (Number.isNaN(date.getTime())) return String(seconds);
+  return date.toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function primaryLabel(p: {
-  path?: string;
-  name?: string;
-  originUri?: unknown;
-}): string {
-  const base =
+function primaryPath(p: NzipOpenSummary["primaries"][number]): string {
+  return (
     (typeof p.path === "string" && p.path) ||
     (typeof p.name === "string" && p.name) ||
-    "(unnamed)";
-  if (typeof p.originUri === "string" && p.originUri) {
-    return `${base} → ${p.originUri}`;
-  }
-  return base;
+    "(unnamed)"
+  );
 }
+
+function documentOrigin(
+  summary: NzipOpenSummary,
+  p: NzipOpenSummary["primaries"][number],
+) {
+  const key = primaryPath(p);
+  const matched = summary.origins.find((o) => o.primaryPath === key);
+  const uri =
+    (typeof p.originUri === "string" && p.originUri) || matched?.originUri;
+  const size =
+    typeof p.originSize === "number" ? p.originSize : matched?.originSize;
+  const mtime =
+    typeof p.originMtime === "number" ? p.originMtime : matched?.originMtime;
+  const bits: string[] = [];
+  if (size !== undefined) bits.push(formatBytes(size));
+  if (mtime !== undefined) bits.push(`modified ${formatOriginMtime(mtime)}`);
+  return { uri, size, bits };
+}
+
+function isOkfTopic(path: string): boolean {
+  return /(?:^|\/)topics\//i.test(path);
+}
+
+function extractedMarkdownSummary(summary: NzipOpenSummary): string {
+  const markdown = summary.parsed.filter((path) =>
+    path.toLowerCase().endsWith(".md"),
+  ).length;
+  const originals = summary.primaries.length;
+  return `${markdown} text file${markdown === 1 ? "" : "s"} · ${originals} original${originals === 1 ? "" : "s"}`;
+}
+
+function okfConceptSummary(paths: string[]): string {
+  let concepts = 0;
+  let topics = 0;
+  for (const path of paths) {
+    if (isOkfTopic(path)) topics += 1;
+    else concepts += 1;
+  }
+  return `${concepts} concept${concepts === 1 ? "" : "s"} · ${topics} topic${topics === 1 ? "" : "s"}`;
+}
+
+function inputDocumentSummary(summary: NzipOpenSummary): string {
+  const count = summary.primaries.length;
+  let bytes = 0;
+  let sized = 0;
+  for (const primary of summary.primaries) {
+    const { size } = documentOrigin(summary, primary);
+    if (size === undefined) continue;
+    bytes += size;
+    sized += 1;
+  }
+  const files = `${count} file${count === 1 ? "" : "s"}`;
+  if (sized === 0) return files;
+  return `${files} · ${formatBytes(bytes)}`;
+}
+
+type PackageSection = "documents" | "okf" | "parsed" | "entries";
 
 export default function KnowledgePage() {
   const inputId = useId();
@@ -38,7 +97,7 @@ export default function KnowledgePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<NzipOpenSummary | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [opened, setOpened] = useState<PackageSection[]>([]);
   const reportActivity = useMutation(api.usage.reportActivity);
 
   const loadFile = useCallback(
@@ -46,7 +105,7 @@ export default function KnowledgePage() {
       setError("");
       setLoading(true);
       setSummary(null);
-      setShowAll(false);
+      setOpened([]);
       try {
         const buf = await file.arrayBuffer();
         const opened = await openNzip(buf, file.name);
@@ -83,80 +142,95 @@ export default function KnowledgePage() {
   function clear() {
     setSummary(null);
     setError("");
-    setShowAll(false);
+    setOpened([]);
     if (inputRef.current) inputRef.current.value = "";
   }
 
+  const sectionLinks: { id: PackageSection; label: string }[] = summary
+    ? [
+        { id: "documents", label: "Input documents" },
+        { id: "okf", label: "OKF concepts" },
+        { id: "parsed", label: "Extracted text" },
+        { id: "entries", label: "All entries" },
+      ]
+    : [];
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold">Knowledge Archive</h1>
-        <p className="mt-1 text-(--muted)">
-          Open a local <code className="text-xs">.zipwiki</code> to inspect the
-          package, or copy a query prompt for an agent with ZipWiki MCP.{" "}
-          <Link
-            to="/dashboard/knowledge/create"
-            className="text-(--accent) hover:underline"
-          >
-            Don&apos;t have a package yet? Create ZipWiki
-          </Link>
-        </p>
-      </div>
+      {!summary && (
+        <>
+          <div>
+            <h1 className="font-display text-3xl font-semibold">Query ZipWiki</h1>
+            <p className="mt-1 text-(--muted)">
+              Open a local <code className="text-xs">.zipwiki</code> to inspect the
+              package, or copy a query prompt for an agent with ZipWiki MCP.{" "}
+              <Link
+                to="/dashboard/knowledge/create"
+                className="text-(--accent) hover:underline"
+              >
+                Don&apos;t have a package yet? Create ZipWiki
+              </Link>
+            </p>
+          </div>
 
-      <div
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            inputRef.current?.click();
-          }
-        }}
-        onDragEnter={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          setDragging(false);
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          onFiles(e.dataTransfer.files);
-        }}
-        className={`rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
-          dragging
-            ? "border-[var(--accent)] bg-[var(--paper-deep)]"
-            : "border-[var(--border)] bg-white"
-        }`}
-      >
-        <p className="text-sm text-[var(--ink)]">
-          Drop a <strong>.zipwiki</strong> or <strong>.nzip</strong> here, or
-        </p>
-        <label
-          htmlFor={inputId}
-          className="mt-3 inline-block cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
-        >
-          {loading ? "Opening…" : "Choose file"}
-        </label>
-        <input
-          ref={inputRef}
-          id={inputId}
-          type="file"
-          accept=".zipwiki,.nzip,application/zip"
-          className="sr-only"
-          disabled={loading}
-          onChange={(e) => onFiles(e.target.files)}
-        />
-        <p className="mt-3 text-xs text-[var(--muted)]">
-          Stays in your browser — nothing is uploaded for this preview.
-        </p>
-      </div>
+          <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                inputRef.current?.click();
+              }
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setDragging(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              onFiles(e.dataTransfer.files);
+            }}
+            className={`rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+              dragging
+                ? "border-[var(--accent)] bg-[var(--paper-deep)]"
+                : "border-[var(--border)] bg-white"
+            }`}
+          >
+            <p className="text-sm text-[var(--ink)]">
+              Drop a <strong>.zipwiki</strong> or <strong>.nzip</strong> here, or
+            </p>
+            <label
+              htmlFor={inputId}
+              className="mt-3 inline-block cursor-pointer rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white"
+            >
+              {loading ? "Opening…" : "Choose file"}
+            </label>
+            <input
+              ref={inputRef}
+              id={inputId}
+              type="file"
+              accept=".zipwiki,.nzip,application/zip"
+              className="sr-only"
+              disabled={loading}
+              onChange={(e) => onFiles(e.target.files)}
+            />
+            <p className="mt-3 text-xs text-[var(--muted)]">
+              Stays in your browser — nothing is uploaded for this preview.
+            </p>
+          </div>
+
+          <PromptSection title="Query examples" prompts={QUERY_PROMPTS} />
+        </>
+      )}
 
       {error && (
         <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -168,9 +242,9 @@ export default function KnowledgePage() {
         <>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-semibold">
+              <h1 className="font-display text-3xl font-semibold">
                 Package overview
-              </h2>
+              </h1>
               <p className="mt-1 text-sm text-[var(--muted)]">
                 {summary.filename} · {formatBytes(summary.byteLength)}
               </p>
@@ -180,7 +254,7 @@ export default function KnowledgePage() {
               onClick={clear}
               className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--paper)]"
             >
-              Clear
+              Close
             </button>
           </div>
 
@@ -224,135 +298,144 @@ export default function KnowledgePage() {
             />
           </dl>
 
-          <ContentsSection title="Input documents">
-            {summary.primaries.length === 0 ? (
-              <Empty>No input documents listed in the manifest.</Empty>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {summary.primaries.map((p, i) => (
-                  <li key={`${primaryLabel(p)}-${i}`} className="font-mono text-xs">
-                    {primaryLabel(p)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </ContentsSection>
+          {opened.map((id) => (
+            <SectionBody key={id} summary={summary} section={id} />
+          ))}
 
-          {summary.origins.length > 0 && (
-            <ContentsSection title="Original locators (0x014F)">
-              <ul className="space-y-1 text-sm">
-                {summary.origins.map((o) => {
-                  const bits: string[] = [];
-                  if (o.originCrc32 !== undefined) {
-                    bits.push(`crc ${o.originCrc32}`);
-                  }
-                  if (o.originSize !== undefined) {
-                    bits.push(`${o.originSize} bytes`);
-                  }
-                  if (o.originMtime !== undefined) {
-                    bits.push(
-                      `mtime ${o.originMtime}${
-                        o.originMtimeUtc ? ` (${o.originMtimeUtc})` : ""
-                      }`,
-                    );
-                  }
-                  if (o.originSha256) {
-                    bits.push(`sha256 ${o.originSha256}`);
-                  }
-                  return (
-                    <li key={o.parsedPath} className="font-mono text-xs">
-                      {o.primaryPath ?? o.parsedPath}
-                      {o.originUri ? `: ${o.originUri}` : ""}
-                      {bits.length > 0 ? (
-                        <span className="text-[var(--muted)]">
-                          {" "}
-                          ({bits.join(", ")})
-                        </span>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            </ContentsSection>
+          {sectionLinks.some((link) => !opened.includes(link.id)) && (
+            <>
+              <p className="text-sm text-[var(--muted)]">
+                To show more details click a link below.
+              </p>
+              <nav aria-label="Package sections" className="flex flex-col gap-2">
+                {sectionLinks
+                  .filter((link) => !opened.includes(link.id))
+                  .map((link) => (
+                    <button
+                      key={link.id}
+                      type="button"
+                      onClick={() =>
+                        setOpened((current) =>
+                          current.includes(link.id) ? current : [...current, link.id],
+                        )
+                      }
+                      className="text-left text-sm font-medium text-[var(--accent)] hover:underline"
+                    >
+                      {link.label}
+                    </button>
+                  ))}
+              </nav>
+            </>
           )}
-
-          <ContentsSection title="OKF concepts">
-            {summary.okf.concepts.length === 0 ? (
-              <Empty>No OKF concept files under wiki/okf/.</Empty>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {summary.okf.concepts.map((c) => (
-                  <li key={c} className="font-mono text-xs">
-                    {c}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </ContentsSection>
-
-          <ContentsSection title="Parsed wiki">
-            {summary.parsed.length === 0 ? (
-              <Empty>No files under wiki/parsed/.</Empty>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {summary.parsed.map((c) => (
-                  <li key={c} className="font-mono text-xs">
-                    {c}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </ContentsSection>
-
-          <div>
-            <button
-              type="button"
-              className="text-sm text-[var(--accent)] underline"
-              onClick={() => setShowAll((v) => !v)}
-            >
-              {showAll ? "Hide" : "Show"} all entries
-            </button>
-            {showAll && (
-              <div className="mt-3 overflow-x-auto rounded-xl border border-[var(--border)] bg-white">
-                <table className="w-full min-w-[36rem] text-left text-xs">
-                  <thead className="border-b border-[var(--border)] bg-[var(--paper)] text-[var(--muted)]">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">Path</th>
-                      <th className="px-3 py-2 font-medium">Method</th>
-                      <th className="px-3 py-2 font-medium">Size</th>
-                      <th className="px-3 py-2 font-medium">Stored</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.entries.map((e) => (
-                      <tr
-                        key={e.name}
-                        className="border-b border-[var(--border)] last:border-0"
-                      >
-                        <td className="max-w-md truncate px-3 py-1.5 font-mono">
-                          {e.name}
-                        </td>
-                        <td className="px-3 py-1.5">
-                          {zipMethodLabel(e.method)}
-                        </td>
-                        <td className="px-3 py-1.5 tabular-nums">
-                          {e.uncompressedSize}
-                        </td>
-                        <td className="px-3 py-1.5 tabular-nums">
-                          {e.compressedSize}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         </>
       )}
-
-      <PromptSection title="Query examples" prompts={QUERY_PROMPTS} />
     </div>
+  );
+}
+
+function SectionBody({
+  summary,
+  section,
+}: {
+  summary: NzipOpenSummary;
+  section: PackageSection;
+}) {
+  if (section === "documents") {
+    return (
+      <ContentsSection
+        title="Input documents"
+        subtitle={inputDocumentSummary(summary)}
+      >
+        {summary.primaries.length === 0 ? (
+          <Empty>No input documents listed in the manifest.</Empty>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {summary.primaries.map((p, i) => {
+              const path = primaryPath(p);
+              const origin = documentOrigin(summary, p);
+              return (
+                <li key={`${path}-${i}`} className="font-mono text-xs">
+                  {path}
+                  {origin.uri ? `: ${origin.uri}` : ""}
+                  {origin.bits.length > 0 ? (
+                    <span className="text-[var(--muted)]">
+                      {" "}
+                      ({origin.bits.join(", ")})
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </ContentsSection>
+    );
+  }
+  if (section === "okf") {
+    return (
+      <ContentsSection
+        title="OKF concepts"
+        subtitle={okfConceptSummary(summary.okf.concepts)}
+      >
+        {summary.okf.concepts.length === 0 ? (
+          <Empty>No OKF concept files under wiki/okf/.</Empty>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {summary.okf.concepts.map((c) => (
+              <li key={c} className="font-mono text-xs">
+                {c}
+              </li>
+            ))}
+          </ul>
+        )}
+      </ContentsSection>
+    );
+  }
+  if (section === "parsed") {
+    return (
+      <ContentsSection
+        title="Extracted text"
+        subtitle={extractedMarkdownSummary(summary)}
+      >
+        {summary.parsed.length === 0 ? (
+          <Empty>No extracted text in this package.</Empty>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {summary.parsed.map((c) => (
+              <li key={c} className="font-mono text-xs">
+                {c}
+              </li>
+            ))}
+          </ul>
+        )}
+      </ContentsSection>
+    );
+  }
+  return (
+    <ContentsSection title="All entries">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[36rem] text-left text-xs">
+          <thead className="border-b border-[var(--border)] text-[var(--muted)]">
+            <tr>
+              <th className="px-3 py-2 font-medium">Path</th>
+              <th className="px-3 py-2 font-medium">Method</th>
+              <th className="px-3 py-2 font-medium">Size</th>
+              <th className="px-3 py-2 font-medium">Stored</th>
+            </tr>
+          </thead>
+          <tbody>
+            {summary.entries.map((e) => (
+              <tr key={e.name} className="border-b border-[var(--border)] last:border-0">
+                <td className="max-w-md truncate px-3 py-1.5 font-mono">{e.name}</td>
+                <td className="px-3 py-1.5">{zipMethodLabel(e.method)}</td>
+                <td className="px-3 py-1.5 tabular-nums">{e.uncompressedSize}</td>
+                <td className="px-3 py-1.5 tabular-nums">{e.compressedSize}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </ContentsSection>
   );
 }
 
@@ -367,14 +450,19 @@ function OverviewRow({ label, value }: { label: string; value: string }) {
 
 function ContentsSection({
   title,
+  subtitle,
   children,
 }: {
   title: string;
+  subtitle?: string;
   children: ReactNode;
 }) {
   return (
     <section>
       <h2 className="font-display text-xl font-semibold">{title}</h2>
+      {subtitle ? (
+        <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
+      ) : null}
       <div className="mt-3 rounded-xl border border-[var(--border)] bg-white p-4">
         {children}
       </div>
