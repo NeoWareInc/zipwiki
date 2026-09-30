@@ -48,6 +48,7 @@ export const SUPPORTED_EXTENSIONS = new Set([
   ".webp",
   ".svg",
   ".txt",
+  ".epub",
   ".md",
   ".markdown",
   ".log",

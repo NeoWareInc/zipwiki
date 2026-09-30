@@ -467,6 +467,7 @@ const OMITTABLE_DOCUMENT_EXTENSIONS = new Set([
   ".tif",
   ".webp",
   ".pdf",
+  ".epub",
   ".doc",
   ".docx",
   ".docm",

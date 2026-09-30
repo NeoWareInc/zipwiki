@@ -1,3 +1,4 @@
+import { extname } from "node:path";
 import {
   isLlamaCloudConfigured,
   isRemoteParseMode,
@@ -5,6 +6,7 @@ import {
   type ResolvedZipwikiConfig,
 } from "../config/index.js";
 import { LiteParseAdapter } from "./adapters/liteparse.js";
+import { parseEpub } from "./epub.js";
 import { LlamaParseAdapter } from "./adapters/llamaparse.js";
 import { RemoteParseAdapter } from "./adapters/remote.js";
 import { shouldEscalateToLlamaParse } from "./parse-quality.js";
@@ -65,6 +67,10 @@ export async function parseDocument(
   path: string,
   options: ParseDocumentOptions,
 ): Promise<DocumentParseResult> {
+  if (extname(path).toLowerCase() === ".epub") {
+    return parseEpub(path);
+  }
+
   loadEnvFiles();
   const { project, cli } = options;
   const runtime: ParseRuntimeOptions = { project, cli };

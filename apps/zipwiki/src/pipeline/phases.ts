@@ -50,6 +50,7 @@ function sha256FileHexIf(path: string, enabled: boolean): string | undefined {
 function guessMime(path: string): string {
   const lower = path.toLowerCase();
   if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".epub")) return "application/epub+zip";
   if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "text/markdown";
   if (lower.endsWith(".txt")) return "text/plain";
   if (lower.endsWith(".png")) return "image/png";

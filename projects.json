@@ -1,0 +1,19 @@
+{
+  "projects": [
+    {
+      "id": "charles-dickens",
+      "title": "Charles Dickens",
+      "source": "~/Documents/Charles Dickens",
+      "output": "knowledge/charles-dickens.zipwiki",
+      "stageDir": "knowledge/.stage/charles-dickens",
+      "include": ["*.epub"],
+      "exclude": ["index.txt", ".DS_Store", "*.origin.json", "*.url"],
+      "omitOriginal": true,
+      "origins": {
+        "catalog": "https://www.gutenberg.org/ebooks/author/37",
+        "indexFile": "index.txt",
+        "urlTemplate": "https://www.gutenberg.org/ebooks/{id}"
+      }
+    }
+  ]
+}
