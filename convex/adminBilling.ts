@@ -92,6 +92,7 @@ export const overview = query({
         creditsSpent: credits.creditsSpent,
         creditsRemaining: credits.creditsRemaining,
         creditsUnlimited: credits.creditsUnlimited,
+        creditsLocked: account.creditsLocked === true,
         autoReloadEnabled: account.autoReloadEnabled === true,
         autoReloadLastError: account.autoReloadLastError || null,
       });

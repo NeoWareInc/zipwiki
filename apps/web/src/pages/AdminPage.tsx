@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+import { AdminCreditsLock } from "../components/AdminCreditsLock";
 
 export default function AdminPage() {
   const [search, setSearch] = useState("");
@@ -14,6 +15,7 @@ export default function AdminPage() {
   const setDisabled = useMutation(api.admin.setDisabled);
   const setRole = useMutation(api.admin.setRole);
   const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
+  const setCreditsLocked = useMutation(api.admin.setCreditsLocked);
 
   const list = (accounts ?? []) as Array<{
     id: string;
@@ -22,12 +24,41 @@ export default function AdminPage() {
     role: string;
     status: string;
     disabled: boolean;
+    creditsLocked?: boolean;
     usage: { parseCount: number; okfCount: number };
     creditsRemaining?: number;
     creditsUnlimited?: boolean;
   }>;
   const admins = list.filter((a) => a.role === "admin");
   const customers = list.filter((a) => a.role !== "admin");
+
+  async function toggleLocked(accountId: string, locked: boolean) {
+    setActionError("");
+    try {
+      await setCreditsLocked({
+        id: accountId as Id<"accounts">,
+        locked,
+      });
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to update the credit lock",
+      );
+    }
+  }
+
+  async function toggleDisabled(accountId: string, disabled: boolean) {
+    setActionError("");
+    try {
+      await setDisabled({
+        id: accountId as Id<"accounts">,
+        disabled,
+      });
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to update login access",
+      );
+    }
+  }
 
   async function toggleUnlimited(accountId: string, unlimited: boolean) {
     setActionError("");
@@ -62,6 +93,8 @@ export default function AdminPage() {
         </div>
       )}
 
+      <AdminCreditsLock />
+
       {actionError && <p className="text-sm text-red-600">{actionError}</p>}
 
       <input
@@ -76,25 +109,23 @@ export default function AdminPage() {
         title="Admins"
         rows={admins}
         emptyLabel="No admins found."
-        onDisable={(id, disabled) =>
-          void setDisabled({ id: id as Id<"accounts">, disabled })
-        }
+        onDisable={(id, disabled) => void toggleDisabled(id, disabled)}
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
         }
         onSetUnlimited={(id, unlimited) => void toggleUnlimited(id, unlimited)}
+        onSetLocked={(id, locked) => void toggleLocked(id, locked)}
       />
       <AccountTable
         title="Customers"
         rows={customers}
         emptyLabel="No customers found."
-        onDisable={(id, disabled) =>
-          void setDisabled({ id: id as Id<"accounts">, disabled })
-        }
+        onDisable={(id, disabled) => void toggleDisabled(id, disabled)}
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
         }
         onSetUnlimited={(id, unlimited) => void toggleUnlimited(id, unlimited)}
+        onSetLocked={(id, locked) => void toggleLocked(id, locked)}
       />
     </div>
   );
@@ -116,6 +147,7 @@ function AccountTable({
   onDisable,
   onSetRole,
   onSetUnlimited,
+  onSetLocked,
 }: {
   title: string;
   rows: Array<{
@@ -125,6 +157,7 @@ function AccountTable({
     role: string;
     status: string;
     disabled: boolean;
+    creditsLocked?: boolean;
     usage: { parseCount: number; okfCount: number };
     creditsRemaining?: number;
     creditsUnlimited?: boolean;
@@ -133,6 +166,7 @@ function AccountTable({
   onDisable: (id: string, disabled: boolean) => void;
   onSetRole: (id: string, role: "admin" | "customer") => void;
   onSetUnlimited: (id: string, unlimited: boolean) => void;
+  onSetLocked: (id: string, locked: boolean) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -178,7 +212,8 @@ function AccountTable({
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  {a.disabled ? "disabled" : a.status}
+                  {a.disabled ? "login disabled" : a.status}
+                  {a.creditsLocked ? " · credits locked" : ""}
                 </td>
                 <td className="px-4 py-3 space-x-2 text-right">
                   <button
@@ -195,10 +230,17 @@ function AccountTable({
                   </button>
                   <button
                     type="button"
+                    className="text-xs text-(--accent) hover:underline"
+                    onClick={() => onSetLocked(a.id, !a.creditsLocked)}
+                  >
+                    {a.creditsLocked ? "Unlock credits" : "Lock credits"}
+                  </button>
+                  <button
+                    type="button"
                     className="text-xs text-red-600 hover:underline"
                     onClick={() => onDisable(a.id, !a.disabled)}
                   >
-                    {a.disabled ? "Enable" : "Disable"}
+                    {a.disabled ? "Enable login" : "Disable login"}
                   </button>
                 </td>
               </tr>

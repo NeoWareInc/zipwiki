@@ -17,6 +17,7 @@ export default function AdminAccountPage() {
   const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
   const setRole = useMutation(api.admin.setRole);
   const setDisabled = useMutation(api.admin.setDisabled);
+  const setCreditsLocked = useMutation(api.admin.setCreditsLocked);
   const revokeKeys = useMutation(api.admin.revokeKeys);
   const remove = useMutation(api.admin.deleteAccount);
   const [grantAmount, setGrantAmount] = useState("1000");
@@ -114,7 +115,10 @@ export default function AdminAccountPage() {
         <div className="rounded-xl border border-(--border) bg-white shadow-soft p-4 space-y-2">
           <p>
             Role: <strong>{a.role}</strong> · Status:{" "}
-            <strong>{a.disabled ? "disabled" : a.status}</strong>
+            <strong>
+              {a.disabled ? "login disabled" : a.status}
+              {a.creditsLocked ? " · credits locked" : ""}
+            </strong>
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -136,6 +140,20 @@ export default function AdminAccountPage() {
               className="rounded-md border border-(--border) px-2 py-1 text-xs"
               onClick={() =>
                 void run(() =>
+                  setCreditsLocked({
+                    id: a.id as Id<"accounts">,
+                    locked: !a.creditsLocked,
+                  }),
+                )
+              }
+            >
+              {a.creditsLocked ? "Unlock credits" : "Lock credits"}
+            </button>
+            <button
+              type="button"
+              className="rounded-md border border-(--border) px-2 py-1 text-xs"
+              onClick={() =>
+                void run(() =>
                   setDisabled({
                     id: a.id as Id<"accounts">,
                     disabled: !a.disabled,
@@ -143,7 +161,7 @@ export default function AdminAccountPage() {
                 )
               }
             >
-              {a.disabled ? "Enable" : "Disable"}
+              {a.disabled ? "Enable login" : "Disable login"}
             </button>
             <button
               type="button"

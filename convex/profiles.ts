@@ -11,6 +11,7 @@ import {
   bootstrapAdminEmails,
   isBootstrapAdminEmail,
 } from "./lib/adminEmails";
+import { creditsLockedFor } from "./lib/creditLock";
 import { creditSnapshot } from "./lib/credits";
 
 /** Ensure profile + free account exist for the signed-in auth user. */
@@ -104,6 +105,7 @@ export const me = query({
         name: account.name,
         status: account.status,
         disabled: account.disabled,
+        creditsLocked: await creditsLockedFor(ctx, account),
         stripeCustomerId: account.stripeCustomerId ?? null,
         stripeSubscriptionId: account.stripeSubscriptionId ?? null,
         creditsRemaining: credits.creditsRemaining,

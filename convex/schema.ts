@@ -35,6 +35,8 @@ export default defineSchema({
     creditsSpent: v.optional(v.number()),
     /** Admin/sales: unlimited hosted usage (no credit debit). */
     creditsUnlimited: v.optional(v.boolean()),
+    /** Admin: this account cannot spend ZipWiki credits. */
+    creditsLocked: v.optional(v.boolean()),
     autoReloadEnabled: v.optional(v.boolean()),
     autoReloadThresholdCredits: v.optional(v.number()),
     autoReloadUsdCents: v.optional(v.number()),
@@ -182,6 +184,11 @@ export default defineSchema({
   })
     .index("by_deviceCodeHash", ["deviceCodeHash"])
     .index("by_userCode", ["userCode"]),
+
+  /** Singleton controls for the whole deployment. */
+  platformControls: defineTable({
+    creditsLocked: v.boolean(),
+  }),
 
   accountSettings: defineTable({
     accountId: v.id("accounts"),

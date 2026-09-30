@@ -187,6 +187,14 @@ export function remainingCredits(account: {
   return Math.max(0, purchased - spent);
 }
 
+/** True when hosted credit spend must be refused. */
+export function creditsSpendBlocked(args: {
+  accountLocked?: boolean;
+  globalLocked?: boolean;
+}): boolean {
+  return args.accountLocked === true || args.globalLocked === true;
+}
+
 export function isLowCredits(remaining: number, unlimited?: boolean): boolean {
   if (unlimited) return false;
   return remaining <= LOW_CREDITS_THRESHOLD;

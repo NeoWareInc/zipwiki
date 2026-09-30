@@ -10,6 +10,7 @@ import {
   approxAgenticPagesForUsd,
   approxPagesForUsd,
   crossedLowCreditThreshold,
+  creditsSpendBlocked,
   isLowCredits,
   llamaCreditsPerPageForTier,
   remainingCredits,
@@ -145,6 +146,12 @@ describe("credits", () => {
       remainingCredits({ creditsUnlimited: true, creditsPurchased: 0 }),
       Number.MAX_SAFE_INTEGER,
     );
+  });
+
+  it("blocks credit spend when the account or the platform is locked", () => {
+    assert.equal(creditsSpendBlocked({}), false);
+    assert.equal(creditsSpendBlocked({ accountLocked: true }), true);
+    assert.equal(creditsSpendBlocked({ globalLocked: true }), true);
   });
 
   it("flags low balance at ≤500", () => {

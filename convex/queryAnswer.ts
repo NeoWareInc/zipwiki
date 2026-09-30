@@ -51,10 +51,14 @@ export const ask = action({
 
     const billing: {
       accountId: Id<"accounts">;
+      disabled: boolean;
       creditsRemaining: number;
       creditsUnlimited: boolean;
+      creditsLocked: boolean;
     } | null = await ctx.runQuery(internal.usage.queryBilling, { userId });
     if (!billing) throw new Error("No account");
+    if (billing.disabled) throw new Error("account_disabled");
+    if (billing.creditsLocked) throw new Error("credits_locked");
     if (!billing.creditsUnlimited && billing.creditsRemaining < 1) {
       throw new Error("credits_exhausted");
     }

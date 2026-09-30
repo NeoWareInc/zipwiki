@@ -120,6 +120,7 @@ export const approve = mutation({
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .unique();
     if (!account) throw new Error("No account — complete signup first");
+    if (account.disabled) throw new Error("This account is disabled.");
 
     const row = await ctx.db
       .query("deviceAuthCodes")

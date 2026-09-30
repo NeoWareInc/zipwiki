@@ -14,6 +14,14 @@ import { AccountMenu } from "./AccountMenu";
 function LowCreditsBanner() {
   const location = useLocation();
   const usage = useQuery(api.usage.myUsage);
+  if (usage?.creditsLocked) {
+    return (
+      <p className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        ZipWiki credits are locked for this account. Hosted parse, OKF, and
+        package questions cannot spend credits.
+      </p>
+    );
+  }
   if (!usage?.lowCredits || usage.creditsUnlimited) return null;
   if (location.pathname.startsWith("/dashboard/billing")) return null;
   return (

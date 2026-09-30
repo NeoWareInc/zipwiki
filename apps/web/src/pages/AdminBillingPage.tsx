@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { AdminCreditsLock } from "../components/AdminCreditsLock";
 
 function dollars(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -155,6 +156,7 @@ export default function AdminBillingPage() {
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">Customer credits</h2>
+        <AdminCreditsLock />
         <div className="overflow-x-auto rounded-xl border border-(--border) bg-white">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-(--border) text-(--muted)">
@@ -173,6 +175,9 @@ export default function AdminBillingPage() {
                     <div className="text-(--muted)">{account.name}</div>
                   </td>
                   <td className="px-3 py-2 tabular-nums">
+                    {account.creditsLocked
+                      ? "Locked · "
+                      : ""}
                     {account.creditsUnlimited
                       ? "Unlimited"
                       : account.creditsRemaining.toLocaleString()}

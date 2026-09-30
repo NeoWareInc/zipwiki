@@ -8,6 +8,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   google_failed: "Google sign-in failed. Try again.",
   access_denied: "Google sign-in was cancelled.",
   use_google_sign_in: "This account uses Google. Continue with Google below.",
+  account_disabled: "This account is disabled and cannot sign in.",
 };
 
 export function AuthErrorBanner({ code }: { code?: string | null }) {

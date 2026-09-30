@@ -92,7 +92,10 @@ export default function AdminUsagePage() {
                     {row.email}
                   </Link>
                   {row.disabled ? (
-                    <span className="ml-2 text-xs text-(--muted)">disabled</span>
+                    <span className="ml-2 text-xs text-(--muted)">login disabled</span>
+                  ) : null}
+                  {row.creditsLocked ? (
+                    <span className="ml-2 text-xs text-(--muted)">credits locked</span>
                   ) : null}
                 </td>
                 <td className="px-4 py-3 tabular-nums">

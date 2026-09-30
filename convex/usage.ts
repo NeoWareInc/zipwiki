@@ -14,6 +14,7 @@ import {
   remainingCredits,
   shouldStartAutoReload,
 } from "./lib/credits";
+import { creditsLockedFor } from "./lib/creditLock";
 import type { Id } from "./_generated/dataModel";
 
 export const getOrCreatePeriod = internalMutation({
@@ -65,8 +66,9 @@ export const checkQuota = internalQuery({
 
     const cost = kind === "parse" ? CREDIT_COST_PARSE : CREDIT_COST_LLM;
     const remaining = remainingCredits(account);
+    const locked = await creditsLockedFor(ctx, account);
     const billable =
-      account.creditsUnlimited === true || remaining >= cost;
+      !locked && (account.creditsUnlimited === true || remaining >= cost);
 
     const periodStart = startOfMonthMs();
     const period = await ctx.db
@@ -78,8 +80,9 @@ export const checkQuota = internalQuery({
 
     const used =
       kind === "parse" ? (period?.parseCount ?? 0) : (period?.okfCount ?? 0);
-    const entitlement =
-      kind === "parse"
+    const entitlement = locked
+      ? ("credits_locked" as const)
+      : kind === "parse"
         ? billable
           ? ("llamaparse" as const)
           : ("liteparse_fallback" as const)
@@ -240,8 +243,9 @@ export const recordUsage = internalMutation({
       });
     }
 
-    const shouldDebit = billable !== false;
     const account = await ctx.db.get(accountId);
+    const locked = account ? await creditsLockedFor(ctx, account) : false;
+    const shouldDebit = billable !== false && !locked;
     if (!shouldDebit || !account) {
       const remaining = account ? remainingCredits(account) : 0;
       return {
@@ -347,8 +351,10 @@ export const queryBilling = internalQuery({
     if (!account) return null;
     return {
       accountId: account._id,
+      disabled: account.disabled,
       creditsRemaining: remainingCredits(account),
       creditsUnlimited: account.creditsUnlimited === true,
+      creditsLocked: await creditsLockedFor(ctx, account),
     };
   },
 });
@@ -366,6 +372,12 @@ export const recordQueryDebit = internalMutation({
     filename: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const account = await ctx.db.get(args.accountId);
+    if (!account) throw new Error("No account");
+    if (account.disabled) throw new Error("account_disabled");
+    if (await creditsLockedFor(ctx, account)) {
+      throw new Error("credits_locked");
+    }
     const creditCost = zipwikiCreditsForAnthropicTokens({
       model: args.model,
       inputTokens: args.inputTokens,
@@ -427,8 +439,7 @@ export const recordQueryDebit = internalMutation({
       });
     }
 
-    const account = await ctx.db.get(args.accountId);
-    if (!account || account.creditsUnlimited) {
+    if (account.creditsUnlimited) {
       return {
         creditsCharged: 0,
         creditsRemaining: account ? remainingCredits(account) : 0,
@@ -685,6 +696,7 @@ export const myUsage = query({
       creditsSpent: credits.creditsSpent,
       creditsRemaining: credits.creditsRemaining,
       creditsUnlimited: credits.creditsUnlimited,
+      creditsLocked: await creditsLockedFor(ctx, account),
       lowCredits: isLowCredits(
         credits.creditsRemaining,
         credits.creditsUnlimited,

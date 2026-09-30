@@ -27,6 +27,7 @@ const KNOWN_CODES = new Set([
   "google_failed",
   "email_unverified",
   "access_denied",
+  "account_disabled",
 ]);
 
 type Step = "email" | "code";

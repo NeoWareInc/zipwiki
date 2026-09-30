@@ -1,8 +1,10 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin } from "./lib/admin";
+import { globalCreditsLocked } from "./lib/creditLock";
 import { startOfMonthMs } from "./lib/crypto";
 import { creditSnapshot } from "./lib/credits";
+import { revokeLoginSessions } from "./lib/loginSessions";
 
 export const summary = query({
   args: {},
@@ -60,6 +62,7 @@ export const listAccounts = query({
         auth: "convex",
         status: account.status,
         disabled: account.disabled,
+        creditsLocked: account.creditsLocked === true,
         createdAt: new Date(account._creationTime).toISOString(),
         usage: {
           parseCount: period?.parseCount ?? 0,
@@ -108,6 +111,7 @@ export const accountDetail = query({
         auth: "convex",
         status: account.status,
         disabled: account.disabled,
+        creditsLocked: account.creditsLocked === true,
         stripeCustomerId: account.stripeCustomerId ?? null,
         createdAt: new Date(account._creationTime).toISOString(),
         creditsPurchased: credits.creditsPurchased,
@@ -182,6 +186,7 @@ export const usageOverview = query({
         email: profile.email,
         name: account.name,
         disabled: account.disabled,
+        creditsLocked: account.creditsLocked === true,
         creditsRemaining: credits.creditsRemaining,
         creditsUnlimited: credits.creditsUnlimited,
         parseCount: period?.parseCount ?? 0,
@@ -204,11 +209,52 @@ export const usageOverview = query({
   },
 });
 
+export const creditControls = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return { creditsLocked: await globalCreditsLocked(ctx) };
+  },
+});
+
+export const setGlobalCreditsLocked = mutation({
+  args: { locked: v.boolean() },
+  handler: async (ctx, { locked }) => {
+    await requireAdmin(ctx);
+    const row = await ctx.db.query("platformControls").first();
+    if (row) {
+      await ctx.db.patch(row._id, { creditsLocked: locked });
+    } else {
+      await ctx.db.insert("platformControls", { creditsLocked: locked });
+    }
+    return { creditsLocked: locked };
+  },
+});
+
+export const setCreditsLocked = mutation({
+  args: { id: v.id("accounts"), locked: v.boolean() },
+  handler: async (ctx, { id, locked }) => {
+    await requireAdmin(ctx);
+    const account = await ctx.db.get(id);
+    if (!account) throw new Error("Not found");
+    await ctx.db.patch(id, { creditsLocked: locked });
+    return { ok: true, creditsLocked: locked };
+  },
+});
+
 export const setDisabled = mutation({
   args: { id: v.id("accounts"), disabled: v.boolean() },
   handler: async (ctx, { id, disabled }) => {
-    await requireAdmin(ctx);
+    const { userId } = await requireAdmin(ctx);
+    const account = await ctx.db.get(id);
+    if (!account) throw new Error("Not found");
+    if (disabled && account.userId === userId) {
+      throw new Error("You cannot disable your own login");
+    }
     await ctx.db.patch(id, { disabled });
+    if (disabled) {
+      await revokeLoginSessions(ctx, account.userId);
+    }
     return { ok: true };
   },
 });

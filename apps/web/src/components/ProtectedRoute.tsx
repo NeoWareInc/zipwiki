@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useConvexAuth } from "@convex-dev/auth/react";
+import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { useEffect } from "react";
 import { api } from "@convex/_generated/api";
@@ -47,6 +47,16 @@ function EnsureProfile() {
   return <Outlet context={data} />;
 }
 
+function SignOutDisabled() {
+  const { signOut } = useAuthActions();
+
+  useEffect(() => {
+    void signOut();
+  }, [signOut]);
+
+  return <Navigate to="/login?error=account_disabled" replace />;
+}
+
 export function ProtectedRoute({ admin }: { admin?: boolean }) {
   const location = useLocation();
   const { isLoading, isAuthenticated } = useConvexAuth();
@@ -62,6 +72,7 @@ export function ProtectedRoute({ admin }: { admin?: boolean }) {
       />
     );
   }
+  if (me?.account.disabled) return <SignOutDisabled />;
   if (admin && me && me.user.role !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }

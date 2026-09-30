@@ -130,8 +130,10 @@ export default function KnowledgePage() {
   const reportActivity = useMutation(api.usage.reportActivity);
   const ask = useAction(api.queryAnswer.ask);
   const usage = useQuery(api.usage.myUsage);
+  const creditsLocked = usage?.creditsLocked === true;
   const outOfCredits =
     usage != null &&
+    !creditsLocked &&
     usage.creditsUnlimited !== true &&
     usage.creditsRemaining < 1;
 
@@ -239,7 +241,7 @@ export default function KnowledgePage() {
   async function askPackage() {
     const buf = archiveRef.current;
     const q = question.trim();
-    if (!buf || !summary || !q || asking || outOfCredits) return;
+    if (!buf || !summary || !q || asking || outOfCredits || creditsLocked) return;
     setAskError("");
     setAnswer(null);
     setPackageQuery(null);
@@ -268,7 +270,11 @@ export default function KnowledgePage() {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (/credits_exhausted/.test(message)) {
+      if (/credits_locked/.test(message)) {
+        setAskError("ZipWiki credits are locked for this account.");
+      } else if (/account_disabled/.test(message)) {
+        setAskError("This account is disabled.");
+      } else if (/credits_exhausted/.test(message)) {
         setAskError("Credits are required to ask a question.");
       } else if (/anthropic_not_configured/.test(message)) {
         setAskError("Hosted answers are not configured on this deployment.");
@@ -464,7 +470,9 @@ export default function KnowledgePage() {
               />
               <button
                 type="submit"
-                disabled={asking !== null || !question.trim() || outOfCredits}
+                disabled={
+                  asking !== null || !question.trim() || outOfCredits || creditsLocked
+                }
                 className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {asking === "reading"
@@ -474,6 +482,11 @@ export default function KnowledgePage() {
                     : "Ask"}
               </button>
             </form>
+            {creditsLocked && (
+              <p className="mt-2 text-sm text-(--ink)">
+                ZipWiki credits are locked for this account.
+              </p>
+            )}
             {outOfCredits && (
               <p className="mt-2 text-sm text-(--ink)">
                 Credits are required to ask a question.{" "}

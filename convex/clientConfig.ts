@@ -1,5 +1,6 @@
 import { internalQuery } from "./_generated/server";
 import { v } from "convex/values";
+import { creditsLockedFor } from "./lib/creditLock";
 import { creditSnapshot, resolveHostedOkfModel, HOSTED_OKF_MODELS } from "./lib/credits";
 import { startOfMonthMs } from "./lib/crypto";
 import { hashApiKey } from "./lib/crypto";
@@ -78,7 +79,8 @@ export const forApiKey = internalQuery({
 
     const remaining = credits.creditsRemaining;
     const unlimited = credits.creditsUnlimited;
-    const billable = unlimited || remaining >= 1;
+    const locked = await creditsLockedFor(ctx, account);
+    const billable = !locked && (unlimited || remaining >= 1);
     const periodEndMs = Date.UTC(
       new Date(periodStart).getUTCFullYear(),
       new Date(periodStart).getUTCMonth() + 1,
