@@ -2,6 +2,7 @@ import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { MarkdownViewDialog } from "../components/MarkdownViewDialog";
 import { PromptSection } from "../components/ZipWikiPrompts";
 import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
@@ -29,6 +30,10 @@ function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function isMarkdownPath(path: string): boolean {
+  return path.replace(/\\/g, "/").toLowerCase().endsWith(".md");
 }
 
 function primaryPath(p: NzipOpenSummary["primaries"][number]): string {
@@ -127,6 +132,7 @@ export default function KnowledgePage() {
     creditsUnlimited: boolean;
   } | null>(null);
   const archiveRef = useRef<ArrayBuffer | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
   const reportActivity = useMutation(api.usage.reportActivity);
   const ask = useAction(api.queryAnswer.ask);
   const usage = useQuery(api.usage.myUsage);
@@ -149,6 +155,7 @@ export default function KnowledgePage() {
       setAskError("");
       setPackageQuery(null);
       setAnswer(null);
+      setViewing(null);
       archiveRef.current = null;
       try {
         const buf = await file.arrayBuffer();
@@ -195,6 +202,7 @@ export default function KnowledgePage() {
     setAskError("");
     setPackageQuery(null);
     setAnswer(null);
+    setViewing(null);
     archiveRef.current = null;
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -294,6 +302,9 @@ export default function KnowledgePage() {
         { id: "entries", label: "All entries" },
       ]
     : [];
+
+  const viewingEntry = viewing ? entryNamed(viewing) : null;
+  const openArchive = archiveRef.current;
 
   return (
     <div className="space-y-8">
@@ -537,12 +548,20 @@ export default function KnowledgePage() {
                   return (
                     <li key={hit.path} className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs">{hit.path}</span>
+                        <span className="mr-2 font-mono text-xs">{hit.path}</span>
                         {hit.kind === "parsed" && entryNamed(hit.path) ? (
-                          <DownloadIconButton
-                            path={hit.path}
-                            onDownload={() => void downloadEntry(hit.path)}
-                          />
+                          <>
+                            {isMarkdownPath(hit.path) ? (
+                              <ViewButton
+                                path={hit.path}
+                                onView={() => setViewing(hit.path)}
+                              />
+                            ) : null}
+                            <DownloadIconButton
+                              path={hit.path}
+                              onDownload={() => void downloadEntry(hit.path)}
+                            />
+                          </>
                         ) : null}
                         <span className="text-(--muted)">
                           · {hit.kind === "okf" ? "OKF" : "parsed"}
@@ -552,12 +571,20 @@ export default function KnowledgePage() {
                       {hit.kind === "okf"
                         ? documents.map((doc) => (
                             <div key={doc} className="flex items-center gap-2">
-                              <span className="font-mono text-xs">{doc}</span>
+                              <span className="mr-2 font-mono text-xs">{doc}</span>
                               {entryNamed(doc) ? (
-                                <DownloadIconButton
-                                  path={doc}
-                                  onDownload={() => void downloadEntry(doc)}
-                                />
+                                <>
+                                  {isMarkdownPath(doc) ? (
+                                    <ViewButton
+                                      path={doc}
+                                      onView={() => setViewing(doc)}
+                                    />
+                                  ) : null}
+                                  <DownloadIconButton
+                                    path={doc}
+                                    onDownload={() => void downloadEntry(doc)}
+                                  />
+                                </>
                               ) : null}
                             </div>
                           ))
@@ -617,6 +644,7 @@ export default function KnowledgePage() {
               section={id}
               entryNamed={entryNamed}
               onDownload={(name) => void downloadEntry(name)}
+              onView={setViewing}
             />
           ))}
 
@@ -647,6 +675,14 @@ export default function KnowledgePage() {
           )}
         </>
       )}
+      {viewingEntry && openArchive ? (
+        <MarkdownViewDialog
+          archive={openArchive}
+          entry={viewingEntry}
+          onClose={() => setViewing(null)}
+          onDownload={() => void downloadEntry(viewingEntry.name)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -656,11 +692,13 @@ function SectionBody({
   section,
   entryNamed,
   onDownload,
+  onView,
 }: {
   summary: NzipOpenSummary;
   section: PackageSection;
   entryNamed: (path: string) => NzipOpenSummary["entries"][number] | null;
   onDownload: (entryName: string) => void;
+  onView: (entryName: string) => void;
 }) {
   if (section === "documents") {
     return (
@@ -681,7 +719,7 @@ function SectionBody({
                   key={`${path}-${i}`}
                   className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
                 >
-                  <span className="font-mono text-xs">
+                  <span className="mr-2 font-mono text-xs">
                     {path}
                     {origin.uri ? `: ${origin.uri}` : ""}
                     {origin.bits.length > 0 ? (
@@ -692,7 +730,15 @@ function SectionBody({
                     ) : null}
                   </span>
                   {stored ? (
-                    <DownloadButton onClick={() => onDownload(stored.name)} />
+                    <span className="flex shrink-0 items-center gap-3">
+                      {isMarkdownPath(stored.name) ? (
+                        <ViewButton
+                          path={stored.name}
+                          onView={() => onView(stored.name)}
+                        />
+                      ) : null}
+                      <DownloadButton onClick={() => onDownload(stored.name)} />
+                    </span>
                   ) : null}
                 </li>
               );
@@ -716,17 +762,25 @@ function SectionBody({
               const stored = entryNamed(c);
               return (
                 <li key={c} className="flex items-center gap-2">
-                  <span className="font-mono text-xs">{c}</span>
+                  <span className="mr-2 font-mono text-xs">{c}</span>
                   {stored ? (
-                    <button
-                      type="button"
-                      onClick={() => onDownload(stored.name)}
-                      aria-label={`Download ${c.split("/").pop() ?? c}`}
-                      title="Download"
-                      className="shrink-0 text-(--accent) hover:opacity-80"
-                    >
-                      <DownloadIcon />
-                    </button>
+                    <>
+                      {isMarkdownPath(stored.name) ? (
+                        <ViewButton
+                          path={stored.name}
+                          onView={() => onView(stored.name)}
+                        />
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => onDownload(stored.name)}
+                        aria-label={`Download ${c.split("/").pop() ?? c}`}
+                        title="Download"
+                        className="shrink-0 text-(--accent) hover:opacity-80"
+                      >
+                        <DownloadIcon />
+                      </button>
+                    </>
                   ) : null}
                 </li>
               );
@@ -751,17 +805,23 @@ function SectionBody({
               const stored = markdown ? entryNamed(c) : null;
               return (
                 <li key={c} className="flex items-center gap-2">
-                  <span className="font-mono text-xs">{c}</span>
+                  <span className="mr-2 font-mono text-xs">{c}</span>
                   {stored ? (
-                    <button
-                      type="button"
-                      onClick={() => onDownload(stored.name)}
-                      aria-label={`Download ${c.split("/").pop() ?? c}`}
-                      title="Download"
-                      className="shrink-0 text-(--accent) hover:opacity-80"
-                    >
-                      <DownloadIcon />
-                    </button>
+                    <>
+                      <ViewButton
+                        path={stored.name}
+                        onView={() => onView(stored.name)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onDownload(stored.name)}
+                        aria-label={`Download ${c.split("/").pop() ?? c}`}
+                        title="Download"
+                        className="shrink-0 text-(--accent) hover:opacity-80"
+                      >
+                        <DownloadIcon />
+                      </button>
+                    </>
                   ) : null}
                 </li>
               );
@@ -799,6 +859,27 @@ function SectionBody({
   );
 }
 
+function ViewButton({
+  path,
+  onView,
+}: {
+  path: string;
+  onView: () => void;
+}) {
+  const name = path.split("/").pop() ?? path;
+  return (
+    <button
+      type="button"
+      onClick={onView}
+      aria-label={`View ${name}`}
+      title="View"
+      className="shrink-0 text-(--accent) hover:opacity-80"
+    >
+      <ViewIcon />
+    </button>
+  );
+}
+
 function DownloadIconButton({
   path,
   onDownload,
@@ -817,6 +898,25 @@ function DownloadIconButton({
     >
       <DownloadIcon />
     </button>
+  );
+}
+
+function ViewIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
   );
 }
 
