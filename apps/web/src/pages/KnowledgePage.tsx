@@ -109,6 +109,53 @@ function inputDocumentSummary(summary: NzipOpenSummary): string {
   return `${files} · ${formatBytes(bytes)}`;
 }
 
+function compressionSaved(compressed: number, uncompressed: number): string {
+  if (uncompressed <= 0) return "0%";
+  const saved = Math.max(0, (1 - compressed / uncompressed) * 100);
+  if (saved > 90) {
+    const tenths = Math.round(saved * 10) / 10;
+    return `${tenths.toFixed(1)}%`;
+  }
+  return `${Math.round(saved)}%`;
+}
+
+function listedEntry(summary: NzipOpenSummary, path: string) {
+  const key = path.replace(/\\/g, "/").replace(/^\/+/, "");
+  return summary.entries.find((entry) => entry.name === key) ?? null;
+}
+
+function archiveSizeLine(summary: NzipOpenSummary): string {
+  let compressed = 0;
+  let uncompressed = 0;
+  for (const entry of summary.entries) {
+    compressed += entry.compressedSize;
+    uncompressed += entry.uncompressedSize;
+  }
+  return `${formatBytes(compressed)} compressed / ${formatBytes(uncompressed)} · ${compressionSaved(compressed, uncompressed)}`;
+}
+
+function documentSizeLine(summary: NzipOpenSummary): string {
+  let original = 0;
+  for (const primary of summary.primaries) {
+    const entry = listedEntry(summary, primaryPath(primary));
+    if (entry) {
+      original += entry.uncompressedSize;
+      continue;
+    }
+    const { size } = documentOrigin(summary, primary);
+    if (size !== undefined) original += size;
+  }
+
+  let parsedCompressed = 0;
+  for (const path of summary.parsed) {
+    const entry = listedEntry(summary, path);
+    if (!entry) continue;
+    parsedCompressed += entry.compressedSize;
+  }
+
+  return `${formatBytes(original)} originals / ${formatBytes(parsedCompressed)} extracted compressed text · ${compressionSaved(parsedCompressed, original)}`;
+}
+
 type PackageSection = "documents" | "okf" | "parsed" | "entries";
 
 export default function KnowledgePage() {
@@ -794,7 +841,10 @@ function SectionBody({
     return (
       <ContentsSection
         title="Extracted text"
-        subtitle={extractedMarkdownSummary(summary)}
+        subtitle={[
+          extractedMarkdownSummary(summary),
+          documentSizeLine(summary),
+        ]}
       >
         {summary.parsed.length === 0 ? (
           <Empty>No extracted text in this package.</Empty>
@@ -832,7 +882,10 @@ function SectionBody({
     );
   }
   return (
-    <ContentsSection title="All entries">
+    <ContentsSection
+      title="All entries"
+      subtitle={archiveSizeLine(summary)}
+    >
       <div className="overflow-x-auto">
         <table className="w-full min-w-xl text-left text-xs">
           <thead className="border-b border-(--border) text-(--muted)">
@@ -967,15 +1020,18 @@ function ContentsSection({
   children,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: string | readonly string[];
   children: ReactNode;
 }) {
+  const lines = subtitle == null ? [] : Array.isArray(subtitle) ? subtitle : [subtitle];
   return (
     <section>
       <h2 className="font-display text-xl font-semibold">{title}</h2>
-      {subtitle ? (
-        <p className="mt-1 text-sm text-(--muted)">{subtitle}</p>
-      ) : null}
+      {lines.map((line, index) => (
+        <p key={`${index}:${line}`} className="mt-1 text-sm text-(--muted)">
+          {line}
+        </p>
+      ))}
       <div className="mt-3 rounded-xl border border-(--border) bg-white p-4">
         {children}
       </div>
