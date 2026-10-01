@@ -233,6 +233,10 @@ function withPipelineFlags(cmd: Command): Command {
       "Store file: URI (pathToFileURL) as Extra Field 0x014F on each parse",
     )
     .option(
+      "--origin-drive",
+      "Store each file's Google Drive URL (Drive for desktop file id) as the original",
+    )
+    .option(
       "--sha256",
       "Write Extra Field 0x014E (SHA-256 of each zip member). Default: CRC-32 only",
     )

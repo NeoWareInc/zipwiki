@@ -80,6 +80,8 @@ export type StageOptions = CliParseOptions & {
   originUrlTemplate?: string;
   /** When true, CLI overlay uses pathToFileURL for each file. */
   originFile?: boolean;
+  /** Store each file's Google Drive URL from Drive for desktop. */
+  originDrive?: boolean;
   /**
    * Write Extra Field 0x014E (SHA-256 of each zip member).
    * Default: ZIP CRC-32 only.

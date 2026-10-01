@@ -113,6 +113,7 @@ export {
   DEFAULT_PARSED_DIR,
   PACKAGE_SPEC_VERSION,
   assignContentPaths,
+  relativeContentPath,
   buildNeoZipManifest,
   classifyEntry,
   findOrphanParses,

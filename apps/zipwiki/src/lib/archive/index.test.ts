@@ -481,10 +481,20 @@ describe("merkle", () => {
 
 describe("multi-primary package", () => {
   it("assigns content/ paths on basename collision", () => {
-    assert.deepEqual(assignContentPaths(["a/report.pdf", "b/report.pdf"]), [
+    assert.deepEqual(assignContentPaths(["report.pdf", "report.pdf"]), [
       "report.pdf",
       "content/2/report.pdf",
     ]);
+  });
+
+  it("keeps a directory path from the pack root", () => {
+    assert.deepEqual(
+      assignContentPaths([
+        "marchetti/Marchetti CT.pdf",
+        "ostrander/Ostrander CT.pdf",
+      ]),
+      ["marchetti/Marchetti CT.pdf", "ostrander/Ostrander CT.pdf"],
+    );
   });
 
   it("writes a single-member package via the collection/bundle writer", () => {

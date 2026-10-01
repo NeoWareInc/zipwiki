@@ -100,6 +100,7 @@ export function stageOptionsFromCli(
     originPattern: opts.originPattern as string | undefined,
     originUrlTemplate: opts.originUrlTemplate as string | undefined,
     originFile: opts.originFile === true,
+    originDrive: opts.originDrive === true,
     sha256Extra: opts.sha256 === true,
     originSha256: opts.originSha256 === true,
     dryRun: opts.dryRun === true,

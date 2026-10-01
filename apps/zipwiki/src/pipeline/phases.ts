@@ -13,6 +13,7 @@ import { stageLog } from "../lib/cli/activity-dots.js";
 import {
   parseCategoryOverride,
   parsedMarkdownFileName,
+  relativeContentPath,
   isOmittableDocumentSource,
   writeNzipCollectionBundle,
   cliOriginOverlay,
@@ -667,12 +668,13 @@ export function runCompressPhase(input: {
       const originUri = resolveOriginUri(m.abs, {
         inputRoots,
         cliOverlay: overlay,
+        originDrive: input.opts.originDrive === true,
       });
       return {
         originalPath: m.abs,
         originalName: input.opts.junkPaths
-          ? basename(m.originalName)
-          : m.originalName,
+          ? basename(m.abs)
+          : relativeContentPath(m.abs, inputRoots),
         mimeType: guessMime(m.abs),
         documentType: m.documentType,
         ...(m.structuredMarkdown

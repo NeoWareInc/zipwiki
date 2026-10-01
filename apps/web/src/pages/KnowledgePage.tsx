@@ -293,6 +293,14 @@ export default function KnowledgePage() {
     }
   }
 
+  function clearAsk() {
+    if (asking) return;
+    setQuestion("");
+    setAskError("");
+    setPackageQuery(null);
+    setAnswer(null);
+  }
+
   async function askPackage() {
     const buf = archiveRef.current;
     const q = question.trim();
@@ -538,6 +546,17 @@ export default function KnowledgePage() {
                   : asking === "answering"
                     ? "Answering…"
                     : "Ask"}
+              </button>
+              <button
+                type="button"
+                onClick={clearAsk}
+                disabled={
+                  asking !== null ||
+                  (!question && !answer && !packageQuery && !askError)
+                }
+                className="rounded-md border border-(--border) bg-white px-4 py-2 text-sm font-semibold text-(--ink) disabled:opacity-60"
+              >
+                Clear
               </button>
             </form>
             {creditsLocked && (

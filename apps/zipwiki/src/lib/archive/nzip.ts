@@ -21,7 +21,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import {
   compressZipPayload,
   type CompressOptions,
@@ -532,29 +532,46 @@ export function findOrphanParses(
 }
 
 /**
- * Assign unique content entry paths. Prefer basename; on collision use
- * `content/<n>/<basename>`.
+ * Assign unique content entry paths. A relative path such as
+ * `patient/report.pdf` is kept. On an exact collision, use
+ * `content/<n>/<path>`.
  */
 export function assignContentPaths(names: string[]): string[] {
   const used = new Set<string>();
   const out: string[] = [];
   for (const name of names) {
-    const base = basename(name).replace(/\\/g, "/");
-    if (!used.has(base)) {
-      used.add(base);
-      out.push(base);
+    const normalized = name.replace(/\\/g, "/").replace(/^\/+/, "");
+    if (!used.has(normalized)) {
+      used.add(normalized);
+      out.push(normalized);
       continue;
     }
     let n = 2;
-    let candidate = `content/${n}/${base}`;
+    let candidate = `content/${n}/${normalized}`;
     while (used.has(candidate)) {
       n++;
-      candidate = `content/${n}/${base}`;
+      candidate = `content/${n}/${normalized}`;
     }
     used.add(candidate);
     out.push(candidate);
   }
   return out;
+}
+
+/** Path inside the archive, relative to the pack directory that contains the file. */
+export function relativeContentPath(abs: string, roots: string[]): string {
+  const file = resolve(abs);
+  let best: string | null = null;
+  let bestLen = -1;
+  for (const root of roots) {
+    const dir = resolve(root);
+    const prefix = dir.endsWith(sep) ? dir : dir + sep;
+    if (file.startsWith(prefix) && dir.length > bestLen) {
+      best = relative(dir, file).split(sep).join("/");
+      bestLen = dir.length;
+    }
+  }
+  return best && best.length > 0 ? best : basename(file);
 }
 
 function makeSha256Extra(digest: Buffer): Buffer {

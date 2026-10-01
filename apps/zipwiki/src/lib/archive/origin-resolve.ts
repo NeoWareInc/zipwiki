@@ -10,6 +10,7 @@
  * Rule files are pack input only — not written into the .zipwiki.
  */
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, extname, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -33,6 +34,8 @@ export type ResolveOriginOptions = {
   inputRoots: string[];
   /** Virtual rule applied at each input root when no directory rule matched. */
   cliOverlay?: OriginRule | null;
+  /** Read com.google.drivefs.item-id and store the Drive file URL. */
+  originDrive?: boolean;
 };
 
 function matchGlob(pathOrName: string, pattern: string): boolean {
@@ -250,6 +253,20 @@ export function readOriginSidecar(fileAbs: string): string | null {
   return null;
 }
 
+const DRIVE_ITEM_ID_ATTR = "com.google.drivefs.item-id#S";
+
+/** Google Drive for desktop file id, when the pack flag asks for it. */
+export function driveFileOriginUri(fileAbs: string): string | null {
+  if (process.platform !== "darwin") return null;
+  const result = spawnSync("xattr", ["-p", DRIVE_ITEM_ID_ATTR, fileAbs], {
+    encoding: "utf8",
+  });
+  if (result.status !== 0) return null;
+  const id = (result.stdout ?? "").trim();
+  if (!id) return null;
+  return `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
+}
+
 /**
  * Resolve the origin URI for one source file at pack time.
  * Returns null when no rule/sidecar matches (omit 0x014F).
@@ -261,12 +278,19 @@ export function resolveOriginUri(
   const abs = resolve(fileAbs);
   const root = containingRoot(abs, opts.inputRoots);
   if (!root) {
-    // No known pack root — still allow sidecar next to the file.
-    return readOriginSidecar(abs);
+    const sidecar = readOriginSidecar(abs);
+    if (sidecar) return sidecar;
+    if (opts.originDrive) return driveFileOriginUri(abs);
+    return null;
   }
 
   const sidecar = readOriginSidecar(abs);
   if (sidecar) return sidecar;
+
+  if (opts.originDrive) {
+    const drive = driveFileOriginUri(abs);
+    if (drive) return drive;
+  }
 
   const chain: string[] = [];
   let dir = dirname(abs);
