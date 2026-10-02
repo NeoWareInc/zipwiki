@@ -352,7 +352,7 @@ export default function KnowledgePage() {
   const sectionLinks: { id: PackageSection; label: string }[] = summary
     ? [
         { id: "documents", label: "Input documents" },
-        { id: "okf", label: "OKF concepts" },
+        { id: "okf", label: "Open Knowledge Format (OKF) concepts" },
         { id: "parsed", label: "Extracted text" },
         { id: "entries", label: "All entries" },
       ]
@@ -376,6 +376,12 @@ export default function KnowledgePage() {
               >
                 Don&apos;t have a package yet? Create ZipWiki
               </Link>
+            </p>
+            <p className="mt-3 text-sm text-(--muted)">
+              Open Knowledge Format (OKF) is the short, structured index inside
+              the archive — one concept card per document (title, type, tags,
+              summary) plus topic pages — so agents can search and skim before
+              opening full extracted text.
             </p>
           </div>
 
@@ -493,7 +499,7 @@ export default function KnowledgePage() {
               value={String(summary.primaryCount)}
             />
             <OverviewRow
-              label="OKF"
+              label="Open Knowledge Format (OKF)"
               value={
                 summary.okf.present
                   ? okfOverview(summary.okf.concepts)
@@ -817,11 +823,16 @@ function SectionBody({
   if (section === "okf") {
     return (
       <ContentsSection
-        title="OKF concepts"
+        title="Open Knowledge Format (OKF) concepts"
         subtitle={okfConceptSummary(summary.okf.concepts)}
       >
+        <p className="mb-3 text-sm text-(--muted)">
+          Short concept cards under <code className="text-xs">wiki/okf/</code>{" "}
+          (one per input document) and topic aggregations. Prefer these before
+          opening full extracted text.
+        </p>
         {summary.okf.concepts.length === 0 ? (
-          <Empty>No OKF concept files under wiki/okf/.</Empty>
+          <Empty>No Open Knowledge Format (OKF) concept files under wiki/okf/.</Empty>
         ) : (
           <ul className="space-y-3 text-sm">
             {summary.okf.concepts.map((c) => {
