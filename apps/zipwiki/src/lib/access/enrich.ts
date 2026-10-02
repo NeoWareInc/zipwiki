@@ -10,6 +10,8 @@ import {
 import {
   buildOkfBundle,
   conceptFileNameFor,
+  parseOkfProfileFlag,
+  resolveOkfProfile,
   syncOkfArchive,
   type OkfEnrichment,
   type OkfPrimaryRef,
@@ -29,6 +31,11 @@ export type EnrichOkfArgs = {
   enrichment: OkfEnrichment;
   /** Optional primary path(s) for sources; defaults from manifest. */
   primaryPath?: string;
+  /**
+   * OKF profile to store on the primary. When omitted, the profile already
+   * on the manifest primary is kept.
+   */
+  okfProfile?: string;
 };
 
 export type EnrichOkfResult = {
@@ -36,6 +43,8 @@ export type EnrichOkfResult = {
   path: string;
   title: string;
   conceptType: string;
+  /** Profile stored on the primary this concept describes. */
+  okfProfile?: string;
 };
 
 function resolveConceptFileName(args: EnrichOkfArgs): string {
@@ -66,6 +75,7 @@ function loadManifestPrimaries(zipPath: string): OkfPrimaryRef[] {
       ...(s.manifest?.documentType
         ? { documentType: s.manifest.documentType }
         : {}),
+      ...(s.manifest?.okfProfile ? { okfProfile: s.manifest.okfProfile } : {}),
     }));
   } catch {
     return [];
@@ -147,6 +157,20 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
     map.set(file.name, { name: file.name, data: Buffer.from(file.data, "utf8") });
   }
 
+  const targetPath = args.primaryPath?.trim() || primaryForConcept[0]?.path;
+  const storedProfile = targetPath
+    ? primaries.find((p) => p.path === targetPath)?.okfProfile
+    : primaries[0]?.okfProfile;
+  let okfProfile = storedProfile;
+  if (args.okfProfile?.trim()) {
+    const raw = args.okfProfile.trim();
+    if (raw.toLowerCase() !== "generic") parseOkfProfileFlag(raw);
+    okfProfile = resolveOkfProfile({
+      explicit: raw.toLowerCase() === "auto" ? undefined : raw,
+      fileName: targetPath,
+    });
+  }
+
   if (map.has(BUNDLE_PATHS.manifest)) {
     try {
       const man = JSON.parse(
@@ -158,6 +182,16 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
       okf.root = okf.root ?? okfRoot.replace(/\/$/, "");
       okf.index = okf.index ?? indexPath;
       ai.okf = okf;
+      if (okfProfile && Array.isArray(ai.primaries)) {
+        for (const row of ai.primaries) {
+          if (!row || typeof row !== "object") continue;
+          const primary = row as { path?: string; okfProfile?: string };
+          if (!targetPath || primary.path === targetPath) {
+            primary.okfProfile = okfProfile;
+            if (targetPath) break;
+          }
+        }
+      }
       man.ai = ai;
       map.set(BUNDLE_PATHS.manifest, {
         name: BUNDLE_PATHS.manifest,
@@ -176,5 +210,6 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
     path: conceptZipPath,
     title: built.title,
     conceptType: built.conceptType,
+    ...(okfProfile ? { okfProfile } : {}),
   };
 }

@@ -1,6 +1,7 @@
 import type { ParseEngineId, ParserMode } from "../lib/config/index.js";
 import type { CliParseOptions } from "../lib/parse/index.js";
 import type { DocumentType } from "../lib/archive/index.js";
+import type { OkfProfile, OkfProfileFlag } from "../lib/okf/profiles.js";
 
 export type PipelinePhase =
   | "parse"
@@ -15,6 +16,8 @@ export type StageMember = {
   /** Optional prose; not a content hash. */
   digest?: string;
   documentType: DocumentType;
+  /** Resolved OKF profile stored on the manifest primary. */
+  okfProfile?: OkfProfile;
   structuredMarkdown?: string;
   /** Figure files written beside the parse as `{name}.assets/`. */
   assets?: Array<{ name: string; data: Buffer }>;
@@ -52,6 +55,8 @@ export type StageOptions = CliParseOptions & {
   noOkf?: boolean;
   okfProvider?: string;
   okfModel?: string;
+  /** Pack-wide OKF profile. `auto` treats `.epub` as `book`. */
+  okfProfile?: OkfProfileFlag;
   config?: string;
   parser?: ParseEngineId;
   parserMode?: ParserMode;

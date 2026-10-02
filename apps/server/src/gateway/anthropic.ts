@@ -29,6 +29,8 @@ export type OkfRequest = {
   title?: string;
   digest?: string;
   documentType?: string;
+  /** book | legislation | invoice | generic. Omitted keeps the generic prompt. */
+  okfProfile?: string;
 };
 
 export type OkfEnrichment = {
@@ -50,18 +52,51 @@ export type AnthropicOutput = {
 /** Keep in step with `OKF_PARSE_SAMPLE_CHARS` in the zipwiki client. */
 export const MAX_PARSE_CHARS = 12_000;
 
-function promptFor(input: OkfRequest): string {
-  const sample = (input.parsedMarkdown ?? "").slice(0, MAX_PARSE_CHARS);
+/** Room for a book sample: 6,000 opening + marker + 6,000 ending. */
+const BOOK_SAMPLE_CHARS = 13_000;
+
+/**
+ * Keep these sentences in step with `okfProfileInstruction` in
+ * `apps/zipwiki/src/lib/okf/profiles.ts`. The API image does not import that package.
+ */
+function hostedProfileInstruction(profile: string): string | undefined {
+  switch (profile) {
+    case "book":
+      return "This file is a book. type is Book. keyFacts are the author, the title, the date or setting, and one distinctive line or scene from the sample. Do not invent amounts, dates, names, or citations that are not in the sample.";
+    case "legislation":
+      return "This file is legislation. type is Legislation. keyFacts are the jurisdiction, the citation or chapter, and what the section regulates. Do not invent amounts, dates, names, or citations that are not in the sample.";
+    case "invoice":
+      return "This file is an invoice. type is Invoice. keyFacts are the vendor, the invoice number, the date, and the total, and only when those strings are in the sample. Do not invent amounts, dates, names, or citations that are not in the sample.";
+    default:
+      return undefined;
+  }
+}
+
+export function promptFor(input: OkfRequest): string {
+  const profile = input.okfProfile?.trim().toLowerCase() ?? "";
+  const instruction = hostedProfileInstruction(profile);
+  const sample = (input.parsedMarkdown ?? "").slice(
+    0,
+    instruction && profile === "book" ? BOOK_SAMPLE_CHARS : MAX_PARSE_CHARS,
+  );
   const primaries = (input.primaries ?? [])
     .map((item) => `- ${item.path ?? "document"}${item.documentType ? ` [${item.documentType}]` : ""}`)
     .join("\n");
+  const typeLine = instruction
+    ? instruction
+    : "type: a short document type such as Document, Contract, Invoice, or Technical Document.";
+  const factsLine = instruction
+    ? "tags: 2-8 short lowercase labels. contents: optional section names."
+    : "tags: 2-8 short lowercase labels. keyFacts: 3-8 concrete bullets. contents: optional section names.";
   return [
     "You author Open Knowledge Format metadata for one ZipWiki document.",
     "Return only JSON with keys title, description, type, tags, keyFacts, and optional contents.",
     "title: concise. description: 1-2 sentences, max 240 chars.",
-    "type: a short document type such as Document, Contract, Invoice, or Technical Document.",
-    "tags: 2-8 short lowercase labels. keyFacts: 3-8 concrete bullets. contents: optional section names.",
-    "Do not invent amounts or dates that are not in the text.",
+    typeLine,
+    factsLine,
+    instruction
+      ? "Do not invent amounts, dates, names, or citations that are not in the sample."
+      : "Do not invent amounts or dates that are not in the text.",
     "",
     `Suggested type: ${input.documentType ?? "Document"}`,
     `Title hint: ${input.title ?? "(none)"}`,

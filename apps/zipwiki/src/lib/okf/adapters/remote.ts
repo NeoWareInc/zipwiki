@@ -3,7 +3,7 @@ import {
   resolveZipwikiApiUrl,
   type ZipwikiApiConfig,
 } from "../../config/index.js";
-import { okfParseSample } from "../parse-sample.js";
+import { resolveOkfProfile, sampleFor } from "../profiles.js";
 import type { BuildOkfBundleInput, OkfEnrichment } from "../types.js";
 
 export type RemoteOkfAdapterOptions = {
@@ -41,15 +41,20 @@ export class RemoteOkfAdapter {
       headers.Authorization = `Bearer ${this.api.key}`;
     }
 
+    const profile = resolveOkfProfile({
+      explicit: input.okfProfile,
+      fileName: input.primaries[0]?.path,
+    });
     const response = await this.fetchImpl(`${base}/api/okf/enrich`, {
       method: "POST",
       headers,
       body: JSON.stringify({
         primaries: input.primaries,
-        parsedMarkdown: okfParseSample(input.parsedMarkdown),
+        parsedMarkdown: sampleFor(profile, input.parsedMarkdown),
         title: input.title,
         digest: input.digest,
         documentType: input.documentType,
+        okfProfile: profile,
         ...(input.model?.trim() ? { model: input.model.trim() } : {}),
       }),
     });

@@ -904,6 +904,15 @@ Default MCP create sequence:
 Optional: pack with hosted / BYO OKF when the plan still has quota.
 Soft fallback is host-LLM enrich, not a hard failure.
 
+Pack chooses one OKF profile for the archive (`auto`, `book`, `legislation`,
+or `invoice`; default `auto`). `auto` treats `.epub` as `book` and leaves
+other files on the generic card. An explicit profile applies to every file.
+The choice is stored on each manifest primary as `okfProfile` so a later
+`okf_enrich` uses the same profile. Search should hit that concept card:
+a book card names the work and one distinctive line, a statute card names
+the jurisdiction and what the section regulates, and an invoice card names
+the vendor, number, date, and total when those strings are in the text.
+
 ---
 
 ## 8. Collision rewrite

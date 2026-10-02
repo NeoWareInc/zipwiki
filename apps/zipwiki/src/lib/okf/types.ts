@@ -3,6 +3,8 @@ export type OkfPrimaryRef = {
   /** Zip entry path of the primary (e.g. `report.pdf`). */
   path: string;
   documentType?: string;
+  /** OKF enrichment profile chosen at pack (`book`, `legislation`, `invoice`, `generic`). */
+  okfProfile?: string;
   digest?: string;
   contentSha256?: string;
 };
@@ -40,6 +42,8 @@ export type BuildOkfBundleInput = {
   title?: string;
   digest?: string;
   documentType?: string;
+  /** Enrichment profile for this call. Resolved by the caller. */
+  okfProfile?: string;
   primaries: OkfPrimaryRef[];
   /** LiteParse markdown sample for AI context. */
   parsedMarkdown?: string;
@@ -87,6 +91,8 @@ export type BuildOkfDocumentInput = {
    */
   parsedMarkdown?: string;
   documentType?: string;
+  /** Enrichment profile for this file (`book`, `legislation`, `invoice`, `generic`). */
+  okfProfile?: string;
   title?: string;
   digest?: string;
   contentSha256?: string;

@@ -67,6 +67,17 @@ export {
   relativeParseFromOkf,
   yamlEscape,
 } from "./yaml.js";
+export {
+  isOkfProfile,
+  okfProfileInstruction,
+  okfProfileType,
+  parseOkfProfileFlag,
+  resolveOkfProfile,
+  sampleFor,
+  OKF_PROFILES,
+  type OkfProfile,
+  type OkfProfileFlag,
+} from "./profiles.js";
 export { RemoteOkfAdapter } from "./adapters/remote.js";
 export {
   parseFrontmatterFields,

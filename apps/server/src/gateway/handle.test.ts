@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildApp } from "../app.js";
+import { promptFor } from "./anthropic.js";
 import { handleOkf, handleParse, handleQueryAnswer } from "./handle.js";
 import type { ConvexGateway } from "./types.js";
 
@@ -590,6 +591,27 @@ describe("POST /api/query/answer", () => {
     );
     assert.equal(result.status, 503);
     assert.equal((result.body as { error: string }).error, "anthropic_not_configured");
+  });
+});
+
+describe("OKF profile prompt", () => {
+  it("keeps the generic card and asks a book for a late line", () => {
+    const generic = promptFor({
+      documentType: "Generic",
+      parsedMarkdown: "A".repeat(20_000),
+    });
+    assert.match(generic, /Document, Contract, Invoice/);
+    assert.equal(generic.includes("distinctive line"), false);
+    assert.equal((generic.split("Parsed text sample:")[1] ?? "").trim().length, 12_000);
+
+    const book = promptFor({
+      okfProfile: "book",
+      parsedMarkdown: `${"H".repeat(6_000)}MIDDLE${"T".repeat(6_000)}`,
+    });
+    assert.match(book, /type is Book/);
+    assert.match(book, /distinctive line/);
+    assert.ok(book.includes("H".repeat(100)));
+    assert.ok(book.includes("T".repeat(100)));
   });
 });
 

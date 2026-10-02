@@ -122,6 +122,11 @@ export type NeoZipAiPrimary = {
   path: string;
   mimeType?: string;
   documentType?: string;
+  /**
+   * OKF enrichment profile for this primary (`book`, `legislation`, `invoice`,
+   * or `generic`). Chosen once at pack so a later `okf_enrich` reuses it.
+   */
+  okfProfile?: string;
   /** True when `{ai.root}/parsed/{path}.md` is present in this package. */
   hasParsed: boolean;
   /**
@@ -212,6 +217,8 @@ export type CollectionMemberInput = {
   originalName: string;
   mimeType?: string;
   documentType?: string;
+  /** OKF profile stored on `ai.primaries[].okfProfile`. */
+  okfProfile?: string;
   /**
    * Whole-document markdown under `{ai.root}/parsed/{P}.md`.
    * Omit or leave undefined when extract failed — no parse entry is written
@@ -789,6 +796,7 @@ export function writeNzipCollectionBundle(
       data,
       mimeType: m.mimeType,
       documentType: m.documentType,
+      okfProfile: m.okfProfile,
       structuredMarkdown,
       hasParsed,
       sourceIncluded: !omitOriginal,
@@ -863,6 +871,7 @@ export function writeNzipCollectionBundle(
     path: m.path,
     ...(m.mimeType ? { mimeType: m.mimeType } : {}),
     ...(m.documentType ? { documentType: m.documentType } : {}),
+    ...(m.okfProfile ? { okfProfile: m.okfProfile } : {}),
     hasParsed: m.hasParsed,
     ...(m.sourceIncluded ? {} : { sourceIncluded: false }),
   }));

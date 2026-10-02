@@ -17,6 +17,13 @@ import {
   resolveOkfProvider,
 } from "./providers.js";
 import { okfParseSample } from "./parse-sample.js";
+import {
+  okfProfileInstruction,
+  okfProfileType,
+  resolveOkfProfile,
+  sampleFor,
+  type OkfProfile,
+} from "./profiles.js";
 import type {
   BuildOkfBundleInput,
   BuildOkfDocumentInput,
@@ -118,6 +125,68 @@ function ensureEnrichmentTags(
   return { ...enrichment, tags };
 }
 
+function okfEnrichmentPrompt(input: {
+  profile: OkfProfile;
+  documentType?: string;
+  title?: string;
+  digest?: string;
+  primaryList: string;
+  parseSample: string;
+}): string {
+  const instruction = okfProfileInstruction(input.profile);
+  const typeRule =
+    input.profile === "generic"
+      ? "- type: one OKF type from the mapping above."
+      : `- type: ${okfProfileType(input.profile)}.`;
+  const keyFactsRule =
+    input.profile === "generic"
+      ? "- keyFacts: 3–8 concrete bullets agents can skim (who/what/when/amounts/jurisdiction). No prose paragraphs."
+      : "- keyFacts: 3–8 concrete bullets from the profile instructions above. No prose paragraphs.";
+  return [
+    "You author Open Knowledge Format (OKF) v0.2 metadata for a ZipWiki document.",
+    "Full parse markdown lives in a separate file — do NOT paste or paraphrase long excerpts.",
+    "Return title, description, type, tags, keyFacts, and optional contents for ONE concept.",
+    "",
+    ...(input.profile === "generic"
+      ? [
+          "TYPE MAPPING (choose an appropriate OKF type):",
+          "- SEC filings / 10-K / annual reports → Technical Document or Financial Report",
+          "- Invoices / receipts → Invoice or Vendor Receipt",
+          "- Contracts / NDAs / agreements / deeds → Contract, NDA, Deed, or Service Agreement",
+          "- Spreadsheets → Spreadsheet",
+          "- Fax / scanned ads / marketing → Document or Advertisement",
+          "- Email / .eml → Communication or Email Thread",
+          "- Other → Document or Technical Document",
+          "",
+        ]
+      : [instruction, ""]),
+    "Rules:",
+    "- title: concise human-readable title (not just the filename).",
+    "- description: a clear 1–2 sentence summary of what the document contains and its purpose (max ~240 chars). Do not quote random checkboxes or boilerplate headers.",
+    typeRule,
+    "- tags: 2–8 short lowercase labels (hyphenated), e.g. sec-filing, apple, fiscal-2024, warranty-deed.",
+    keyFactsRule,
+    "- contents: optional short list of major sections or topics (e.g. \"Item 1A Risk Factors\", \"Granting clause\").",
+    "- Do NOT invent verified, sources, generated, status, stale_after, or resource fields — code owns those.",
+    "- Prefer facts extractable from the parsed text; omit uncertain amounts/dates.",
+    ...(input.profile === "generic"
+      ? []
+      : [
+          "- Do not invent amounts, dates, names, or citations that are not in the sample.",
+        ]),
+    "- If parse text is missing or only says parse was unavailable, summarize from the filename and type alone — still return title, description, type, tags, and plausible keyFacts (e.g. format, topic hints from the name). Mark uncertainty in description when needed.",
+    "",
+    `Suggested classifier category: ${input.documentType ?? "Generic"}`,
+    `Package title hint: ${input.title ?? "(none)"}`,
+    `Existing digest hint: ${input.digest ?? "(none)"}`,
+    "Documents:",
+    input.primaryList || "(none)",
+    "",
+    "Parsed text sample:",
+    input.parseSample || "(no parse text — filename/type only)",
+  ].join("\n");
+}
+
 /**
  * Call the configured LLM supplier for OKF enrichment.
  * Throws when credentials are missing or the provider call fails.
@@ -139,42 +208,23 @@ export async function fetchOkfEnrichment(
   const primaryList = input.primaries
     .map((p) => `- ${p.path}${p.documentType ? ` [${p.documentType}]` : ""}`)
     .join("\n");
-  const parseSample = okfParseSample(input.parsedMarkdown);
+  const profile = resolveOkfProfile({
+    explicit: input.okfProfile,
+    fileName: input.primaries[0]?.path,
+  });
+  const parseSample =
+    profile === "generic"
+      ? okfParseSample(input.parsedMarkdown)
+      : sampleFor(profile, input.parsedMarkdown);
 
-  const prompt = [
-      "You author Open Knowledge Format (OKF) v0.2 metadata for a ZipWiki document.",
-      "Full parse markdown lives in a separate file — do NOT paste or paraphrase long excerpts.",
-      "Return title, description, type, tags, keyFacts, and optional contents for ONE concept.",
-      "",
-      "TYPE MAPPING (choose an appropriate OKF type):",
-      "- SEC filings / 10-K / annual reports → Technical Document or Financial Report",
-      "- Invoices / receipts → Invoice or Vendor Receipt",
-      "- Contracts / NDAs / agreements / deeds → Contract, NDA, Deed, or Service Agreement",
-      "- Spreadsheets → Spreadsheet",
-      "- Fax / scanned ads / marketing → Document or Advertisement",
-      "- Email / .eml → Communication or Email Thread",
-      "- Other → Document or Technical Document",
-      "",
-      "Rules:",
-      "- title: concise human-readable title (not just the filename).",
-      "- description: a clear 1–2 sentence summary of what the document contains and its purpose (max ~240 chars). Do not quote random checkboxes or boilerplate headers.",
-      "- type: one OKF type from the mapping above.",
-      "- tags: 2–8 short lowercase labels (hyphenated), e.g. sec-filing, apple, fiscal-2024, warranty-deed.",
-      "- keyFacts: 3–8 concrete bullets agents can skim (who/what/when/amounts/jurisdiction). No prose paragraphs.",
-      "- contents: optional short list of major sections or topics (e.g. \"Item 1A Risk Factors\", \"Granting clause\").",
-      "- Do NOT invent verified, sources, generated, status, stale_after, or resource fields — code owns those.",
-      "- Prefer facts extractable from the parsed text; omit uncertain amounts/dates.",
-      "- If parse text is missing or only says parse was unavailable, summarize from the filename and type alone — still return title, description, type, tags, and plausible keyFacts (e.g. format, topic hints from the name). Mark uncertainty in description when needed.",
-      "",
-      `Suggested classifier category: ${input.documentType ?? "Generic"}`,
-      `Package title hint: ${input.title ?? "(none)"}`,
-      `Existing digest hint: ${input.digest ?? "(none)"}`,
-      "Documents:",
-      primaryList || "(none)",
-      "",
-      "Parsed text sample:",
-      parseSample || "(no parse text — filename/type only)",
-    ].join("\n");
+  const prompt = okfEnrichmentPrompt({
+    profile,
+    documentType: input.documentType,
+    title: input.title,
+    digest: input.digest,
+    primaryList,
+    parseSample,
+  });
 
   let object: z.infer<typeof enrichmentSchema> | undefined;
   try {
@@ -360,6 +410,7 @@ export async function buildOkfDocument(
     title: input.title ?? input.sourceName,
     digest,
     documentType: input.documentType,
+    okfProfile: input.okfProfile,
     primaries: [
       {
         path: input.sourceName,

@@ -13,6 +13,7 @@ export type UpdateCommandOptions = {
   del?: string[];
   update?: string[];
   noAiOkf?: boolean;
+  okfProfile?: string;
   noOkf?: boolean;
   omitOriginal?: boolean;
   includeOriginal?: boolean;
@@ -76,6 +77,7 @@ export async function runUpdateCommand(
         file: resolveRepoPath(r.file),
       })),
       noAiOkf: opts.noAiOkf,
+      okfProfile: opts.okfProfile,
       noOkf: opts.noOkf,
       omitOriginalDocuments,
       parser,

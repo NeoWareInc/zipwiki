@@ -30,13 +30,15 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 | `-r, --recursive` | Recurse directories |
 | `--parser liteparse` | Local parse (default for Free) |
 | `--no-ai-okf` | Skip hosted/AI OKF; enrich later via MCP `okf_enrich` |
+| `--okf-profile auto\|book\|legislation\|invoice` | One enrichment profile for the pack (default `auto`; `.epub` is `book`). Stored on each manifest primary |
 | `--omit-original` | Store parse + Extra Field `0x014F` locator instead of the original document bytes |
 | `--compression zstd\|deflate\|store` | ZIP method (default zstd) |
 | `--sha256` | Extra Field `0x014E` on members |
 | `--origin-url-template` | Fill `0x014F` URI from filename captures |
 
 `zipwiki update` rewrites an archive (`--add` / `--update` / `--del`). Unchanged
-members are copied compressed.
+members are copied compressed. `--okf-profile` on an add or update stores the
+same profile; omit it to keep the profile already on that primary.
 
 ## zipwiki query
 

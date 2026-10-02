@@ -65,6 +65,7 @@ zipwiki catalog ./knowledge/docs.zipwiki -j
 ### `search` — find concepts / passages
 
 OKF cards first (title, tags, description, type, body). Parsed markdown only when no OKF card matches.
+The card is written once, at pack, from one profile (`auto`, `book`, `legislation`, or `invoice`). Search should hit that card: a book names the work and a distinctive line, legislation names the jurisdiction and what the section regulates, and an invoice names the vendor, number, date, and total.
 
 ```bash
 zipwiki search ./knowledge/docs.zipwiki "homestead exemption"

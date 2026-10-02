@@ -343,10 +343,18 @@ export async function okfEnrich(args: {
   path?: string;
   stem?: string;
   primaryPath?: string;
+  okfProfile?: "auto" | "book" | "legislation" | "invoice";
   enrichment: OkfEnrichment;
 }): Promise<ToolResult> {
   try {
-    const result = await enrichOkf(args);
+    const result = await enrichOkf({
+      package: args.package,
+      path: args.path,
+      stem: args.stem,
+      primaryPath: args.primaryPath,
+      okfProfile: args.okfProfile,
+      enrichment: args.enrichment,
+    });
     invalidatePackageCache(args.package);
     return jsonResult({
       ...result,
@@ -377,6 +385,7 @@ export async function pack(args: {
   originFile?: boolean;
   sha256Extra?: boolean;
   originSha256?: boolean;
+  okfProfile?: "auto" | "book" | "legislation" | "invoice";
 }): Promise<ToolResult> {
   try {
     const source = isAbsolute(args.source)
@@ -411,6 +420,7 @@ export async function pack(args: {
       originFile: args.originFile,
       sha256Extra: args.sha256Extra,
       originSha256: args.originSha256,
+      okfProfile: args.okfProfile,
       quiet: true,
     });
     if (!existsSync(outAbs)) {
@@ -483,6 +493,7 @@ export async function update(args: {
   originFile?: boolean;
   sha256Extra?: boolean;
   originSha256?: boolean;
+  okfProfile?: "auto" | "book" | "legislation" | "invoice";
 }): Promise<ToolResult> {
   try {
     const pkg = args.package?.trim();
@@ -524,6 +535,7 @@ export async function update(args: {
       originFile: args.originFile,
       sha256Extra: args.sha256Extra,
       originSha256: args.originSha256,
+      okfProfile: args.okfProfile,
       quiet: true,
     });
     invalidatePackageCache(result.package ?? zipPath);

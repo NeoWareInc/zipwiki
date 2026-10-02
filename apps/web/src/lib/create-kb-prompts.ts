@@ -35,7 +35,7 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     title: "Document folder",
     description: "Pack a folder and enrich OKF — replace the paths first.",
     prompt:
-      'Using ZipWiki MCP, pack "./path/to/docs" into ./knowledge/my-docs.zipwiki (recurse if needed), enrich every document with AI OKF via okf_enrich, and tell me the output path.',
+      'Using ZipWiki MCP, pack "./path/to/docs" into ./knowledge/my-docs.zipwiki (recurse if needed). If the folder is books, pass okfProfile "book"; if it is laws, pass okfProfile "legislation"; if it is invoices, pass okfProfile "invoice". Enrich every document with AI OKF via okf_enrich using that profile, and tell me the output path.',
     debugCli:
       "mkdir -p knowledge && pnpm zipwiki -- pack ./path/to/docs -o ./knowledge/my-docs.zipwiki -r",
   },

@@ -64,6 +64,7 @@ import {
 } from "../config/index.js";
 import type { StageOptions } from "../../pipeline/types.js";
 import type { DocumentType } from "../archive/index.js";
+import { parseOkfProfileFlag, resolveOkfProfile, type OkfProfile } from "../okf/profiles.js";
 import { AccessError } from "./resolve.js";
 
 export type UpdateSpec = {
@@ -86,6 +87,8 @@ export type UpdatePackageInput = {
   del?: string[];
   update?: UpdateSpec[];
   noAiOkf?: boolean;
+  /** `auto`, `book`, `legislation`, or `invoice`. Omitted keeps a stored profile. */
+  okfProfile?: string;
   noOkf?: boolean;
   omitOriginalDocuments?: boolean;
   parser?: StageOptions["parser"];
@@ -259,6 +262,19 @@ function removeMemberGraph(
   inventory.primaries.delete(slotPath);
 }
 
+function profileForUpdate(
+  flag: StageOptions["okfProfile"],
+  stored: string | undefined,
+  fileName: string,
+): OkfProfile {
+  if (flag && flag !== "auto") {
+    return resolveOkfProfile({ explicit: flag, fileName });
+  }
+  if (flag === "auto") return resolveOkfProfile({ fileName });
+  if (stored) return resolveOkfProfile({ explicit: stored, fileName });
+  return resolveOkfProfile({ fileName });
+}
+
 async function ingestFile(input: {
   abs: string;
   zipPath: string;
@@ -267,6 +283,8 @@ async function ingestFile(input: {
   noOkf: boolean;
   noAiOkf: boolean;
   opts: StageOptions;
+  /** Profile already stored on this primary, captured before the graph is removed. */
+  storedOkfProfile?: string;
   project: ResolvedZipwikiConfig;
   originOverlay: ReturnType<typeof cliOriginOverlay>;
   originSha256?: boolean;
@@ -280,6 +298,7 @@ async function ingestFile(input: {
 }> {
   const { abs, zipPath, inventory, omitOriginal, noOkf, noAiOkf, opts, project } =
     input;
+  const okfProfile = profileForUpdate(opts.okfProfile, input.storedOkfProfile, zipPath);
   let markdown: string;
   let documentType: DocumentType;
   let assets: Array<{ name: string; data: Buffer }> = [];
@@ -369,6 +388,7 @@ async function ingestFile(input: {
         omitOriginalDocuments: omit,
         includeSha256:
           input.originSha256 === true || opts.sha256Extra === true,
+        okfProfile,
       });
       okfMode = okf.mode;
       entries.push({
@@ -388,6 +408,7 @@ async function ingestFile(input: {
     path: zipPath,
     mimeType: guessMime(abs),
     documentType,
+    okfProfile,
     hasParsed: true,
     ...(omit ? { sourceIncluded: false } : {}),
   };
@@ -536,6 +557,7 @@ export async function updatePackage(
     originFile: input.originFile,
     sha256Extra: input.sha256Extra,
     originSha256: input.originSha256,
+    okfProfile: parseOkfProfileFlag(input.okfProfile),
   };
   const originOverlay = cliOriginOverlay({
     originPattern: input.originPattern,
@@ -561,9 +583,11 @@ export async function updatePackage(
 
   for (const spec of updateSpecs) {
     const p = resolveExistingPrimaryPath(spec.entry, pathsNow());
+    const storedOkfProfile = inventory.primaries.get(p)?.manifest?.okfProfile;
     logUpdate(quiet, `update ${p} ← ${spec.file}`);
     removeMemberGraph(map, p, inventory, warnings);
     const ingested = await ingestFile({
+      storedOkfProfile,
       abs: spec.file,
       zipPath: p,
       inventory,

@@ -32,6 +32,8 @@ import {
   buildZipWikiOkfSources,
   conceptFileNameFor,
   finalizeOkfDirectory,
+  resolveOkfProfile,
+  type OkfProfile,
 } from "../lib/okf/index.js";
 import {
   assessParseYield,
@@ -59,6 +61,10 @@ function guessMime(path: string): string {
   if (lower.endsWith(".png")) return "image/png";
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
   return "application/octet-stream";
+}
+
+function profileFor(opts: StageOptions, fileName: string): OkfProfile {
+  return resolveOkfProfile({ explicit: opts.okfProfile, fileName });
 }
 
 export function stagePaths(stageDir: string) {
@@ -179,6 +185,7 @@ export async function parseOneFile(
       abs,
       originalName,
       documentType: forcedCategory ?? classification.documentType,
+      okfProfile: profileFor(opts, originalName),
       structuredMarkdown: markdown,
       ...(assets ? { assets } : {}),
     },
@@ -243,6 +250,7 @@ export async function okfOneFile(input: {
   omitOriginalDocuments?: boolean;
   /** Hash original bytes for OKF `contentSha256` (only when --sha256 / --origin-sha256). */
   includeSha256?: boolean;
+  okfProfile?: OkfProfile;
 }): Promise<{ path: string; mode: "ai" | "fallback"; aiError?: string; ms: number }> {
   const { okfDir } = ensureStageDirs(input.stageDir);
   const conceptName = conceptFileNameFor(input.originalName);
@@ -282,6 +290,9 @@ export async function okfOneFile(input: {
           "LiteParse/extract failed or missing",
         ),
     documentType: classification.documentType,
+    okfProfile:
+      input.okfProfile ??
+      resolveOkfProfile({ fileName: input.originalName }),
     ...(input.includeSha256
       ? { contentSha256: sha256FileHexIf(input.abs, true) }
       : {}),
@@ -374,6 +385,7 @@ export async function runParseAndOkfPhase(input: {
           parseAvailable: !loaded.parseFailed,
           omitOriginalDocuments,
           includeSha256,
+          okfProfile: profileFor(opts, loaded.originalName),
         });
         if (!opts.quiet) {
           const notes: string[] = [written.mode, `${written.ms}ms`];
@@ -403,6 +415,7 @@ export async function runParseAndOkfPhase(input: {
             fileName: p.value.originalName,
             text: p.value.markdown,
           }).documentType,
+          okfProfile: profileFor(opts, p.value.originalName),
           structuredMarkdown: p.value.parseFailed
             ? undefined
             : p.value.markdown,
@@ -415,6 +428,7 @@ export async function runParseAndOkfPhase(input: {
           abs,
           originalName: basename(abs),
           documentType: "Generic",
+          okfProfile: profileFor(opts, basename(abs)),
           error: p?.error ?? o?.error ?? "unknown",
         });
       }
@@ -473,6 +487,7 @@ export async function runParseAndOkfPhase(input: {
           abs: files[i]!,
           originalName: basename(files[i]!),
           documentType: "Generic",
+          okfProfile: profileFor(opts, basename(files[i]!)),
           error: p?.error ?? "unknown",
         };
       }
@@ -533,6 +548,7 @@ export async function runParseAndOkfPhase(input: {
             abs,
             originalName,
             documentType: forcedCategory ?? classification.documentType,
+            okfProfile: profileFor(opts, originalName),
             parseFailed: true,
             error: msg,
           },
@@ -554,6 +570,9 @@ export async function runParseAndOkfPhase(input: {
         parseAvailable: !parsed.parseFailed,
         omitOriginalDocuments,
         includeSha256,
+        okfProfile:
+          parsed.member.okfProfile ??
+          profileFor(opts, parsed.member.originalName),
       });
       if (!opts.quiet) {
         const notes: string[] = [written.mode, `${written.ms}ms`];
@@ -592,6 +611,7 @@ export async function runParseAndOkfPhase(input: {
         abs: files[i]!,
         originalName: basename(files[i]!),
         documentType: "Generic",
+        okfProfile: profileFor(opts, basename(files[i]!)),
         error: p?.error ?? o?.error ?? "unknown",
       };
     }
@@ -717,6 +737,7 @@ export function runCompressPhase(input: {
           : relativeContentPath(m.abs, inputRoots),
         mimeType: guessMime(m.abs),
         documentType: m.documentType,
+        okfProfile: m.okfProfile ?? profileFor(input.opts, m.originalName),
         ...(m.structuredMarkdown
           ? { structuredMarkdown: m.structuredMarkdown }
           : {}),

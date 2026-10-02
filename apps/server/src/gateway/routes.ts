@@ -353,6 +353,8 @@ export async function registerGateway(
         digest: typeof raw.digest === "string" ? raw.digest : undefined,
         documentType:
           typeof raw.documentType === "string" ? raw.documentType : undefined,
+        okfProfile:
+          typeof raw.okfProfile === "string" ? raw.okfProfile : undefined,
       },
     });
     return reply.code(result.status).send(result.body);

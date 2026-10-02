@@ -1,3 +1,4 @@
+import { parseOkfProfileFlag } from "./lib/okf/profiles.js";
 import { resolveRepoPath } from "./lib/parse/index.js";
 import type { PipelinePhase, StageOptions } from "./pipeline/types.js";
 
@@ -61,6 +62,7 @@ export function stageOptionsFromCli(
     okfModel:
       (opts.okfModel as string | undefined) ??
       (opts.model as string | undefined),
+    okfProfile: parseOkfProfileFlag(opts.okfProfile),
     config: opts.config
       ? resolveRepoPath(String(opts.config))
       : opts.projectConfig

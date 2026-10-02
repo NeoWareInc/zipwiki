@@ -115,6 +115,10 @@ function withPipelineFlags(cmd: Command): Command {
       "Skip OKF entirely (no wiki/okf/ directory or LLM enrichment)",
     )
     .option(
+      "--okf-profile <profile>",
+      "OKF profile for every file: auto|book|legislation|invoice (default auto; .epub is book)",
+    )
+    .option(
       "--okf-provider <id>",
       "OKF LLM supplier: openai|anthropic|gemini|openrouter|openai-compatible|ai-gateway",
     )
@@ -760,6 +764,10 @@ program
     [] as string[],
   )
   .option("--no-ai-okf", "Skip AI for OKF on added/updated files")
+  .option(
+    "--okf-profile <profile>",
+    "OKF profile for added/updated files: auto|book|legislation|invoice (default: keep the stored profile, or auto for new files)",
+  )
   .option("--no-okf", "Do not write OKF for added/updated files")
   .option("--omit-original", "Omit omittable originals for new/updated files")
   .option(
@@ -813,6 +821,7 @@ program
       del: opts.del,
       update: opts.update,
       noAiOkf: opts.noAiOkf === true || opts.aiOkf === false,
+      okfProfile: opts.okfProfile,
       noOkf: opts.noOkf === true || opts.okf === false,
       omitOriginal: opts.omitOriginal === true,
       includeOriginal: opts.includeOriginal === true,

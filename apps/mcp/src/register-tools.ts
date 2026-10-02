@@ -277,6 +277,12 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe("Optional: run hosted/BYO AI OKF during pack"),
+        okfProfile: z
+          .enum(["auto", "book", "legislation", "invoice"])
+          .optional()
+          .describe(
+            "OKF profile for every file. auto (default) treats .epub as book. book keyFacts: author, title, date or setting, one distinctive line. legislation: jurisdiction, citation, what it regulates. invoice: vendor, invoice number, date, total. Stored on each manifest primary for okf_enrich.",
+          ),
         noOkf: z.boolean().optional(),
         noOcr: z.boolean().optional(),
         recurse: z.boolean().optional(),
@@ -354,6 +360,12 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe("Optional: run hosted/BYO AI OKF for add/update"),
+        okfProfile: z
+          .enum(["auto", "book", "legislation", "invoice"])
+          .optional()
+          .describe(
+            "OKF profile for added or updated files. Omit to keep the profile stored on that primary.",
+          ),
         noOkf: z.boolean().optional(),
         noOcr: z.boolean().optional(),
         omitOriginalDocuments: z.boolean().optional(),
@@ -385,7 +397,7 @@ export function registerTools(server: McpServer): void {
     "okf_enrich",
     {
       description:
-        "Write host-LLM OKF enrichment into a local .zipwiki (title/description/type/tags/keyFacts). No ZipWiki OKF quota.",
+        "Write host-LLM OKF enrichment into a local .zipwiki (title/description/type/tags/keyFacts). No ZipWiki OKF quota. Follow the profile stored on the manifest primary, or pass okfProfile. book keyFacts: author, title, date or setting, and one distinctive line or scene. legislation: jurisdiction, citation or chapter, and what the section regulates. invoice: vendor, invoice number, date, and total, only when those strings are in the text. Do not invent amounts, dates, names, or citations.",
       inputSchema: {
         package: packageArg,
         path: z.string().optional().describe("wiki/okf/….md"),
@@ -394,6 +406,12 @@ export function registerTools(server: McpServer): void {
           .string()
           .optional()
           .describe("Input document path for sources"),
+        okfProfile: z
+          .enum(["auto", "book", "legislation", "invoice"])
+          .optional()
+          .describe(
+            "Profile to store on the primary. Omit to keep the profile chosen at pack.",
+          ),
         enrichment: enrichmentSchema,
       },
     },
