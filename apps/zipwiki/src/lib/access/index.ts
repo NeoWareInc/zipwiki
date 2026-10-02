@@ -40,10 +40,27 @@ export {
 } from "./catalog.js";
 export {
   searchPackage,
+  type EvidenceGap,
+  type EvidencePassage,
   type SearchHit,
   type SearchResult,
   type SearchScope,
 } from "./search.js";
+export {
+  NO_EXTRACT_REASON,
+  PASSAGE_CHARS,
+  attachEvidence,
+  queryArchive,
+  queryReadKind,
+  readFollow,
+  type QueryArchiveResult,
+  type QueryReadKind,
+} from "./evidence.js";
+export {
+  askArchive,
+  type AskArchiveResult,
+  type AskExcerpt,
+} from "./ask.js";
 export {
   enrichOkf,
   type EnrichOkfArgs,

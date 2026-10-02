@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { createConvexGateway } from "./convex.js";
+import type { QueryTranscriptTurn } from "./anthropic.js";
 import {
   handleOkf,
   handleParse,
@@ -360,7 +361,9 @@ export async function registerGateway(
   app.post("/api/query/answer", async (req, reply) => {
     const env = deps.env ?? process.env;
     const secret = headerText(req.headers["x-zipwiki-worker-secret"]);
-    if (!workerSecretMatches(secret, env.ZIPWIKI_WORKER_SECRET)) {
+    const worker = workerSecretMatches(secret, env.ZIPWIKI_WORKER_SECRET);
+    const token = bearer(headerText(req.headers.authorization));
+    if (!worker && !token) {
       return reply.code(401).send({ error: "unauthorized" });
     }
     const body = req.body;
@@ -369,31 +372,119 @@ export async function registerGateway(
     }
     const raw = body as Record<string, unknown>;
     const question = typeof raw.question === "string" ? raw.question : "";
-    const excerpts = Array.isArray(raw.excerpts)
-      ? raw.excerpts.flatMap((item): QueryExcerptInput[] => {
-          if (!item || typeof item !== "object") return [];
-          const row = item as Record<string, unknown>;
-          const path = typeof row.path === "string" ? row.path : "";
-          const text = typeof row.text === "string" ? row.text : "";
-          const kind = row.kind === "parsed" ? "parsed" : row.kind === "okf" ? "okf" : null;
-          if (!path || !kind) return [];
-          const documents = Array.isArray(row.documents)
-            ? row.documents.filter((path): path is string => typeof path === "string")
-            : [];
-          return [
-            {
-              path,
-              text,
-              kind,
-              ...(typeof row.title === "string" ? { title: row.title } : {}),
-              ...(documents.length > 0 ? { documents } : {}),
-            },
-          ];
-        })
-      : [];
-    const result = await handleQueryAnswer(deps, { question, excerpts });
-    return reply.code(result.status).send(result.body);
+    const excerpts = parseQueryExcerpts(raw.excerpts);
+    const transcript = parseQueryTranscript(raw.transcript);
+    const finish = raw.finish === true;
+    const filename =
+      typeof raw.filename === "string" ? raw.filename.trim().slice(0, 512) : undefined;
+
+    let accountId: string | undefined;
+    if (!worker) {
+      let billing;
+      try {
+        billing = await deps.convex.queryBilling(token);
+      } catch {
+        return reply.code(503).send({ error: "convex_unavailable" });
+      }
+      if (!billing.ok) {
+        return reply.code(billing.status).send({ error: billing.error });
+      }
+      if (billing.disabled) {
+        return reply.code(403).send({ error: "account_disabled" });
+      }
+      if (billing.creditsLocked) {
+        return reply.code(403).send({ error: "credits_locked" });
+      }
+      if (!billing.creditsUnlimited && billing.creditsRemaining < 1) {
+        return reply.code(402).send({ error: "credits_exhausted" });
+      }
+      accountId = billing.accountId;
+    }
+
+    const result = await handleQueryAnswer(deps, {
+      question,
+      excerpts,
+      transcript,
+      finish,
+    });
+    if (result.status !== 200 || !accountId) {
+      return reply.code(result.status).send(result.body);
+    }
+    const turn = result.body as {
+      model?: string;
+      inputTokens?: number;
+      outputTokens?: number;
+    };
+    try {
+      const billed = await deps.convex.recordQuery({
+        accountId,
+        model: turn.model ?? "claude-haiku-4-5",
+        inputTokens: turn.inputTokens,
+        outputTokens: turn.outputTokens,
+        filename,
+      });
+      return reply.code(200).send({ ...result.body as object, ...billed });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "record_query_failed";
+      return reply.code(502).send({ error: message });
+    }
   });
+}
+
+function parseQueryExcerpts(value: unknown): QueryExcerptInput[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item): QueryExcerptInput[] => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    const path = typeof row.path === "string" ? row.path : "";
+    const text = typeof row.text === "string" ? row.text : "";
+    const kind =
+      row.kind === "parsed" ? "parsed" : row.kind === "gap" ? "gap" : row.kind === "okf" ? "okf" : null;
+    if (!path || !kind) return [];
+    const documents = Array.isArray(row.documents)
+      ? row.documents.filter((entry): entry is string => typeof entry === "string")
+      : [];
+    return [
+      {
+        path,
+        text,
+        kind,
+        ...(typeof row.title === "string" ? { title: row.title } : {}),
+        ...(documents.length > 0 ? { documents } : {}),
+      },
+    ];
+  });
+}
+
+function parseQueryTranscript(value: unknown): QueryTranscriptTurn[] {
+  if (!Array.isArray(value)) return [];
+  const turns: QueryTranscriptTurn[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    if (row.role === "assistant" && Array.isArray(row.content)) {
+      turns.push({ role: "assistant", content: row.content });
+      continue;
+    }
+    if (row.role !== "user" || !Array.isArray(row.results)) continue;
+    const results = row.results.flatMap((result) => {
+      if (!result || typeof result !== "object") return [];
+      const read = result as Record<string, unknown>;
+      const id = typeof read.id === "string" ? read.id : "";
+      const path = typeof read.path === "string" ? read.path : "";
+      if (!id || !path) return [];
+      return [
+        {
+          id,
+          path,
+          ...(typeof read.text === "string" ? { text: read.text } : {}),
+          ...(typeof read.error === "string" ? { error: read.error } : {}),
+        },
+      ];
+    });
+    turns.push({ role: "user", results });
+  }
+  return turns;
 }
 
 function readField(

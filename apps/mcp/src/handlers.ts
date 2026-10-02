@@ -22,6 +22,7 @@ import {
   readOkf as libReadOkf,
   readOkfIndex as libReadOkfIndex,
   readParsed as libReadParsed,
+  queryArchive,
   searchPackage,
   updatePackage,
   parseUpdateSpecs,
@@ -149,32 +150,17 @@ export async function query(args: {
         true,
       );
     }
-    const result = withCachedPackage(args.package, () => {
-      const search = searchPackage(args);
-      const k = Math.min(
-        Math.max(args.readTopK ?? 3, 0),
-        search.hits.length,
-      );
-      const paths = search.hits.slice(0, k).map((h) => h.path);
-      const topK =
-        paths.length > 0
-          ? readEntries({
-              package: args.package,
-              paths,
-              maxBytes: args.maxBytes,
-            })
-          : [];
-      return {
-        ...search,
-        topK: topK.map((r) => ({
-          path: r.path,
-          encoding: r.encoding ?? "utf8",
-          truncated: r.truncated,
-          text: r.text,
-          data: r.data,
-        })),
-      };
-    });
+    const result = withCachedPackage(args.package, () =>
+      queryArchive({
+        package: args.package,
+        query: args.query,
+        in: args.in,
+        limit: args.limit,
+        snippetChars: args.snippetChars,
+        readTopK: args.readTopK,
+        maxBytes: args.maxBytes,
+      }),
+    );
     void maybeReportActivity({
       type: "query",
       action: "query",

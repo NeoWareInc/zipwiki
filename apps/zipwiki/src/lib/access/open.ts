@@ -28,9 +28,9 @@ import {
 
 export const OPEN_SEQUENCE = [
   "1. open (done)",
-  "2. Prefer search or query; else read_okf_index",
+  "2. Prefer search or query; else read_okf_index. query includes cited passages. A gap means no extract was stored at pack time",
   "3. read_okf for top concepts",
-  "4. read_parsed / read_entry to stream bytes via MCP (verified inflate; size-capped). origin URI/CRC is on read_parsed when Extra Field 0x014F is present",
+  "4. read_parsed when a parsed file exists. read_entry streams bytes but does not extract an unparsed PDF or Office file",
   "5. origin (fetch=true) to download the original and verify CRC-32; extract only when a filesystem path is required",
 ] as const;
 

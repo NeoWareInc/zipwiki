@@ -67,6 +67,28 @@ export interface ConvexGateway {
     bytes?: number;
     pages?: number;
   }): Promise<void>;
+  queryBilling(token: string): Promise<
+    | { ok: false; status: number; error: string }
+    | {
+        ok: true;
+        accountId: string;
+        disabled: boolean;
+        creditsRemaining: number;
+        creditsUnlimited: boolean;
+        creditsLocked: boolean;
+      }
+  >;
+  recordQuery(args: {
+    accountId: string;
+    model: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    filename?: string;
+  }): Promise<{
+    creditsCharged: number;
+    creditsRemaining: number;
+    creditsUnlimited: boolean;
+  }>;
 }
 
 export type GatewayResponse = {

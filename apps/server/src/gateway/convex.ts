@@ -217,5 +217,54 @@ export function createConvexGateway(options?: {
         throw new Error(data.error ?? "activity_record_failed");
       }
     },
+
+    async queryBilling(token: string) {
+      const res = await post("/internal/query-billing", { api_key: token });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        accountId?: string;
+        disabled?: boolean;
+        creditsRemaining?: number;
+        creditsUnlimited?: boolean;
+        creditsLocked?: boolean;
+      };
+      if (!res.ok || !data.accountId) {
+        return {
+          ok: false as const,
+          status: res.status || 401,
+          error: data.error ?? "unauthorized",
+        };
+      }
+      return {
+        ok: true as const,
+        accountId: data.accountId,
+        disabled: data.disabled === true,
+        creditsRemaining: data.creditsRemaining ?? 0,
+        creditsUnlimited: data.creditsUnlimited === true,
+        creditsLocked: data.creditsLocked === true,
+      };
+    },
+
+    async recordQuery(args) {
+      const res = await post("/internal/record-query", {
+        account_id: args.accountId,
+        model: args.model,
+        input_tokens: args.inputTokens,
+        output_tokens: args.outputTokens,
+        filename: args.filename,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        creditsCharged?: number;
+        creditsRemaining?: number;
+        creditsUnlimited?: boolean;
+      };
+      if (!res.ok) throw new Error(data.error ?? "record_query_failed");
+      return {
+        creditsCharged: data.creditsCharged ?? 0,
+        creditsRemaining: data.creditsRemaining ?? 0,
+        creditsUnlimited: data.creditsUnlimited === true,
+      };
+    },
   };
 }

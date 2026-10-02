@@ -6,6 +6,7 @@ import type { Command } from "commander";
 import { runExtractCommand } from "./inspect-cmd.js";
 import {
   AccessError,
+  askArchive,
   buildCatalog,
   extractEntries,
   extractWithOrigin,
@@ -14,6 +15,7 @@ import {
   formatReadStdout,
   formatSearchText,
   lookupOrigin,
+  queryArchive,
   readEntry,
   readEntries,
   readManifest,
@@ -22,6 +24,7 @@ import {
   searchPackage,
   type SearchHitWithHints,
 } from "./lib/access/index.js";
+import { resolveZipwikiApiKey, resolveZipwikiApiUrl } from "./lib/config/index.js";
 import { resolveRepoPath } from "./lib/parse/index.js";
 
 const QUERY = "Query";
@@ -187,6 +190,94 @@ export function registerQueryCommands(program: Command): void {
         }
       },
     );
+
+  program
+    .command("query")
+    .helpGroup(QUERY)
+    .description(
+      "Search, then include cited text passages and gaps for files that were never extracted",
+    )
+    .argument("<package>", "Path to .zipwiki")
+    .argument("<query>", "Search query")
+    .option("-j, --json", "JSON output")
+    .option("--limit <n>", "Max hits", (v) => Number(v), 10)
+    .action(
+      (
+        pkg: string,
+        query: string,
+        opts: { json?: boolean; limit?: number },
+      ) => {
+        try {
+          const result = queryArchive({
+            package: resolvePkg(pkg),
+            query,
+            limit: opts.limit,
+          });
+          if (opts.json) {
+            console.log(JSON.stringify(result, null, 2));
+            return;
+          }
+          process.stdout.write(
+            formatSearchText({
+              package: result.package,
+              query: result.query,
+              hits: result.hits as SearchHitWithHints[],
+            }),
+          );
+          for (const hit of result.hits) {
+            for (const passage of hit.passages ?? []) {
+              process.stdout.write(`Passage: ${passage.path}\n${passage.text}\n\n`);
+            }
+            for (const gap of hit.gaps ?? []) {
+              const origin = gap.originUri ? ` Original: ${gap.originUri}` : "";
+              process.stdout.write(`Gap: ${gap.path} — ${gap.reason}${origin}\n`);
+            }
+          }
+        } catch (err) {
+          fail(err);
+        }
+      },
+    );
+
+  program
+    .command("ask")
+    .helpGroup(QUERY)
+    .description(
+      "Ask a question. Matching text is read locally first. The model may request one more text file. Uses hosted credits.",
+    )
+    .argument("<package>", "Path to .zipwiki")
+    .argument("<question>", "Question")
+    .option("-j, --json", "JSON output")
+    .action(async (pkg: string, question: string, opts: { json?: boolean }) => {
+      try {
+        const apiUrl = resolveZipwikiApiUrl();
+        const apiKey = resolveZipwikiApiKey();
+        if (!apiUrl || !apiKey) {
+          throw new Error(
+            "ZIPWIKI_API_URL and ZIPWIKI_API_KEY are required. Run zipwiki login.",
+          );
+        }
+        const result = await askArchive({
+          package: resolvePkg(pkg),
+          question,
+          apiUrl,
+          apiKey,
+          onRead(path) {
+            if (!opts.json) console.error(`Reading ${path}`);
+          },
+        });
+        if (opts.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+        process.stdout.write(`${result.answer}\n`);
+        if (result.reads.length > 0) {
+          console.error(`Also read ${result.reads.join(", ")}`);
+        }
+      } catch (err) {
+        fail(err);
+      }
+    });
 
   program
     .command("catalog")

@@ -83,6 +83,31 @@ Each hit’s **NEXT** / `readHints` tell you the shortest follow-up (`read --okf
 
 ---
 
+### `query` — search plus local evidence
+
+Same ranking as `search`, then the top concept cards are followed locally:
+
+- A cited `wiki/parsed/*.md` file contributes a short passage around the query.
+- A stored text or markdown primary with no parse contributes a passage from those bytes.
+- A PDF, Office file, or image that was never extracted becomes a **gap**. Query does not extract it. That text is not in the package.
+
+```bash
+zipwiki query ./knowledge/docs.zipwiki "homestead exemption"
+zipwiki query ./knowledge/docs.zipwiki "deed" -j
+```
+
+---
+
+### `ask` — hosted answer over the local evidence
+
+Reads the same local bundle, then asks the hosted model. The model may request one more text file (`wiki/okf`, `wiki/parsed`, or a stored `.txt` / `.md`). A request for an unparsed PDF or Office file is refused. Uses hosted credits (`zipwiki login`).
+
+```bash
+zipwiki ask ./knowledge/docs.zipwiki "Who signed the deed?"
+```
+
+---
+
 ### `read` — stream bodies (no disk write)
 
 Three selector styles:
@@ -275,7 +300,9 @@ Same zipaccess library; tools are short verbs on the `zipwiki` MCP server:
 | --- | --- |
 | `open` / `catalog` | `open` |
 | `list` | `list` |
-| `search` | `search`, `query` (query also returns capped bodies) |
+| `search` | `search` |
+| `query` | `query` (bodies, passages, and gaps) |
+| `ask` | Hosted model over the same local bundle. MCP has no `ask` tool; the host agent uses `query`, then `read_parsed` when a parsed file exists. A gap ends that document. |
 | `read --okf` | `read_okf` / `read` |
 | `read --parsed` | `read_parsed` / `read` |
 | `read --path` / `--entry` | `read_entry` / `read` |
@@ -285,7 +312,7 @@ Same zipaccess library; tools are short verbs on the `zipwiki` MCP server:
 
 Pass `package` on each tool, or place `wiki.zipwiki` in the MCP cwd.
 
-Open sequence for agents: **open → search → read_okf → read_parsed → origin (fetch) → extract only if needed**.
+Open sequence for agents: **open → search or query → read_okf → read_parsed when a parsed file exists**. A gap means that document was not extracted at pack time. **origin (fetch) → extract** only when a file on disk is required.
 
 ---
 

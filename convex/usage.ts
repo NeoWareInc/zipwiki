@@ -340,6 +340,21 @@ export const recordUsage = internalMutation({
   },
 });
 
+/** Credits for a CLI or MCP ask, resolved from the API key's account. */
+export const billingForAccount = internalQuery({
+  args: { accountId: v.id("accounts") },
+  handler: async (ctx, { accountId }) => {
+    const account = await ctx.db.get(accountId);
+    if (!account) return null;
+    return {
+      disabled: account.disabled === true,
+      creditsRemaining: remainingCredits(account),
+      creditsUnlimited: account.creditsUnlimited === true,
+      creditsLocked: await creditsLockedFor(ctx, account),
+    };
+  },
+});
+
 /** Credits and account id for a signed-in user about to ask a package question. */
 export const queryBilling = internalQuery({
   args: { userId: v.id("users") },

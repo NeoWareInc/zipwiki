@@ -28,6 +28,19 @@ function convex(partial: Partial<ConvexGateway> & Pick<ConvexGateway, "validateK
     getClientConfig: async () => ({}),
     recordLiteparse: async () => {},
     recordActivity: async () => {},
+    queryBilling: async () => ({
+      ok: true as const,
+      accountId: "acc",
+      disabled: false,
+      creditsRemaining: 10,
+      creditsUnlimited: false,
+      creditsLocked: false,
+    }),
+    recordQuery: async () => ({
+      creditsCharged: 1,
+      creditsRemaining: 9,
+      creditsUnlimited: false,
+    }),
     ...partial,
   };
 }
@@ -306,6 +319,92 @@ describe("POST /api/query/answer", () => {
     assert.equal(body.answer, "The grantor signed the deed.");
     assert.equal(body.inputTokens, 12);
     assert.match(prompt, /wiki\/parsed\/deed\.pdf\.md/);
+    const answered = res.json() as { status: string };
+    assert.equal(answered.status, "answer");
+    await app.close();
+  });
+
+  it("returns one read when the model asks for a package path", async () => {
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () =>
+        json({
+          model: "claude-haiku-4-5",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool_1",
+              name: "read_zipwiki",
+              input: { path: "wiki/parsed/deed.pdf.md" },
+            },
+          ],
+          usage: { input_tokens: 4, output_tokens: 2 },
+        }),
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "What parcel?",
+        excerpts: [
+          { path: "wiki/okf/deed.md", kind: "okf", text: "See the deed." },
+        ],
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as {
+      status: string;
+      reads: Array<{ id: string; path: string }>;
+    };
+    assert.equal(body.status, "read");
+    assert.deepEqual(body.reads, [
+      { id: "tool_1", path: "wiki/parsed/deed.pdf.md" },
+    ]);
+    await app.close();
+  });
+
+  it("forwards an unparsed binary so the caller can refuse it", async () => {
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () =>
+        json({
+          model: "claude-haiku-4-5",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool_2",
+              name: "read_zipwiki",
+              input: { path: "legacy.docx" },
+            },
+          ],
+          usage: { input_tokens: 4, output_tokens: 2 },
+        }),
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "What is in the legacy file?",
+        excerpts: [
+          {
+            path: "legacy.docx",
+            kind: "gap",
+            text: "No extracted text was stored for this file at pack time.",
+          },
+        ],
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as { reads: Array<{ path: string }> };
+    assert.equal(body.reads[0]?.path, "legacy.docx");
     await app.close();
   });
 

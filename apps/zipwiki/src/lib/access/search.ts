@@ -20,6 +20,18 @@ import {
 
 export type SearchScope = "okf" | "parsed" | "okf,parsed";
 
+export type EvidencePassage = {
+  path: string;
+  text: string;
+  truncated: boolean;
+};
+
+export type EvidenceGap = {
+  path: string;
+  reason: string;
+  originUri?: string;
+};
+
 export type SearchHit = {
   score: number;
   kind: "okf" | "parsed";
@@ -34,6 +46,10 @@ export type SearchHit = {
   evidence?: boolean;
   /** CLI / MCP next-step hints (`read --okf …` / `read --parsed …`). */
   readHints?: CatalogReadHints;
+  /** Cited parsed or text-primary windows. Absent on `search`; filled by `query`. */
+  passages?: EvidencePassage[];
+  /** Citations whose text was never stored at pack time. */
+  gaps?: EvidenceGap[];
 };
 
 export type SearchResult = {

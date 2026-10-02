@@ -9,6 +9,7 @@ import {
   integritySummary,
   openNzip,
   queryPackage,
+  readPackageFollow,
   readZipEntryPayload,
   testArchiveIntegrity,
   zipMethodLabel,
@@ -169,15 +170,17 @@ export default function KnowledgePage() {
   const [integrity, setIntegrity] = useState<IntegrityLine[] | null>(null);
   const [testing, setTesting] = useState(false);
   const [question, setQuestion] = useState("");
-  const [asking, setAsking] = useState<"reading" | "answering" | null>(null);
+  const [asking, setAsking] = useState<"searching" | "answering" | "reading" | null>(null);
   const [askError, setAskError] = useState("");
   const [packageQuery, setPackageQuery] = useState<PackageQuery | null>(null);
   const [answer, setAnswer] = useState<{
     text: string;
+    reads: string[];
     creditsCharged: number;
     creditsRemaining: number;
     creditsUnlimited: boolean;
   } | null>(null);
+  const [followPath, setFollowPath] = useState("");
   const archiveRef = useRef<ArrayBuffer | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const reportActivity = useMutation(api.usage.reportActivity);
@@ -299,6 +302,7 @@ export default function KnowledgePage() {
     setAskError("");
     setPackageQuery(null);
     setAnswer(null);
+    setFollowPath("");
   }
 
   async function askPackage() {
@@ -308,29 +312,118 @@ export default function KnowledgePage() {
     setAskError("");
     setAnswer(null);
     setPackageQuery(null);
-    setAsking("reading");
+    setFollowPath("");
+    setAsking("searching");
     try {
       const found = await queryPackage(buf, summary.entries, q);
       setPackageQuery(found);
       if (found.excerpts.length === 0) return;
-      setAsking("answering");
-      const result = await ask({
-        question: q,
-        filename: summary.filename,
-        excerpts: found.excerpts.map((excerpt) => ({
+      const pendingPassages = [...found.passages];
+      const excerpts: Array<{
+        path: string;
+        title?: string;
+        kind: "okf" | "parsed" | "gap";
+        text: string;
+        documents?: string[];
+      }> = [];
+      for (const excerpt of found.excerpts) {
+        excerpts.push({
           path: excerpt.path,
           title: excerpt.title,
           kind: excerpt.kind,
           text: excerpt.text,
           ...(excerpt.documents?.length ? { documents: excerpt.documents } : {}),
-        })),
-      });
-      setAnswer({
-        text: result.answer,
-        creditsCharged: result.creditsCharged,
-        creditsRemaining: result.creditsRemaining,
-        creditsUnlimited: result.creditsUnlimited,
-      });
+        });
+        const cited = new Set(excerpt.documents ?? []);
+        for (let i = 0; i < pendingPassages.length && excerpts.length < 9; ) {
+          const passage = pendingPassages[i]!;
+          if (passage.path !== excerpt.path && !cited.has(passage.path)) {
+            i += 1;
+            continue;
+          }
+          pendingPassages.splice(i, 1);
+          excerpts.push({
+            path: passage.path,
+            kind: "parsed",
+            text: passage.text,
+          });
+        }
+      }
+      for (const passage of pendingPassages) {
+        if (excerpts.length >= 9) break;
+        excerpts.push({
+          path: passage.path,
+          kind: "parsed",
+          text: passage.text,
+        });
+      }
+      for (const gap of found.gaps) {
+        if (excerpts.length >= 9) break;
+        excerpts.push({
+          path: gap.path,
+          kind: "gap",
+          text: gap.originUri
+            ? `${gap.reason} Original: ${gap.originUri}`
+            : gap.reason,
+        });
+      }
+      let transcript: Array<
+        | { role: "assistant"; content: unknown[] }
+        | {
+            role: "user";
+            results: Array<{ id: string; path: string; text?: string; error?: string }>;
+          }
+      > = [];
+      let charged = 0;
+      let remaining = 0;
+      let unlimited = false;
+      const followReads: string[] = [];
+      for (let round = 0; round < 2; round += 1) {
+        setAsking(round === 0 ? "answering" : "reading");
+        const result = await ask({
+          question: q,
+          filename: summary.filename,
+          excerpts,
+          ...(transcript.length > 0
+            ? { transcript: JSON.stringify(transcript) }
+            : {}),
+          ...(round === 1 ? { finish: true } : {}),
+        });
+        charged += result.creditsCharged;
+        remaining = result.creditsRemaining;
+        unlimited = result.creditsUnlimited;
+        const reads = Array.isArray(result.reads) ? result.reads : [];
+        const read = reads[0];
+        if (result.status !== "read" || !read || round === 1) {
+          setAnswer({
+            text: result.answer ?? "",
+            reads: followReads,
+            creditsCharged: charged,
+            creditsRemaining: remaining,
+            creditsUnlimited: unlimited,
+          });
+          return;
+        }
+        setFollowPath(read.path);
+        const loaded = await readPackageFollow(buf, summary.entries, read.path);
+        followReads.push(read.path);
+        const assistant = JSON.parse(result.assistant || "[]") as unknown[];
+        transcript = [
+          { role: "assistant", content: assistant },
+          {
+            role: "user",
+            results: [
+              {
+                id: read.id,
+                path: read.path,
+                ...("error" in loaded
+                  ? { error: loaded.error }
+                  : { text: loaded.text }),
+              },
+            ],
+          },
+        ];
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (/credits_locked/.test(message)) {
@@ -523,8 +616,9 @@ export default function KnowledgePage() {
           <section>
             <h2 className="font-display text-xl font-semibold">Ask this package</h2>
             <p className="mt-1 text-sm text-(--muted)">
-              The archive stays in your browser. Matching concept excerpts are
-              sent to answer the question.
+              The archive stays in your browser. Matching concepts are read
+              locally, including cited text, then sent to answer the question.
+              A file with no extract stored at pack time cannot be read.
             </p>
             <form
               className="mt-3 flex flex-col gap-2 sm:flex-row"
@@ -547,11 +641,13 @@ export default function KnowledgePage() {
                 }
                 className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
-                {asking === "reading"
-                  ? "Reading concepts…"
-                  : asking === "answering"
-                    ? "Answering…"
-                    : "Ask"}
+                {asking === "searching"
+                  ? "Searching…"
+                  : asking === "reading"
+                    ? "Reading…"
+                    : asking === "answering"
+                      ? "Answering…"
+                      : "Ask"}
               </button>
               <button
                 type="button"
@@ -580,9 +676,11 @@ export default function KnowledgePage() {
             )}
             {asking && (
               <p className="mt-2 text-sm text-(--muted)">
-                {asking === "reading"
-                  ? "Reading concepts…"
-                  : "Answering from the matching concepts…"}
+                {asking === "searching"
+                  ? "Searching the package…"
+                  : asking === "reading"
+                    ? `Reading ${followPath}…`
+                    : "Answering from the package…"}
               </p>
             )}
             {askError && (
@@ -605,7 +703,33 @@ export default function KnowledgePage() {
                     ? "Unlimited · no charge"
                     : `Charged ${answer.creditsCharged} credit${answer.creditsCharged === 1 ? "" : "s"} · ${answer.creditsRemaining.toLocaleString()} remaining`}
                 </p>
+                {answer.reads.length > 0 && (
+                  <p className="mt-2 text-sm text-(--muted)">
+                    Also read {answer.reads.join(", ")}
+                  </p>
+                )}
               </div>
+            )}
+            {packageQuery && packageQuery.passages.length > 0 && (
+              <ul className="mt-3 space-y-1 text-sm text-(--muted)">
+                {packageQuery.passages.map((passage) => (
+                  <li key={passage.path}>
+                    Passage from <span className="font-mono text-xs">{passage.path}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {packageQuery && packageQuery.gaps.length > 0 && (
+              <ul className="mt-3 space-y-1 text-sm text-(--ink)">
+                {packageQuery.gaps.map((gap) => (
+                  <li key={gap.path}>
+                    <span className="font-mono text-xs">{gap.path}</span>
+                    {": "}
+                    {gap.reason}
+                    {gap.originUri ? ` Original: ${gap.originUri}` : ""}
+                  </li>
+                ))}
+              </ul>
             )}
             {packageQuery && packageQuery.hits.length > 0 && (
               <ul className="mt-3 space-y-2 text-sm">

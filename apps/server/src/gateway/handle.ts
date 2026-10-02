@@ -1,7 +1,8 @@
 import {
   invokeAnthropic,
-  invokeQueryAnswer,
+  invokeQueryTurn,
   type OkfRequest,
+  type QueryTranscriptTurn,
 } from "./anthropic.js";
 import {
   invokeLlamaParse,
@@ -200,22 +201,50 @@ export async function handleOkf(
 
 const QUERY_BODY_CHARS = 12_000;
 const QUERY_QUESTION_CHARS = 2_000;
+const QUERY_EXCERPT_LIMIT = 9;
 
 export type QueryExcerptInput = {
   path: string;
   title?: string;
-  kind: "okf" | "parsed";
+  kind: "okf" | "parsed" | "gap";
   text: string;
   documents?: string[];
 };
 
+function clipTranscript(raw: QueryTranscriptTurn[] | undefined): QueryTranscriptTurn[] {
+  const turns: QueryTranscriptTurn[] = [];
+  for (const turn of (raw ?? []).slice(0, 2)) {
+    if (turn.role === "assistant" && Array.isArray(turn.content)) {
+      turns.push({ role: "assistant", content: turn.content.slice(0, 4) });
+      continue;
+    }
+    if (turn.role !== "user" || !Array.isArray(turn.results)) continue;
+    turns.push({
+      role: "user",
+      results: turn.results.slice(0, 1).map((result) => ({
+        id: result.id.slice(0, 128),
+        path: result.path.slice(0, 512),
+        ...(result.text ? { text: result.text.slice(0, QUERY_BODY_CHARS) } : {}),
+        ...(result.error ? { error: result.error.slice(0, 500) } : {}),
+      })),
+    });
+  }
+  return turns;
+}
+
 /**
- * Answer a package question with the Fly-held Anthropic key.
- * Credit checks stay in Convex; this route only runs the model.
+ * One answer turn with the Fly-held Anthropic key.
+ * A `read` body asks the caller to load one archive path locally.
+ * Credit checks stay with the caller.
  */
 export async function handleQueryAnswer(
   deps: GatewayDeps,
-  args: { question: string; excerpts: QueryExcerptInput[] },
+  args: {
+    question: string;
+    excerpts: QueryExcerptInput[];
+    transcript?: QueryTranscriptTurn[];
+    finish?: boolean;
+  },
 ): Promise<GatewayResponse> {
   const env = deps.env ?? process.env;
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -223,7 +252,7 @@ export async function handleQueryAnswer(
   if (!apiKey) return { status: 503, body: { error: "anthropic_not_configured" } };
 
   const question = args.question.trim().slice(0, QUERY_QUESTION_CHARS);
-  const excerpts = args.excerpts.slice(0, 3).map((excerpt) => ({
+  const excerpts = args.excerpts.slice(0, QUERY_EXCERPT_LIMIT).map((excerpt) => ({
     path: excerpt.path.slice(0, 512),
     title: excerpt.title?.slice(0, 240),
     kind: excerpt.kind,
@@ -238,9 +267,13 @@ export async function handleQueryAnswer(
   }
 
   try {
-    const completion = await invokeQueryAnswer(
-      question,
-      excerpts,
+    const completion = await invokeQueryTurn(
+      {
+        question,
+        excerpts,
+        transcript: clipTranscript(args.transcript),
+        finish: args.finish === true,
+      },
       apiKey,
       fetchImpl,
     );

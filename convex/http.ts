@@ -455,6 +455,74 @@ http.route({
 });
 
 http.route({
+  path: "/internal/query-billing",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!workerAuthorized(req)) return json({ error: "forbidden" }, 403);
+    let token = "";
+    try {
+      const body = (await req.json()) as { api_key?: unknown };
+      token = typeof body.api_key === "string" ? body.api_key.trim() : "";
+    } catch {
+      return json({ error: "invalid_request" }, 400);
+    }
+    if (!token) return json({ error: "unauthorized" }, 401);
+    const keyCtx = await ctx.runQuery(internal.apiKeys.resolveByToken, { token });
+    if (!keyCtx) return json({ error: "unauthorized" }, 401);
+    if (keyCtx.accountDisabled || keyCtx.accountStatus === "suspended") {
+      return json({ error: "account_disabled" }, 403);
+    }
+    await ctx.runMutation(internal.apiKeys.touchLastUsed, {
+      apiKeyId: keyCtx.apiKeyId,
+    });
+    const billing = await ctx.runQuery(internal.usage.billingForAccount, {
+      accountId: keyCtx.accountId,
+    });
+    if (!billing) return json({ error: "unauthorized" }, 401);
+    return json({
+      ok: true,
+      accountId: keyCtx.accountId,
+      disabled: billing.disabled,
+      creditsRemaining: billing.creditsRemaining,
+      creditsUnlimited: billing.creditsUnlimited,
+      creditsLocked: billing.creditsLocked,
+    });
+  }),
+});
+
+http.route({
+  path: "/internal/record-query",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    if (!workerAuthorized(req)) return json({ error: "forbidden" }, 403);
+    try {
+      const body = (await req.json()) as {
+        account_id?: unknown;
+        model?: unknown;
+        input_tokens?: unknown;
+        output_tokens?: unknown;
+        filename?: unknown;
+      };
+      if (typeof body.account_id !== "string" || typeof body.model !== "string") {
+        return json({ error: "invalid_request" }, 400);
+      }
+      const result = await ctx.runMutation(internal.usage.recordQueryDebit, {
+        accountId: body.account_id as never,
+        model: body.model,
+        inputTokens: typeof body.input_tokens === "number" ? body.input_tokens : undefined,
+        outputTokens: typeof body.output_tokens === "number" ? body.output_tokens : undefined,
+        filename: typeof body.filename === "string" ? body.filename : undefined,
+      });
+      return json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "record_query_failed";
+      const status = message === "credits_locked" || message === "account_disabled" ? 403 : 400;
+      return json({ error: message }, status);
+    }
+  }),
+});
+
+http.route({
   path: "/internal/record-activity",
   method: "POST",
   handler: httpAction(async (ctx, req) => {

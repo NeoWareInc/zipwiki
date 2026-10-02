@@ -90,7 +90,7 @@ export function registerTools(server: McpServer): void {
     "query",
     {
       description:
-        "Search then stream the top-K OKF/parsed bodies (size-capped) in one round-trip. Prefer this when answering a question; use search when you only need paths/snippets.",
+        "Search, then return the top hit bodies plus local passages from cited wiki/parsed files and stored text primaries. A gap means no extract was stored at pack time: that file's text is not in the package, and read_entry will not recover it. Follow read_parsed only when a parsed path is present and the passage is not enough.",
       inputSchema: {
         package: packageArg,
         query: z.string().describe("Search query"),

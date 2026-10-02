@@ -17,4 +17,12 @@ export {
   testArchiveIntegrity,
   type IntegrityLine,
 } from "./integrity";
-export { queryPackage, type PackageQuery, type QueryExcerpt, type QueryHit } from "./query";
+export {
+  queryPackage,
+  readPackageFollow,
+  type PackageQuery,
+  type QueryExcerpt,
+  type QueryGap,
+  type QueryHit,
+  type QueryPassage,
+} from "./query";

@@ -28,11 +28,23 @@ export type QueryHit = {
 export type QueryExcerpt = {
   path: string;
   title?: string;
-  kind: "okf" | "parsed";
+  kind: "okf" | "parsed" | "gap";
   text: string;
   truncated: boolean;
   /** Full extracted-text files this concept cites. */
   documents?: string[];
+};
+
+export type QueryPassage = {
+  path: string;
+  text: string;
+  truncated: boolean;
+};
+
+export type QueryGap = {
+  path: string;
+  reason: string;
+  originUri?: string;
 };
 
 export type QuerySkipped = {
@@ -44,8 +56,41 @@ export type PackageQuery = {
   query: string;
   hits: QueryHit[];
   excerpts: QueryExcerpt[];
+  passages: QueryPassage[];
+  gaps: QueryGap[];
   skipped: QuerySkipped[];
 };
+
+export const NO_EXTRACT_REASON =
+  "No extracted text was stored for this file at pack time.";
+
+const TEXT_EXTENSIONS = [".txt", ".text", ".md", ".markdown"];
+const PASSAGE_CHARS = 4_000;
+
+export type QueryReadKind = "text" | "binary" | "reject";
+
+/** Keep in step with `queryReadKind` in the zipwiki access library. */
+export function queryReadKind(path: string): QueryReadKind {
+  const name = path.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+  if (
+    !name ||
+    name.length > 512 ||
+    name.includes("..") ||
+    name.includes("\0") ||
+    name.includes("://") ||
+    name.endsWith("/")
+  ) {
+    return "reject";
+  }
+  if (name.startsWith("wiki/okf/") && name.endsWith(".md")) return "text";
+  if (name.startsWith(`${BUNDLE_PATHS.parsed}`) && name.endsWith(".md")) return "text";
+  if (name.startsWith("wiki/") || name.startsWith("META-INF/")) return "reject";
+  const lower = name.toLowerCase();
+  if (TEXT_EXTENSIONS.some((ext) => lower.endsWith(ext))) return "text";
+  const dot = lower.lastIndexOf(".");
+  if (dot > 0) return "binary";
+  return "reject";
+}
 
 type ScoredFile = {
   path: string;
@@ -317,7 +362,7 @@ export async function queryPackage(
   const trimmed = query.trim();
   const skipped: QuerySkipped[] = [];
   if (!trimmed) {
-    return { query: "", hits: [], excerpts: [], skipped };
+    return { query: "", hits: [], excerpts: [], passages: [], gaps: [], skipped };
   }
   const tokens = tokenize(trimmed);
   const byName = new Map(entries.map((entry) => [entry.name, entry]));
@@ -412,6 +457,52 @@ export async function queryPackage(
     };
   });
 
+  const passages: QueryPassage[] = [];
+  const gaps: QueryGap[] = [];
+  let passageBudget = 3;
+  let gapBudget = 3;
+  let cards = 0;
+  for (const hit of unique) {
+    if (hit.kind !== "okf" || cards >= READ_TOP_K) continue;
+    cards += 1;
+    let followed = 0;
+    for (const resolved of citedPaths(hit.path, hit.text)) {
+      if (followed >= 2) break;
+      followed += 1;
+      const parsePath =
+        resolved.startsWith(BUNDLE_PATHS.parsed) && resolved.endsWith(".md")
+          ? resolved
+          : `${BUNDLE_PATHS.parsed}${resolved}.md`;
+      if (byName.has(parsePath)) {
+        if (passageBudget <= 0) continue;
+        const entry = byName.get(parsePath);
+        const markdown = entry
+          ? await readVerifiedText(buf, entry, skipped)
+          : null;
+        const window = markdown ? passageAround(markdown, tokens) : null;
+        if (!window) continue;
+        passages.push({ path: parsePath, ...window });
+        passageBudget -= 1;
+        continue;
+      }
+      if (byName.has(resolved) && queryReadKind(resolved) === "text") {
+        if (passageBudget <= 0) continue;
+        const entry = byName.get(resolved);
+        const markdown = entry
+          ? await readVerifiedText(buf, entry, skipped)
+          : null;
+        const window = markdown ? passageAround(markdown, tokens) : null;
+        if (!window) continue;
+        passages.push({ path: resolved, ...window });
+        passageBudget -= 1;
+        continue;
+      }
+      if (gapBudget <= 0) continue;
+      gaps.push(gapFor(entries, resolved));
+      gapBudget -= 1;
+    }
+  }
+
   return {
     query: trimmed,
     hits: unique.map((hit) => ({
@@ -426,6 +517,78 @@ export async function queryPackage(
         : {}),
     })),
     excerpts,
+    passages,
+    gaps,
     skipped,
   };
+}
+
+function citedPaths(conceptPath: string, markdown: string): string[] {
+  const { frontmatter } = splitFrontmatter(markdown);
+  if (!frontmatter) return [];
+  const found: string[] = [];
+  for (const resource of parseSourceResources(frontmatter)) {
+    const resolved = resolveResource(conceptPath, resource);
+    if (resolved && !found.includes(resolved)) found.push(resolved);
+  }
+  return found;
+}
+
+function passageAround(
+  text: string,
+  tokens: string[],
+  maxChars = PASSAGE_CHARS,
+): { text: string; truncated: boolean } | null {
+  const lower = text.toLowerCase();
+  let idx = -1;
+  for (const token of tokens) {
+    const at = lower.indexOf(token);
+    if (at >= 0 && (idx < 0 || at < idx)) idx = at;
+  }
+  if (idx < 0) return null;
+  const start = Math.max(0, idx - Math.floor(maxChars / 3));
+  let slice = text.slice(start, start + maxChars);
+  const truncated = start > 0 || start + maxChars < text.length;
+  if (start > 0) slice = `…${slice}`;
+  if (start + maxChars < text.length) slice = `${slice}…`;
+  return { text: slice, truncated };
+}
+
+function gapFor(entries: ZipListEntry[], path: string): QueryGap {
+  const parsePath = `${BUNDLE_PATHS.parsed}${path}.md`;
+  const origin =
+    entries.find((entry) => entry.name === path)?.originUri ??
+    entries.find((entry) => entry.name === parsePath)?.originUri;
+  return {
+    path,
+    reason: NO_EXTRACT_REASON,
+    ...(origin ? { originUri: origin } : {}),
+  };
+}
+
+/** Load one model-requested path, or refuse when pack stored no extract. */
+export async function readPackageFollow(
+  buf: ArrayBuffer,
+  entries: ZipListEntry[],
+  requestPath: string,
+): Promise<{ text: string; truncated: boolean } | { error: string }> {
+  const name = requestPath.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+  const kind = queryReadKind(name);
+  if (kind === "binary") return { error: NO_EXTRACT_REASON };
+  if (kind !== "text") return { error: "That path cannot be read from this package." };
+  const entry = entries.find((item) => item.name === name);
+  if (!entry) return { error: `Not in this package: ${name}` };
+  try {
+    const data = await readZipEntryPayload(buf, entry);
+    if (!payloadCrcMatches(data, entry.crc32)) {
+      return { error: `CRC-32 mismatch: ${name}` };
+    }
+    const full = new TextDecoder("utf-8").decode(data);
+    return {
+      text: full.slice(0, QUERY_BODY_CHARS),
+      truncated: full.length > QUERY_BODY_CHARS,
+    };
+  } catch {
+    return { error: `Could not read ${name}` };
+  }
 }
