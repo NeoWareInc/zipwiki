@@ -21,6 +21,7 @@ import {
   findOrphanParses,
   isOmittableDocumentSource,
   parsedMarkdownFileName,
+  parsedAssetPath,
   parsedPathFor,
   serializeNeoZipManifest,
   writeZipBuffer,
@@ -106,6 +107,8 @@ export type UpdatePackageInput = {
   quiet?: boolean;
   config?: string;
   noOcr?: boolean;
+  imageMode?: string;
+  extractImages?: boolean;
   /** Persist wiki/ + META-INF/manifest.json here after rewrite. */
   stageDir?: string;
   /** Test-only parse override (skip LiteParse). */
@@ -279,6 +282,7 @@ async function ingestFile(input: {
     input;
   let markdown: string;
   let documentType: DocumentType;
+  let assets: Array<{ name: string; data: Buffer }> = [];
   if (input.hooks?.parse) {
     const hooked = await input.hooks.parse(abs, opts, project);
     markdown = hooked.markdown;
@@ -287,6 +291,7 @@ async function ingestFile(input: {
     const parsed = await parseOneFile(abs, opts, project);
     markdown = parsed.markdown;
     documentType = parsed.member.documentType;
+    assets = parsed.member.assets ?? [];
   }
   const data = readFileSync(abs);
   const mtime = statSync(abs).mtime;
@@ -323,6 +328,17 @@ async function ingestFile(input: {
     parseEntry.origin = origin;
   }
   entries.push(parseEntry);
+  for (const asset of assets) {
+    entries.push({
+      name: parsedAssetPath(
+        zipPath,
+        asset.name,
+        inventory.aiRoot,
+        inventory.parsedDir,
+      ),
+      data: asset.data,
+    });
+  }
 
   const okfPath = `${inventory.okfRoot}${conceptFileNameFor(zipPath)}`;
   let okfMode: "ai" | "fallback" | "skipped" = "skipped";
@@ -513,6 +529,8 @@ export async function updatePackage(
     parser: input.parser,
     parserMode: input.parserMode,
     quiet: input.quiet === true,
+    imageMode: input.imageMode,
+    extractImages: input.extractImages === true,
     originPattern: input.originPattern,
     originUrlTemplate: input.originUrlTemplate,
     originFile: input.originFile,

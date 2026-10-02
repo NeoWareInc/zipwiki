@@ -112,6 +112,8 @@ export function stageOptionsFromCli(
     quiet: opts.quiet === true,
     keepExistingOkf: opts.keepExisting === true,
     password: opts.password as string | undefined,
+    imageMode: opts.imageMode as string | undefined,
+    extractImages: opts.extractImages === true,
     ocrLanguage: opts.ocrLanguage as string | undefined,
     maxPages: opts.maxPages as number | undefined,
     dpi: opts.dpi as number | undefined,

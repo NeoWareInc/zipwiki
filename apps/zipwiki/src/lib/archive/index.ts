@@ -120,6 +120,7 @@ export {
   isOmittableDocumentSource,
   okfPathFor,
   parsedPathFor,
+  parsedAssetPath,
   parsedMarkdownFileName,
   serializeNeoZipManifest,
   writeNzipBundle,

@@ -1,6 +1,7 @@
-import { basename } from "node:path";
+import { basename, extname } from "node:path";
 import { listZipEntries, readZipEntry } from "../archive/zip-list.js";
-import type { DocumentParseResult } from "./types.js";
+import { imageModeFrom, type ImageMode } from "./config.js";
+import type { DocumentParseResult, ParsedImage } from "./types.js";
 
 const HTML_EXT = /\.(xhtml|html|htm)$/i;
 
@@ -75,11 +76,174 @@ function isContentHtml(name: string): boolean {
   return true;
 }
 
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|tiff?|svg)$/i;
+
+export type EpubParseOptions = {
+  /** Same values as LiteParse `imageMode`. Default `placeholder`. */
+  imageMode?: string;
+  /** Keep figure bytes on the parse result. Pack stores them as `.assets/`. */
+  extractImages?: boolean;
+};
+
+function tagAttr(attrs: string, name: string): string | undefined {
+  const match = attrs.match(
+    new RegExp(
+      `(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`,
+      "i",
+    ),
+  );
+  const value = match?.[1] ?? match?.[2] ?? match?.[3];
+  return value ? decodeEntities(value).trim() : undefined;
+}
+
+function imageHref(attrs: string): string | undefined {
+  return (
+    tagAttr(attrs, "src") ??
+    tagAttr(attrs, "xlink:href") ??
+    tagAttr(attrs, "href")
+  );
+}
+
+function resolveZipPath(fromFile: string, href: string): string | null {
+  const raw = href.split("#")[0]?.split("?")[0] ?? "";
+  if (!raw || raw.startsWith("data:") || /^[a-z][a-z0-9+.-]*:/i.test(raw)) {
+    return null;
+  }
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    decoded = raw;
+  }
+  const parts = fromFile.split("/").slice(0, -1);
+  for (const part of decoded.replace(/\\/g, "/").split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") parts.pop();
+    else parts.push(part);
+  }
+  const joined = parts.join("/");
+  return joined || null;
+}
+
+function mimeForImage(name: string): string {
+  switch (extname(name).toLowerCase()) {
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".gif":
+      return "image/gif";
+    case ".webp":
+      return "image/webp";
+    case ".svg":
+      return "image/svg+xml";
+    case ".tif":
+    case ".tiff":
+      return "image/tiff";
+    case ".bmp":
+      return "image/bmp";
+    default:
+      return "image/png";
+  }
+}
+
+function markdownAlt(attrs: string, fileName: string): string {
+  const alt = (tagAttr(attrs, "alt") ?? "")
+    .replace(/[\[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (alt) return alt;
+  return basename(fileName).replace(/\.[^.]+$/, "") || "image";
+}
+
+function uniqueImageName(srcPath: string, used: Set<string>): string {
+  const cleaned =
+    srcPath
+      .replace(/\\/g, "/")
+      .split("/")
+      .filter(Boolean)
+      .join("_")
+      .replace(/[^A-Za-z0-9._-]+/g, "_") || "image";
+  const ext = extname(cleaned);
+  const stem = ext ? cleaned.slice(0, -ext.length) : cleaned;
+  let name = cleaned;
+  let n = 2;
+  while (used.has(name.toLowerCase())) {
+    name = `${stem}_${n}${ext}`;
+    n += 1;
+  }
+  used.add(name.toLowerCase());
+  return name;
+}
+
+/**
+ * Replace `<img>` / `<image>` before the generic tag strip.
+ * `placeholder` leaves a markdown image. `embed` inlines a data URI.
+ * `extractImages` keeps the bytes; pack retargets the href into `.assets/`.
+ */
+function replaceEpubImages(
+  html: string,
+  htmlName: string,
+  byName: Map<string, { name: string }>,
+  read: (name: string) => Buffer,
+  mode: ImageMode,
+  extractImages: boolean,
+  images: ParsedImage[],
+  usedNames: Set<string>,
+  named: Map<string, string>,
+): string {
+  const emit = (attrs: string): string => {
+    if (mode === "off") return "";
+    const href = imageHref(attrs);
+    if (!href) return "";
+    if (href.startsWith("data:")) {
+      return mode === "embed"
+        ? `\n\n![${markdownAlt(attrs, "image")}](${href})\n\n`
+        : `\n\n![${markdownAlt(attrs, "image")}](inline-image)\n\n`;
+    }
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+      return `\n\n![${markdownAlt(attrs, "image")}](${href})\n\n`;
+    }
+    const resolved = resolveZipPath(htmlName, href);
+    const entryName = resolved
+      ? [...byName.keys()].find((name) => name.toLowerCase() === resolved.toLowerCase())
+      : undefined;
+    if (!entryName || !IMAGE_EXT.test(entryName)) {
+      const label = basename(href.split("?")[0] ?? href) || "image";
+      return `\n\n![${markdownAlt(attrs, label)}](${label})\n\n`;
+    }
+    let fileName = named.get(entryName);
+    if (!fileName) {
+      fileName = uniqueImageName(entryName, usedNames);
+      named.set(entryName, fileName);
+      if (extractImages) {
+        images.push({ name: fileName, bytes: read(byName.get(entryName)!.name) });
+      }
+    }
+    const alt = markdownAlt(attrs, fileName);
+    if (mode === "embed") {
+      const bytes = extractImages
+        ? images.find((image) => image.name === fileName)?.bytes
+        : read(byName.get(entryName)!.name);
+      if (!bytes) return `\n\n![${alt}](${fileName})\n\n`;
+      const mime = mimeForImage(fileName);
+      return `\n\n![${alt}](data:${mime};base64,${bytes.toString("base64")})\n\n`;
+    }
+    return `\n\n![${alt}](${fileName})\n\n`;
+  };
+  return html
+    .replace(/<img\b([^>]*)>/gi, (_, attrs: string) => emit(attrs))
+    .replace(/<image\b([^>]*)>/gi, (_, attrs: string) => emit(attrs));
+}
+
 /**
  * Read an EPUB (ZIP of XHTML) into one markdown document.
  * LiteParse and LlamaParse do not read EPUB, so pack uses this extract.
+ * Image options match LiteParse: `imageMode` and `extractImages`.
  */
-export function parseEpub(epubPath: string): DocumentParseResult {
+export function parseEpub(
+  epubPath: string,
+  options: EpubParseOptions = {},
+): DocumentParseResult {
   const entries = listZipEntries(epubPath);
   const byName = new Map(entries.map((entry) => [entry.name.replace(/\\/g, "/"), entry]));
   const opf = entries.find((entry) => entry.name.toLowerCase().endsWith(".opf"));
@@ -106,10 +270,26 @@ export function parseEpub(epubPath: string): DocumentParseResult {
     chosen.push(name);
   }
 
+  const mode = imageModeFrom(options.imageMode);
+  const extractImages = options.extractImages === true;
+  const images: ParsedImage[] = [];
+  const usedNames = new Set<string>();
+  const named = new Map<string, string>();
   const parts: string[] = [];
   for (const name of chosen) {
     const html = readZipEntry(epubPath, name).toString("utf8");
-    const text = htmlToMarkdown(html);
+    const withImages = replaceEpubImages(
+      html,
+      name,
+      byName,
+      (entry) => readZipEntry(epubPath, entry),
+      mode,
+      extractImages,
+      images,
+      usedNames,
+      named,
+    );
+    const text = htmlToMarkdown(withImages);
     if (text) parts.push(text);
   }
   const text = parts.join("\n\n").trim();
@@ -120,6 +300,7 @@ export function parseEpub(epubPath: string): DocumentParseResult {
     engine: "liteparse",
     text,
     pages: [{ pageNum: 1, text, markdown: text }],
+    ...(images.length > 0 ? { images } : {}),
     route: { mode: "fixed", reason: "epub xhtml extract" },
   };
 }

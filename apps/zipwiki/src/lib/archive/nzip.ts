@@ -232,6 +232,11 @@ export type CollectionMemberInput = {
    * SHA-256 when the writer sets `originSha256` (not both).
    */
   originUri?: string;
+  /**
+   * Figure files for `{ai.root}/parsed/{P}.assets/`.
+   * `name` is the file name; the markdown href is `{basename}.assets/{name}`.
+   */
+  assets?: Array<{ name: string; data: Buffer }>;
 };
 
 export type CollectionWriteInput = {
@@ -390,6 +395,18 @@ export function classifyEntry(
     return "ai";
   }
   return "primary";
+}
+
+/** Zip path for one figure of primary `P`: `{root}/parsed/{P}.assets/{file}`. */
+export function parsedAssetPath(
+  primaryPath: string,
+  fileName: string,
+  aiRoot: string = DEFAULT_AI_ROOT,
+  parsedDir: string = DEFAULT_PARSED_DIR,
+): string {
+  const p = primaryPath.replace(/\\/g, "/").replace(/^\/+/, "");
+  const file = basename(fileName.replace(/\\/g, "/"));
+  return `${aiRoot.replace(/\/+$/, "")}/${parsedDir.replace(/\/+$/, "")}/${p}.assets/${file}`;
 }
 
 /** Path for parsed markdown of primary `P` (APPNOTE §4.3). */
@@ -777,6 +794,12 @@ export function writeNzipCollectionBundle(
       sourceIncluded: !omitOriginal,
       mtime,
       originUri: m.originUri?.trim() || undefined,
+      assets: (m.assets ?? [])
+        .filter((asset) => asset.name.trim() && asset.data.length > 0)
+        .map((asset) => ({
+          name: basename(asset.name.replace(/\\/g, "/")),
+          data: asset.data,
+        })),
     };
   });
 
@@ -810,6 +833,12 @@ export function writeNzipCollectionBundle(
         ...(writeOrigin && originLocatorPresent(origin) ? { origin } : {}),
       };
     }),
+    ...parsedMembers.flatMap((m) =>
+      m.assets.map((asset) => ({
+        name: parsedAssetPath(m.path, asset.name, aiRoot),
+        data: asset.data,
+      })),
+    ),
     ...okfEntries,
   ].sort((a, b) =>
     Buffer.from(a.name, "utf-8").compare(Buffer.from(b.name, "utf-8")),
@@ -837,6 +866,10 @@ export function writeNzipCollectionBundle(
     hasParsed: m.hasParsed,
     ...(m.sourceIncluded ? {} : { sourceIncluded: false }),
   }));
+  const assetEntryCount = parsedMembers.reduce(
+    (count, member) => count + member.assets.length,
+    0,
+  );
   const neoManifest = buildNeoZipManifest({
     createdAt,
     aiRoot,
@@ -845,6 +878,7 @@ export function writeNzipCollectionBundle(
     okf: aiOkf,
     parserEngine: input.parserEngine,
     parser: input.parser,
+    ...(assetEntryCount > 0 ? { assetEntryCount } : {}),
     profiles:
       input.sha256Extra === true
         ? ["integrity", "zipwiki"]

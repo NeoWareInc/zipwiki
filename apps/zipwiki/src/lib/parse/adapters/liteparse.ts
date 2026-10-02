@@ -8,6 +8,7 @@ import {
 } from "../parse-quality.js";
 import { annotateParseError } from "../libreoffice-hint.js";
 import { resolveParseOcrEnabled } from "../parse-header.js";
+import { imagesFromLiteParse } from "../images.js";
 import { resolveTessdataPath } from "../tessdata.js";
 import type {
   DocumentParser,
@@ -50,6 +51,8 @@ export class LiteParseAdapter implements DocumentParser {
       const complexity = summarizeParseComplexity(result);
       const ocrConfidence = summarizeOcrConfidence(result);
       const engineVersion = liteparseEngineVersion();
+      const images =
+        config.extractImages === true ? imagesFromLiteParse(result) : [];
 
       return {
         engine: "liteparse",
@@ -62,6 +65,7 @@ export class LiteParseAdapter implements DocumentParser {
         })),
         ...(complexity ? { complexity } : {}),
         ocrConfidence,
+        ...(images.length > 0 ? { images } : {}),
         raw: result,
       };
     } catch (err) {

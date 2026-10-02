@@ -126,6 +126,14 @@ function withPipelineFlags(cmd: Command): Command {
     .option("--ocr-language <lang>", "OCR language (default: eng)")
     .option("--max-pages <n>", "Max pages to parse per file", Number.parseInt)
     .option("--dpi <dpi>", "Rendering DPI", Number.parseFloat)
+    .option(
+      "--image-mode <mode>",
+      "How to surface raster images in markdown: off|placeholder|embed (default: placeholder)",
+    )
+    .option(
+      "--extract-images",
+      "Save document images under wiki/parsed/{file}.assets/ (LiteParse extractImages and EPUB figures)",
+    )
     .option("--password <password>", "Password for encrypted documents")
     .option(
       "--config <file>",
@@ -275,8 +283,12 @@ function withDocParse(cmd: Command): Command {
       "How to surface raster images in markdown: off|placeholder|embed (default: placeholder)",
     )
     .option(
+      "--extract-images",
+      "Keep image bytes. With --image-output-dir, write them there (LiteParse extractImages and EPUB figures)",
+    )
+    .option(
       "--image-output-dir <dir>",
-      "Directory to write embedded images to when --image-mode embed is set",
+      "Directory to write extracted images (requires --extract-images, or --image-mode embed)",
     )
     .option("--no-links", "Disable hyperlink extraction (emit plain anchor text)")
     .option("--ocr-server-url <url>", "HTTP OCR server URL (optional remote OCR)")
@@ -784,6 +796,14 @@ program
   .option("--wiki-dir <dir>", "Alias for --stage-dir")
   .option("--config <file>", "ZipWiki project config")
   .option("--no-ocr", "Disable OCR for parse of new/updated files")
+  .option(
+    "--image-mode <mode>",
+    "How to surface raster images in markdown: off|placeholder|embed (default: placeholder)",
+  )
+  .option(
+    "--extract-images",
+    "Save document images under wiki/parsed/{file}.assets/ when adding or updating files",
+  )
   .option("-j, --json", "JSON output")
   .option("-q, --quiet", "Quiet")
   .action(async (archive: string, opts) => {
@@ -812,6 +832,8 @@ program
       json: opts.json === true,
       config: opts.config,
       noOcr: opts.noOcr === true || opts.ocr === false,
+      imageMode: opts.imageMode,
+      extractImages: opts.extractImages === true,
       stageDir: opts.stageDir,
       wikiDir: opts.wikiDir,
     });

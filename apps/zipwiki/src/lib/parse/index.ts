@@ -6,7 +6,14 @@ export {
   type ClassifyInput,
 } from "./classify.js";
 export { parseCategoryOverride } from "../archive/index.js";
-export { buildConfig, formatParseResult, type CliParseOptions } from "./config.js";
+export {
+  buildConfig,
+  formatParseResult,
+  imageModeFrom,
+  type CliParseOptions,
+  type ImageMode,
+} from "./config.js";
+export { retargetParsedImageHrefs } from "./images.js";
 export {
   assessParseYield,
   buildParserManifest,

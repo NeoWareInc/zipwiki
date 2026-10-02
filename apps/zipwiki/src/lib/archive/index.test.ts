@@ -526,6 +526,35 @@ describe("multi-primary package", () => {
     assert.equal(manifest.ai.primaries[0].hasParsed, true);
   });
 
+  it("writes extracted images under the parse assets directory", () => {
+    const dir = mkdtempSync(join(tmpdir(), "nzip-assets-"));
+    const file = join(dir, "letters.epub");
+    writeFileSync(file, "epub-bytes");
+    const out = join(dir, "letters.zipwiki");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        {
+          originalPath: file,
+          originalName: "letters.epub",
+          structuredMarkdown: "![Frontispiece](letters.epub.assets/plate.png)\n",
+          assets: [{ name: "plate.png", data: Buffer.from("png-bytes") }],
+        },
+      ],
+    });
+    const names = listZipEntries(out).map((entry) => entry.name);
+    assert.ok(names.includes("wiki/parsed/letters.epub.md"));
+    assert.ok(names.includes("wiki/parsed/letters.epub.assets/plate.png"));
+    assert.equal(
+      readZipEntry(out, "wiki/parsed/letters.epub.assets/plate.png").toString("utf8"),
+      "png-bytes",
+    );
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.equal(manifest.ai.assetEntryCount, 1);
+  });
+
   it("writes multi-primary with per-file parses under wiki/parsed/", () => {
     const dir = mkdtempSync(join(tmpdir(), "nzip-coll-"));
     const f1 = join(dir, "one.txt");

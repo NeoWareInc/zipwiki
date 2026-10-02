@@ -32,6 +32,8 @@ export type UpdateCommandOptions = {
   json?: boolean;
   config?: string;
   noOcr?: boolean;
+  imageMode?: string;
+  extractImages?: boolean;
   stageDir?: string;
   wikiDir?: string;
 };
@@ -91,6 +93,8 @@ export async function runUpdateCommand(
       quiet: opts.quiet,
       config: opts.config ? resolveRepoPath(opts.config) : undefined,
       noOcr: opts.noOcr,
+      imageMode: opts.imageMode,
+      extractImages: opts.extractImages,
       stageDir: opts.stageDir
         ? resolveRepoPath(opts.stageDir)
         : opts.wikiDir

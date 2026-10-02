@@ -36,7 +36,9 @@ import {
 import {
   assessParseYield,
   classifyDocument,
+  imageModeFrom,
   parseDocument,
+  retargetParsedImageHrefs,
   type CliParseOptions,
 } from "../lib/parse/index.js";
 import { runManifestCommand } from "../manifest-cmd.js";
@@ -123,6 +125,7 @@ export async function parseOneFile(
   forcedCategory?: DocumentType,
 ): Promise<ParseFileResult> {
   const originalName = basename(abs);
+  const imageMode = imageModeFrom(opts.imageMode);
   const cli: CliParseOptions = {
     password: opts.password,
     ocr: opts.noOcr === true ? false : opts.ocr,
@@ -133,13 +136,24 @@ export async function parseOneFile(
     targetPages: opts.targetPages,
     ocrServerUrl: opts.ocrServerUrl,
     quiet: opts.quiet === true,
+    imageMode,
+    extractImages: opts.extractImages === true,
   };
   const parsed = await parseDocument(abs, {
     project,
     cli,
     remoteParse: opts.remoteParse,
   });
-  const yieldInfo = assessParseYield(parsed.text, {
+  const images = parsed.images ?? [];
+  const markdown =
+    images.length > 0 && imageMode !== "embed"
+      ? retargetParsedImageHrefs(parsed.text, originalName, images)
+      : parsed.text;
+  const assets =
+    images.length > 0
+      ? images.map((image) => ({ name: image.name, data: image.bytes }))
+      : undefined;
+  const yieldInfo = assessParseYield(markdown, {
     complexity: parsed.complexity,
   });
   if (!yieldInfo.ok) {
@@ -149,7 +163,7 @@ export async function parseOneFile(
   }
   const classification = classifyDocument({
     fileName: originalName,
-    text: parsed.text,
+    text: markdown,
   });
   await maybeReportLlamaParseUsage({
     engine: parsed.engine,
@@ -160,12 +174,13 @@ export async function parseOneFile(
     quiet: opts.quiet,
   });
   return {
-    markdown: parsed.text,
+    markdown,
     member: {
       abs,
       originalName,
       documentType: forcedCategory ?? classification.documentType,
-      structuredMarkdown: parsed.text,
+      structuredMarkdown: markdown,
+      ...(assets ? { assets } : {}),
     },
   };
 }
@@ -180,6 +195,21 @@ export function writeParsedFile(
   const out = join(parsedDir, parsedMarkdownFileName(originalName));
   writeFileSync(out, markdown, "utf-8");
   return out;
+}
+
+/** Write figure bytes next to the staged parse: `{name}.assets/{file}`. */
+export function writeParsedAssets(
+  stageDir: string,
+  originalName: string,
+  assets: Array<{ name: string; data: Buffer }> | undefined,
+): void {
+  if (!assets?.length) return;
+  const { parsedDir } = ensureStageDirs(stageDir);
+  const dir = join(parsedDir, `${basename(originalName)}.assets`);
+  mkdirSync(dir, { recursive: true });
+  for (const asset of assets) {
+    writeFileSync(join(dir, basename(asset.name)), asset.data);
+  }
 }
 
 function stubMarkdownForFailedParse(
@@ -404,6 +434,11 @@ export async function runParseAndOkfPhase(input: {
             result.member.originalName,
             result.markdown,
           );
+          writeParsedAssets(
+            stageDir,
+            result.member.originalName,
+            result.member.assets,
+          );
           await maybeReportLocalLiteParse({
             success: true,
             bytes: Buffer.byteLength(result.markdown, "utf8"),
@@ -459,6 +494,11 @@ export async function runParseAndOkfPhase(input: {
           stageDir,
           result.member.originalName,
           result.markdown,
+        );
+        writeParsedAssets(
+          stageDir,
+          result.member.originalName,
+          result.member.assets,
         );
         await maybeReportLocalLiteParse({
           success: true,
@@ -680,6 +720,7 @@ export function runCompressPhase(input: {
         ...(m.structuredMarkdown
           ? { structuredMarkdown: m.structuredMarkdown }
           : {}),
+        ...(m.assets?.length ? { assets: m.assets } : {}),
         ...(originUri ? { originUri } : {}),
       };
     }),

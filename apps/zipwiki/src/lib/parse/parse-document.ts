@@ -68,7 +68,10 @@ export async function parseDocument(
   options: ParseDocumentOptions,
 ): Promise<DocumentParseResult> {
   if (extname(path).toLowerCase() === ".epub") {
-    return parseEpub(path);
+    return parseEpub(path, {
+      imageMode: options.cli?.imageMode,
+      extractImages: options.cli?.extractImages === true,
+    });
   }
 
   loadEnvFiles();

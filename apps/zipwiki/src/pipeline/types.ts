@@ -16,6 +16,8 @@ export type StageMember = {
   digest?: string;
   documentType: DocumentType;
   structuredMarkdown?: string;
+  /** Figure files written beside the parse as `{name}.assets/`. */
+  assets?: Array<{ name: string; data: Buffer }>;
   parsePath?: string;
   okfPath?: string;
   /** Soft failure (e.g. parse); member may still be packed + OKF'd. */

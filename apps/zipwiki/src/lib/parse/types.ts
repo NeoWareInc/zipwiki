@@ -28,7 +28,20 @@ export type DocumentParseResult = {
   llamaCredits?: number;
   /** LlamaParse job id when available. */
   jobId?: string;
+  /**
+   * Image bytes when `extractImages` is set. Markdown hrefs use `name`
+   * until pack retargets them into `{primary}.assets/`.
+   */
+  images?: ParsedImage[];
   raw?: unknown;
+};
+
+export type ParsedImage = {
+  /** File name under `{primary}.assets/`. */
+  name: string;
+  bytes: Buffer;
+  /** Other markdown hrefs that should resolve to `name`. */
+  hrefs?: string[];
 };
 
 export type ParseRuntimeOptions = {

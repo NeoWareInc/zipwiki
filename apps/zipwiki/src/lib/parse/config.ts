@@ -6,9 +6,22 @@ import type {
 } from "@llamaindex/liteparse";
 import { resolveTessdataPath } from "./tessdata.js";
 
+export type ImageMode = "off" | "placeholder" | "embed";
+
+/** LiteParse default. An unknown value is rejected by the caller that has a flag. */
+export function imageModeFrom(value: string | undefined): ImageMode {
+  if (value == null || value === "") return "placeholder";
+  if (value === "off" || value === "placeholder" || value === "embed") return value;
+  throw new Error(
+    `image-mode must be off, placeholder, or embed (got ${value})`,
+  );
+}
+
 export type CliParseOptions = {
   format?: string;
   imageMode?: string;
+  /** When true, keep image bytes (LiteParse `extractImages`; EPUB figures). */
+  extractImages?: boolean;
   links?: boolean;
   ocr?: boolean;
   /** When true, skip OCR (same as `ocr: false` / `--no-ocr`). */
@@ -39,8 +52,9 @@ export function buildConfig(opts: CliParseOptions): Partial<LiteParseConfig> {
 
   if (opts.format) config.outputFormat = opts.format as OutputFormat;
   if (opts.imageMode) {
-    config.imageMode = opts.imageMode as LiteParseConfig["imageMode"];
+    config.imageMode = imageModeFrom(opts.imageMode);
   }
+  if (opts.extractImages === true) config.extractImages = true;
   if (opts.links === false) config.extractLinks = false;
   if (opts.ocrServerUrl) config.ocrServerUrl = opts.ocrServerUrl;
   if (opts.ocrServerHeader) config.ocrServerHeaders = opts.ocrServerHeader;

@@ -106,6 +106,9 @@ export async function runParseFile(
         maxPages: opts.maxPages ?? project.parser.liteparse.maxPages,
         dpi: opts.dpi ?? project.parser.liteparse.dpi,
         ocrLanguage: opts.ocrLanguage ?? project.parser.liteparse.ocrLanguage,
+        imageMode: opts.imageMode,
+        extractImages:
+          opts.extractImages === true || Boolean(opts.imageOutputDir),
         quiet: opts.quiet,
       },
     });
@@ -123,20 +126,15 @@ export async function runParseFile(
 
     const output = formatDocumentResult(result, format);
 
-    const raw = result.raw as
-      | { images?: Array<{ id: string; format: string; bytes: Buffer }> }
-      | undefined;
-    if (opts.imageOutputDir && raw?.images && raw.images.length > 0) {
+    const writtenImages = result.images ?? [];
+    if (opts.imageOutputDir && writtenImages.length > 0) {
       ensureDir(opts.imageOutputDir);
-      for (const img of raw.images) {
-        writeFileSync(
-          join(opts.imageOutputDir, `image_${img.id}.${img.format}`),
-          img.bytes,
-        );
+      for (const img of writtenImages) {
+        writeFileSync(join(opts.imageOutputDir, img.name), img.bytes);
       }
       if (!opts.quiet) {
         console.error(
-          `[parse] wrote ${raw.images.length} image(s) to ${opts.imageOutputDir}`,
+          `[parse] wrote ${writtenImages.length} image(s) to ${opts.imageOutputDir}`,
         );
       }
     }
