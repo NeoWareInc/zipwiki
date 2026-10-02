@@ -45,7 +45,37 @@ export type PackageQuery = {
   hits: QueryHit[];
   excerpts: QueryExcerpt[];
   skipped: QuerySkipped[];
+  /** Markdown bodies from wiki/skills/*.md when present. */
+  packageSkills?: string[];
 };
+
+const SKILLS_PREFIX = "wiki/skills/";
+
+/** Read package skill markdown from an open archive (wiki/skills/*.md). */
+export async function loadPackageSkillMarkdown(
+  buf: ArrayBuffer,
+  entries: ZipListEntry[],
+): Promise<string[]> {
+  const skillEntries = entries
+    .filter(
+      (e) =>
+        e.name.startsWith(SKILLS_PREFIX) &&
+        e.name.toLowerCase().endsWith(".md") &&
+        !e.name.endsWith("/"),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const out: string[] = [];
+  for (const entry of skillEntries) {
+    try {
+      const data = await readZipEntryPayload(buf, entry);
+      if (!payloadCrcMatches(data, entry.crc32)) continue;
+      out.push(new TextDecoder("utf-8").decode(data));
+    } catch {
+      // skip
+    }
+  }
+  return out;
+}
 
 type ScoredFile = {
   path: string;
@@ -323,6 +353,7 @@ export async function queryPackage(
   const byName = new Map(entries.map((entry) => [entry.name, entry]));
   const entryNames = new Set(byName.keys());
   const scored: ScoredFile[] = [];
+  const packageSkills = await loadPackageSkillMarkdown(buf, entries);
 
   const indexEntry = byName.get(SEARCH_INDEX);
   let usedCatalog = false;
@@ -427,5 +458,6 @@ export async function queryPackage(
     })),
     excerpts,
     skipped,
+    ...(packageSkills.length > 0 ? { packageSkills } : {}),
   };
 }

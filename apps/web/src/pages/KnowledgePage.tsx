@@ -324,6 +324,9 @@ export default function KnowledgePage() {
           text: excerpt.text,
           ...(excerpt.documents?.length ? { documents: excerpt.documents } : {}),
         })),
+        ...(found.packageSkills?.length
+          ? { packageSkills: found.packageSkills }
+          : {}),
       });
       setAnswer({
         text: result.answer,
@@ -522,6 +525,11 @@ export default function KnowledgePage() {
 
           <section>
             <h2 className="font-display text-xl font-semibold">Ask this package</h2>
+            <p className="mt-1 text-sm text-ink/70">
+              Answers use Open Knowledge Format (OKF) concepts and package query
+              skills when the archive includes{" "}
+              <code className="text-xs">wiki/skills/</code>.
+            </p>
             <p className="mt-1 text-sm text-(--muted)">
               The archive stays in your browser. Matching concept excerpts are
               sent to answer the question.

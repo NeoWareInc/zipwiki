@@ -119,8 +119,12 @@ export function resolveOriginArgs(input: {
   return { packagePath: undefined, selector: input.positional };
 }
 
-function printCatalog(pkg: string | undefined, json: boolean | undefined): void {
-  const catalog = buildCatalog(resolvePkg(pkg));
+function printCatalog(
+  pkg: string | undefined,
+  json: boolean | undefined,
+  skillsPath?: string,
+): void {
+  const catalog = buildCatalog(resolvePkg(pkg), { skillsPath });
   if (json) {
     console.log(JSON.stringify(catalog, null, 2));
     return;
@@ -140,14 +144,27 @@ export function registerQueryCommands(program: Command): void {
       "Print a catalog of primaries (OKF title/type, parsed?, original?, next read hints)",
     )
     .argument("[package]", "Path to .zipwiki (default: wiki.zipwiki in cwd)")
-    .option("-j, --json", "JSON output (full catalog object)")
-    .action((pkg: string | undefined, opts: { json?: boolean }) => {
-      try {
-        printCatalog(pkg, opts.json);
-      } catch (err) {
-        fail(err);
-      }
-    });
+    .option("-j, --json", "JSON output (full catalog object including skills)")
+    .option(
+      "--skills <path>",
+      "Replace built-in query skill with markdown from a file or directory",
+    )
+    .action(
+      (
+        pkg: string | undefined,
+        opts: { json?: boolean; skills?: string },
+      ) => {
+        try {
+          printCatalog(
+            pkg,
+            opts.json,
+            opts.skills ? resolveRepoPath(opts.skills) : undefined,
+          );
+        } catch (err) {
+          fail(err);
+        }
+      },
+    );
 
   program
     .command("search")
@@ -159,11 +176,15 @@ export function registerQueryCommands(program: Command): void {
     .argument("<query>", "Search query")
     .option("-j, --json", "JSON output")
     .option("--limit <n>", "Max hits", (v) => Number(v), 10)
+    .option(
+      "--skills <path>",
+      "Replace built-in query skill (included in JSON when -j)",
+    )
     .action(
       (
         pkg: string,
         query: string,
-        opts: { json?: boolean; limit?: number },
+        opts: { json?: boolean; limit?: number; skills?: string },
       ) => {
         try {
           const result = searchPackage({
@@ -172,7 +193,12 @@ export function registerQueryCommands(program: Command): void {
             limit: opts.limit,
           });
           if (opts.json) {
-            console.log(JSON.stringify(result, null, 2));
+            const skills = buildCatalog(resolvePkg(pkg), {
+              skillsPath: opts.skills
+                ? resolveRepoPath(opts.skills)
+                : undefined,
+            }).skills;
+            console.log(JSON.stringify({ ...result, skills }, null, 2));
             return;
           }
           process.stdout.write(

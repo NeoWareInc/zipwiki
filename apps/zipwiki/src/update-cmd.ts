@@ -14,6 +14,7 @@ export type UpdateCommandOptions = {
   update?: string[];
   noAiOkf?: boolean;
   noOkf?: boolean;
+  skillsPath?: string;
   omitOriginal?: boolean;
   includeOriginal?: boolean;
   parser?: string;
@@ -75,6 +76,9 @@ export async function runUpdateCommand(
       })),
       noAiOkf: opts.noAiOkf,
       noOkf: opts.noOkf,
+      skillsPath: opts.skillsPath
+        ? resolveRepoPath(opts.skillsPath)
+        : undefined,
       omitOriginalDocuments,
       parser,
       parserMode,

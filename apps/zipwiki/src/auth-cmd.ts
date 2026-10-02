@@ -65,23 +65,50 @@ type LoginAccountChoice =
 
 const OTHER_ACCOUNT = "__other__";
 
+/**
+ * Map a picker selection to a login action.
+ * When `forceRefresh` is set (rejected API key), selecting the active account
+ * starts a browser login instead of keeping the rejected key.
+ */
+export function resolveCliLoginAccountChoice(input: {
+  selected: string;
+  active?: string | null;
+  forceRefresh?: boolean;
+}): LoginAccountChoice {
+  const active = input.active?.trim().toLowerCase() || undefined;
+  const selected = input.selected.trim().toLowerCase();
+  if (selected === OTHER_ACCOUNT) return { action: "browser" };
+  if (active && selected === active) {
+    return input.forceRefresh ? { action: "browser" } : { action: "keep" };
+  }
+  return { action: "activate", email: selected };
+}
+
 /** When this CLI already has a saved login, ask which email to use. */
-export async function chooseCliLoginAccount(): Promise<LoginAccountChoice> {
+export async function chooseCliLoginAccount(opts?: {
+  /** Rejected API key — picking the current account must re-auth, not keep. */
+  forceRefresh?: boolean;
+}): Promise<LoginAccountChoice> {
   const accounts = seedCliAccountsFromEnv();
   if (!isInteractiveTty() || accounts.length === 0) {
     return { action: "browser" };
   }
   const active = process.env.ZIPWIKI_ACCOUNT_EMAIL?.trim().toLowerCase();
+  const forceRefresh = opts?.forceRefresh === true;
   const choice = await p.select({
-    message: active
-      ? `This CLI is signed in as ${active}. Which account should it use?`
-      : "Which account should this CLI use?",
+    message: forceRefresh
+      ? "Your API key was rejected. Which account should this CLI re-authenticate?"
+      : active
+        ? `This CLI is signed in as ${active}. Which account should it use?`
+        : "Which account should this CLI use?",
     options: [
       ...accounts.map((account) => ({
         value: account.email,
         label:
           account.email === active
-            ? `${account.email} (signed in)`
+            ? forceRefresh
+              ? `${account.email} (get a new API key)`
+              : `${account.email} (signed in)`
             : account.email,
       })),
       {
@@ -91,9 +118,11 @@ export async function chooseCliLoginAccount(): Promise<LoginAccountChoice> {
     ],
   });
   if (p.isCancel(choice)) return { action: "cancel" };
-  if (choice === OTHER_ACCOUNT) return { action: "browser" };
-  if (choice === active) return { action: "keep" };
-  return { action: "activate", email: String(choice) };
+  return resolveCliLoginAccountChoice({
+    selected: String(choice),
+    active,
+    forceRefresh,
+  });
 }
 
 function printActiveAccount(account: SavedCliAccount): void {
@@ -104,8 +133,15 @@ function printActiveAccount(account: SavedCliAccount): void {
 export async function runAuthLogin(opts: {
   env?: string;
   noBrowser?: boolean;
+  /**
+   * When true (unauthorized API key), selecting the current account starts a
+   * fresh browser login for a new key instead of keeping the rejected one.
+   */
+  forceRefresh?: boolean;
 }): Promise<void> {
-  const choice = await chooseCliLoginAccount();
+  const choice = await chooseCliLoginAccount({
+    forceRefresh: opts.forceRefresh === true,
+  });
   if (choice.action === "cancel") {
     console.error("[zipwiki] Login cancelled.");
     process.exitCode = 1;

@@ -215,7 +215,11 @@ export type QueryExcerptInput = {
  */
 export async function handleQueryAnswer(
   deps: GatewayDeps,
-  args: { question: string; excerpts: QueryExcerptInput[] },
+  args: {
+    question: string;
+    excerpts: QueryExcerptInput[];
+    packageSkills?: string[];
+  },
 ): Promise<GatewayResponse> {
   const env = deps.env ?? process.env;
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -237,12 +241,19 @@ export async function handleQueryAnswer(
     return { status: 400, body: { error: "invalid_request" } };
   }
 
+  const packageSkills = (args.packageSkills ?? [])
+    .filter((s) => typeof s === "string" && s.trim())
+    .slice(0, 8)
+    .map((s) => s.slice(0, 16_000));
+
   try {
     const completion = await invokeQueryAnswer(
       question,
       excerpts,
       apiKey,
       fetchImpl,
+      undefined,
+      packageSkills,
     );
     return { status: 200, body: completion };
   } catch (err) {

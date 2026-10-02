@@ -391,7 +391,13 @@ export async function registerGateway(
           ];
         })
       : [];
-    const result = await handleQueryAnswer(deps, { question, excerpts });
+    const result = await handleQueryAnswer(deps, {
+      question,
+      excerpts,
+      packageSkills: Array.isArray(raw.packageSkills)
+        ? raw.packageSkills.filter((s): s is string => typeof s === "string")
+        : undefined,
+    });
     return reply.code(result.status).send(result.body);
   });
 }

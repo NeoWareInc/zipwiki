@@ -128,7 +128,13 @@ export async function promptAndRunLogin(opts: {
   login?: () => Promise<void>;
   quiet?: boolean;
 }): Promise<void> {
-  const login = opts.login ?? (() => runAuthLogin({}));
+  const login =
+    opts.login ??
+    (() =>
+      runAuthLogin({
+        // Rejected keys must not be "kept" — force a new device login.
+        forceRefresh: opts.reason === "unauthorized",
+      }));
   const interactive = opts.interactive ?? isInteractiveTty();
   const explainer = portalLoginNeededExplainer(opts.reason);
 

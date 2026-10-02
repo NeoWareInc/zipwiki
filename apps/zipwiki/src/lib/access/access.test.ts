@@ -102,9 +102,12 @@ describe("zipaccess", () => {
   it("buildCatalog / formatCatalogText are readable", () => {
     const catalog = buildCatalog(out);
     const text = formatCatalogText(catalog);
-    assert.match(text, /PRIMARY/);
+    assert.match(text, /DOCUMENT/);
+    assert.match(text, /Skills:/);
     assert.match(text, /Warehouse Lease/);
     assert.match(text, /read --okf/);
+    assert.ok(catalog.skills);
+    assert.ok(catalog.skills.base.length >= 1);
     for (const key of CATALOG_RESULT_FIELDS) {
       assert.ok(key in catalog, `catalog missing ${key}`);
     }

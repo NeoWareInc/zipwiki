@@ -28,10 +28,16 @@ import {
   type ResolvedZipwikiConfig,
 } from "../lib/config/index.js";
 import {
+  collectStageSkillFiles,
+  writeQueryHintsToStage,
+} from "../lib/skills/query-hints.js";
+import {
   buildOkfDocument,
   buildZipWikiOkfSources,
   conceptFileNameFor,
   finalizeOkfDirectory,
+  parseFrontmatterFields,
+  splitFrontmatter,
 } from "../lib/okf/index.js";
 import {
   assessParseYield,
@@ -213,6 +219,8 @@ export async function okfOneFile(input: {
   omitOriginalDocuments?: boolean;
   /** Hash original bytes for OKF `contentSha256` (only when --sha256 / --origin-sha256). */
   includeSha256?: boolean;
+  /** Replace built-in enrichment skill for this OKF run. */
+  skillsPath?: string;
 }): Promise<{ path: string; mode: "ai" | "fallback"; aiError?: string; ms: number }> {
   const { okfDir } = ensureStageDirs(input.stageDir);
   const conceptName = conceptFileNameFor(input.originalName);
@@ -261,6 +269,7 @@ export async function okfOneFile(input: {
     provider: input.provider,
     model: input.model,
     sources,
+    skillsPath: input.skillsPath,
   });
   const ms = Date.now() - started;
 
@@ -344,6 +353,7 @@ export async function runParseAndOkfPhase(input: {
           parseAvailable: !loaded.parseFailed,
           omitOriginalDocuments,
           includeSha256,
+          skillsPath: opts.skillsPath,
         });
         if (!opts.quiet) {
           const notes: string[] = [written.mode, `${written.ms}ms`];
@@ -514,6 +524,7 @@ export async function runParseAndOkfPhase(input: {
         parseAvailable: !parsed.parseFailed,
         omitOriginalDocuments,
         includeSha256,
+        skillsPath: opts.skillsPath,
       });
       if (!opts.quiet) {
         const notes: string[] = [written.mode, `${written.ms}ms`];
@@ -642,6 +653,31 @@ export function runCompressPhase(input: {
     clearOkfOutputDir(okfDir);
   }
 
+  if (input.opts.noOkf !== true && okfFiles.length > 0) {
+    const documents = okfFiles
+      .filter(
+        (f) =>
+          f.name !== "index.md" &&
+          !f.name.endsWith("/log.md") &&
+          !f.name.startsWith("topics/"),
+      )
+      .map((f) => {
+        const { frontmatter } = splitFrontmatter(f.data);
+        const fields = parseFrontmatterFields(frontmatter ?? "");
+        return {
+          path: f.name.replace(/\.md$/i, ""),
+          title: fields.title ? String(fields.title) : undefined,
+          type: fields.type ? String(fields.type) : undefined,
+        };
+      });
+    writeQueryHintsToStage(input.stageDir, {
+      digest: input.title,
+      documents,
+    });
+  }
+
+  const skillFiles = collectStageSkillFiles(input.stageDir);
+
   const compression =
     input.opts.legacy || input.opts.deflate
       ? "deflate"
@@ -684,6 +720,7 @@ export function runCompressPhase(input: {
       };
     }),
     ...(okfFiles.length > 0 ? { okf: { files: okfFiles } } : {}),
+    ...(skillFiles.length > 0 ? { skills: { files: skillFiles } } : {}),
     compression: compression as "zstd" | "deflate" | "store",
     level,
     storeSuffixes:

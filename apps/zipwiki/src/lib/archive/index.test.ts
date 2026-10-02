@@ -43,6 +43,7 @@ describe("archive schema", () => {
     assert.equal(BUNDLE_PATHS.aiRoot, "wiki");
     assert.equal(BUNDLE_PATHS.parsed, "wiki/parsed/");
     assert.equal(BUNDLE_PATHS.okfRoot, "wiki/okf/");
+    assert.equal(BUNDLE_PATHS.skillsRoot, "wiki/skills/");
     assert.equal(NZIP_EXTENSION, ".zipwiki");
   });
 

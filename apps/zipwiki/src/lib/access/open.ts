@@ -1,11 +1,9 @@
 import {
-  BUNDLE_PATHS,
-  listZipEntries,
-  pickOriginApiFields,
-  readZipEntryVerified,
-  useZipHandle,
-  type ZipListEntry,
-} from "../archive/index.js";
+  isOkfConceptEntryPath,
+  resolvePackageSkills,
+  toOpenSkillsPayload,
+  type OpenSkillsPayload,
+} from "../skills/package.js";
 import {
   bufferLooksUtf8,
   clipBytes,
@@ -25,9 +23,17 @@ import {
   primaryPathFromParsed,
   type OriginSummary,
 } from "./origin.js";
+import {
+  BUNDLE_PATHS,
+  listZipEntries,
+  pickOriginApiFields,
+  readZipEntryVerified,
+  useZipHandle,
+  type ZipListEntry,
+} from "../archive/index.js";
 
 export const OPEN_SEQUENCE = [
-  "1. open (done)",
+  "1. open (done) — skills load automatically (built-in query skill + package wiki/skills/)",
   "2. Prefer search or query; else read_okf_index",
   "3. read_okf for top concepts",
   "4. read_parsed / read_entry to stream bytes via MCP (verified inflate; size-capped). origin URI/CRC is on read_parsed when Extra Field 0x014F is present",
@@ -38,16 +44,10 @@ function entryExists(entries: ZipListEntry[], name: string): boolean {
   return entries.some((e) => e.name === name || e.name === `${name}/`);
 }
 
-function okfConceptPaths(entries: ZipListEntry[]): string[] {
+function okfConceptPaths(entries: ZipListEntry[], aiRoot = "wiki"): string[] {
+  const okfRoot = BUNDLE_PATHS.okfRoot;
   return entries
-    .filter(
-      (e) =>
-        e.name.startsWith(BUNDLE_PATHS.okfRoot) &&
-        e.name.endsWith(".md") &&
-        !e.name.endsWith("index.md") &&
-        !e.name.endsWith("/log.md") &&
-        !e.name.endsWith("/"),
-    )
+    .filter((e) => isOkfConceptEntryPath(e.name, okfRoot, aiRoot))
     .map((e) => e.name);
 }
 
@@ -93,14 +93,30 @@ export type OpenResult = {
   openSequence: readonly string[];
   /** One row per primary: OKF title/type, parsed?, original?, next-read hints. */
   catalog: CatalogResult;
+  /**
+   * Query skills: built-in (or `--skills` replacement) plus package `wiki/skills/*`.
+   * Full markdown bodies (size-capped via resolve).
+   */
+  skills: OpenSkillsPayload;
 };
 
-export function openPackage(packagePath?: string): OpenResult {
+export type OpenPackageOptions = {
+  /** When set, replaces the built-in query skill (package skills still append). */
+  skillsPath?: string | null;
+};
+
+export function openPackage(
+  packagePath?: string,
+  opts?: OpenPackageOptions,
+): OpenResult {
   const path = resolvePackagePath(packagePath);
-  return useZipHandle(path, () => openPackageLoaded(path));
+  return useZipHandle(path, () => openPackageLoaded(path, opts));
 }
 
-function openPackageLoaded(path: string): OpenResult {
+function openPackageLoaded(
+  path: string,
+  opts?: OpenPackageOptions,
+): OpenResult {
   const entries = listZipEntries(path);
   let manifest: Record<string, unknown> | null = null;
   if (entryExists(entries, BUNDLE_PATHS.manifest)) {
@@ -146,8 +162,14 @@ function openPackageLoaded(path: string): OpenResult {
     return rec;
   });
 
-  const concepts = okfConceptPaths(entries);
+  const concepts = okfConceptPaths(entries, aiRoot);
   const catalog = buildCatalog(path);
+  const resolved = resolvePackageSkills({
+    kind: "query",
+    zipPath: path,
+    aiRoot,
+    skillsPath: opts?.skillsPath,
+  });
   return {
     package: path,
     format: manifest?.format ?? null,
@@ -170,6 +192,7 @@ function openPackageLoaded(path: string): OpenResult {
     entryCount: entries.length,
     openSequence: OPEN_SEQUENCE,
     catalog,
+    skills: toOpenSkillsPayload(resolved),
   };
 }
 

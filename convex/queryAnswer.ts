@@ -21,6 +21,7 @@ export const ask = action({
     question: v.string(),
     filename: v.optional(v.string()),
     excerpts: v.array(excerptValidator),
+    packageSkills: v.optional(v.array(v.string())),
   },
   returns: v.object({
     answer: v.string(),
@@ -69,13 +70,22 @@ export const ask = action({
     const workerSecret = process.env.ZIPWIKI_WORKER_SECRET?.trim();
     if (!apiUrl || !workerSecret) throw new Error("anthropic_not_configured");
 
+    const packageSkills = (args.packageSkills ?? [])
+      .filter((s) => s.trim())
+      .slice(0, 8)
+      .map((s) => s.slice(0, 16_000));
+
     const res = await fetch(`${apiUrl}/api/query/answer`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         "x-zipwiki-worker-secret": workerSecret,
       },
-      body: JSON.stringify({ question, excerpts }),
+      body: JSON.stringify({
+        question,
+        excerpts,
+        ...(packageSkills.length > 0 ? { packageSkills } : {}),
+      }),
     });
     const body = (await res.json().catch(() => ({}))) as {
       error?: string;

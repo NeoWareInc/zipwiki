@@ -50,6 +50,11 @@ export type StageOptions = CliParseOptions & {
   noOkf?: boolean;
   okfProvider?: string;
   okfModel?: string;
+  /**
+   * Replace built-in enrichment skill (pack/update AI OKF) or query skill
+   * (open/search) with markdown from this file or directory.
+   */
+  skillsPath?: string;
   config?: string;
   parser?: ParseEngineId;
   parserMode?: ParserMode;

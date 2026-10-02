@@ -1,7 +1,4 @@
-/**
- * Shared ZipWiki MCP tool handlers (stdio). Local filesystem / mounted drives only.
- */
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
@@ -34,6 +31,7 @@ import {
 } from "@zipwiki/zipwiki/archive";
 import { runPack } from "@zipwiki/zipwiki";
 import { maybeReportActivity } from "@zipwiki/zipwiki/config";
+import { resolveSkills } from "@zipwiki/skills";
 import {
   invalidatePackageCache,
   withCachedPackage,
@@ -67,10 +65,13 @@ function errorResult(err: unknown): ToolResult {
 
 export async function open(args: {
   package?: string;
+  skills?: string;
 }): Promise<ToolResult> {
   try {
     const result = withCachedPackage(args.package, () =>
-      openPackage(args.package),
+      openPackage(args.package, {
+        skillsPath: args.skills?.trim() || undefined,
+      }),
     );
     void maybeReportActivity({
       type: "query",
@@ -358,13 +359,51 @@ export async function okfEnrich(args: {
   stem?: string;
   primaryPath?: string;
   enrichment: OkfEnrichment;
+  /** Path to replacement enrichment skill, or inline markdown. */
+  skills?: string;
 }): Promise<ToolResult> {
   try {
+    const skillsArg = args.skills?.trim();
+    let enrichmentSkill: {
+      replaced: boolean;
+      names: string[];
+      text: string;
+    };
+    if (skillsArg) {
+      const abs = isAbsolute(skillsArg)
+        ? skillsArg
+        : resolve(process.cwd(), skillsArg);
+      if (existsSync(abs) && (statSync(abs).isFile() || statSync(abs).isDirectory())) {
+        const resolved = resolveSkills({
+          kind: "enrichment",
+          skillsPath: abs,
+        });
+        enrichmentSkill = {
+          replaced: true,
+          names: resolved.all.map((s) => s.name),
+          text: resolved.text,
+        };
+      } else {
+        enrichmentSkill = {
+          replaced: true,
+          names: ["custom-enrichment"],
+          text: skillsArg,
+        };
+      }
+    } else {
+      const resolved = resolveSkills({ kind: "enrichment" });
+      enrichmentSkill = {
+        replaced: false,
+        names: resolved.all.map((s) => s.name),
+        text: resolved.text,
+      };
+    }
     const result = await enrichOkf(args);
     invalidatePackageCache(args.package);
     return jsonResult({
       ...result,
-      note: "OKF concept written. Call open or search to continue.",
+      enrichmentSkill,
+      note: "OKF concept written. Call open or search to continue. Use enrichmentSkill.text when drafting host-LLM enrichment.",
     });
   } catch (err) {
     return errorResult(err);
@@ -391,6 +430,7 @@ export async function pack(args: {
   originFile?: boolean;
   sha256Extra?: boolean;
   originSha256?: boolean;
+  skills?: string;
 }): Promise<ToolResult> {
   try {
     const source = isAbsolute(args.source)
@@ -425,6 +465,7 @@ export async function pack(args: {
       originFile: args.originFile,
       sha256Extra: args.sha256Extra,
       originSha256: args.originSha256,
+      skillsPath: args.skills?.trim() || undefined,
       quiet: true,
     });
     if (!existsSync(outAbs)) {

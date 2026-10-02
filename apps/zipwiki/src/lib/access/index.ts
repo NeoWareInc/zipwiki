@@ -23,6 +23,7 @@ export {
   zipwikiReadBegin,
   zipwikiReadEnd,
   type OpenResult,
+  type OpenPackageOptions,
   type ListResult,
   type ReadResult,
 } from "./open.js";

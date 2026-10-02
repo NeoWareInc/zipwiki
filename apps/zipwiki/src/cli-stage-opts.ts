@@ -61,6 +61,9 @@ export function stageOptionsFromCli(
     okfModel:
       (opts.okfModel as string | undefined) ??
       (opts.model as string | undefined),
+    skillsPath: opts.skills
+      ? resolveRepoPath(String(opts.skills))
+      : (opts.skillsPath as string | undefined),
     config: opts.config
       ? resolveRepoPath(String(opts.config))
       : opts.projectConfig

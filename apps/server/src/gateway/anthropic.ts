@@ -1,3 +1,5 @@
+import { resolveSkills, skillDocFromMarkdown, type SkillDoc } from "@zipwiki/skills";
+
 /** Keep in sync with convex/lib/credits.ts HOSTED_OKF_MODELS. */
 export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-4-5";
 
@@ -55,13 +57,11 @@ function promptFor(input: OkfRequest): string {
   const primaries = (input.primaries ?? [])
     .map((item) => `- ${item.path ?? "document"}${item.documentType ? ` [${item.documentType}]` : ""}`)
     .join("\n");
+  const skillText = resolveSkills({ kind: "enrichment" }).text;
   return [
-    "You author Open Knowledge Format metadata for one ZipWiki document.",
+    skillText,
+    "",
     "Return only JSON with keys title, description, type, tags, keyFacts, and optional contents.",
-    "title: concise. description: 1-2 sentences, max 240 chars.",
-    "type: a short document type such as Document, Contract, Invoice, or Technical Document.",
-    "tags: 2-8 short lowercase labels. keyFacts: 3-8 concrete bullets. contents: optional section names.",
-    "Do not invent amounts or dates that are not in the text.",
     "",
     `Suggested type: ${input.documentType ?? "Document"}`,
     `Title hint: ${input.title ?? "(none)"}`,
@@ -107,7 +107,18 @@ export type QueryAnswer = {
   outputTokens?: number;
 };
 
-function queryPrompt(
+function packageSkillsFromMarkdown(markdowns: string[] | undefined): SkillDoc[] {
+  if (!markdowns?.length) return [];
+  const docs: SkillDoc[] = [];
+  for (let i = 0; i < markdowns.length; i++) {
+    const md = markdowns[i]!;
+    const doc = skillDocFromMarkdown(md, `package-skill-${i}.md`, "query");
+    if (doc) docs.push(doc);
+  }
+  return docs;
+}
+
+export function queryPrompt(
   question: string,
   excerpts: Array<{
     path: string;
@@ -116,7 +127,12 @@ function queryPrompt(
     text: string;
     documents?: string[];
   }>,
+  packageSkillMarkdown?: string[],
 ): string {
+  const skillText = resolveSkills({
+    kind: "query",
+    packageSkills: packageSkillsFromMarkdown(packageSkillMarkdown),
+  }).text;
   const blocks = excerpts
     .map((excerpt, index) => {
       const title = excerpt.title ? ` — ${excerpt.title}` : "";
@@ -136,6 +152,8 @@ function queryPrompt(
     })
     .join("\n\n");
   return [
+    skillText,
+    "",
     "Answer the question using only the ZipWiki excerpts below.",
     "If the excerpts do not contain the answer, say that they do not.",
     "Do not use outside knowledge and do not invent amounts, dates, or names.",
@@ -160,6 +178,7 @@ export async function invokeQueryAnswer(
   apiKey: string,
   fetchImpl: typeof fetch,
   model?: string | null,
+  packageSkillMarkdown?: string[],
 ): Promise<QueryAnswer> {
   const resolved = resolveHostedOkfModel(model);
   const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
@@ -172,7 +191,12 @@ export async function invokeQueryAnswer(
     body: JSON.stringify({
       model: resolved,
       max_tokens: 1024,
-      messages: [{ role: "user", content: queryPrompt(question, excerpts) }],
+      messages: [
+        {
+          role: "user",
+          content: queryPrompt(question, excerpts, packageSkillMarkdown),
+        },
+      ],
     }),
   });
   if (!res.ok) throw new Error(`Anthropic failed (${res.status})`);

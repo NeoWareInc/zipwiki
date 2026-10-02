@@ -12,6 +12,12 @@ import {
   parseFrontmatterFields,
   splitFrontmatter,
 } from "../okf/index.js";
+import {
+  isOkfConceptEntryPath,
+  resolvePackageSkills,
+  toOpenSkillsPayload,
+  type OpenSkillsPayload,
+} from "../skills/package.js";
 import { resolvePackagePath, rethrowAccess } from "./resolve.js";
 
 export type CatalogReadHints = {
@@ -53,6 +59,8 @@ export type CatalogResult = {
   okfPresent: boolean;
   conceptCount: number;
   rows: CatalogRow[];
+  /** Query skills (built-in or --skills replacement + package wiki/skills/). */
+  skills?: OpenSkillsPayload;
 };
 
 /** Keys on each catalog row — CLI `zipwiki open --json` and MCP `open.catalog.rows[]`. */
@@ -78,6 +86,7 @@ export const CATALOG_RESULT_FIELDS = [
   "okfPresent",
   "conceptCount",
   "rows",
+  "skills",
 ] as const satisfies readonly (keyof CatalogResult)[];
 
 function okfStemFromPath(okfPath: string): string {
@@ -146,12 +155,18 @@ function readOkfMeta(
 /**
  * Build a catalog of every logical primary (including unparsed / no-OKF).
  */
-export function buildCatalog(packagePath?: string): CatalogResult {
+export function buildCatalog(
+  packagePath?: string,
+  opts?: { skillsPath?: string | null },
+): CatalogResult {
   const path = resolvePackagePath(packagePath);
-  return useZipHandle(path, () => buildCatalogLoaded(path));
+  return useZipHandle(path, () => buildCatalogLoaded(path, opts));
 }
 
-function buildCatalogLoaded(path: string): CatalogResult {
+function buildCatalogLoaded(
+  path: string,
+  opts?: { skillsPath?: string | null },
+): CatalogResult {
   const inv = loadPackageInventory(path);
   const listed = listZipEntries(path);
   const originUriByParsed = new Map<string, string>();
@@ -162,13 +177,8 @@ function buildCatalogLoaded(path: string): CatalogResult {
     typeof inv.manifest?.ai?.digest === "string"
       ? inv.manifest.ai.digest
       : null;
-  const conceptCount = [...inv.names].filter(
-    (n) =>
-      n.startsWith(inv.okfRoot) &&
-      n.endsWith(".md") &&
-      !n.endsWith("index.md") &&
-      !n.endsWith("/log.md") &&
-      !n.endsWith("/"),
+  const conceptCount = [...inv.names].filter((n) =>
+    isOkfConceptEntryPath(n, inv.okfRoot, inv.aiRoot),
   ).length;
   const okfPresent =
     Boolean(inv.manifest?.ai?.okf?.present) || conceptCount > 0;
@@ -213,6 +223,15 @@ function buildCatalogLoaded(path: string): CatalogResult {
     });
   }
 
+  const skills = toOpenSkillsPayload(
+    resolvePackageSkills({
+      kind: "query",
+      zipPath: path,
+      aiRoot: inv.aiRoot,
+      skillsPath: opts?.skillsPath,
+    }),
+  );
+
   return {
     package: path,
     digest,
@@ -220,6 +239,7 @@ function buildCatalogLoaded(path: string): CatalogResult {
     okfPresent,
     conceptCount,
     rows,
+    skills,
   };
 }
 
@@ -241,6 +261,14 @@ export function formatCatalogText(catalog: CatalogResult): string {
   lines.push(
     `Documents: ${catalog.primaryCount}  |  OKF: ${catalog.okfPresent ? `yes (${catalog.conceptCount} concepts)` : "no"}`,
   );
+  if (catalog.skills) {
+    const baseNames = catalog.skills.base.map((s) => s.name).join(", ") || "(none)";
+    const pkgNames =
+      catalog.skills.package.map((s) => s.name).join(", ") || "(none)";
+    lines.push(
+      `Skills:   base=${baseNames}${catalog.skills.replaced ? " (replaced)" : ""}; package=${pkgNames}`,
+    );
+  }
   lines.push("");
   if (catalog.rows.length === 0) {
     lines.push("(no documents)");

@@ -18,7 +18,7 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 
 | Tool | Purpose | Owned by |
 | --- | --- | --- |
-| `open` | Catalog (same fields as `zipwiki open --json`) + manifest summary + open sequence | zipaccess lib |
+| `open` | Catalog + manifest summary + open sequence + query skills (`skills` arg replaces built-in) | zipaccess lib |
 | `list` | Entry inventory (`prefix` / `limit`) | zipaccess lib |
 | `search` | Ranked OKF search (snippets + `readHints`). Parsed text only when OKF misses | zipaccess lib |
 | `query` | Search plus capped top-K OKF/parsed bodies | zipaccess lib |
@@ -30,9 +30,9 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 | `read_manifest` | Always `META-INF/manifest.json` as raw JSON | zipaccess lib |
 | `extract` | Verified extract to disk (`fetchOrigin` also downloads 0x014F originals) | zipaccess lib |
 | `origin` | Extra Field `0x014F` URI/CRC; `fetch` downloads and verifies CRC-32 | zipaccess lib |
-| `pack` | Pack sources → `.zipwiki` (default **no AI OKF**) | zipwiki |
+| `pack` | Pack sources → `.zipwiki` (default **no AI OKF**); optional `skills` replaces enrichment skill when AI OKF runs | zipwiki |
 | `update` | Add / update / delete documents (one rewrite; copies unchanged compressed members) | zipwiki |
-| `okf_enrich` | Apply host-LLM OKF enrichment into `.zipwiki` | zipaccess lib |
+| `okf_enrich` | Apply host-LLM OKF enrichment into `.zipwiki`; returns `enrichmentSkill` text (optional `skills` replaces built-in) | zipaccess lib |
 
 ### Create workflow (default)
 
@@ -45,11 +45,13 @@ Optional: request hosted/BYO OKF on `pack` when the plan still has hosted OKF re
 
 ### Query workflow
 
-1. `open` — catalog rows (title/type, parsed?, original?, `readHints`)
+1. `open` — catalog rows (title/type, parsed?, original?, `readHints`) + query skills
 2. `search` (preferred) or `query` or `read_okf_index`
 3. `read_okf` → `read_parsed` / `read` / `read_entry` (stream through MCP; verified inflate)
 4. `origin` with `fetch: true` to download an omitted original and check CRC-32
 5. `extract` only when a filesystem path is required (`fetchOrigin` to pull originals next to the parse)
+
+Query skills load automatically (built-in + package `wiki/skills/`). Pass tool arg `skills` to replace the built-in query skill.
 
 `maxBytes` (default 160_000) caps **bytes returned** from a single read — not archive size or tokens. Binary entries return `encoding: "base64"`.
 

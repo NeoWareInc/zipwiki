@@ -1,3 +1,5 @@
+import type { SkillDoc } from "@zipwiki/skills";
+
 /** One primary member described by package-level OKF. */
 export type OkfPrimaryRef = {
   /** Zip entry path of the primary (e.g. `report.pdf`). */
@@ -73,6 +75,10 @@ export type BuildOkfBundleInput = {
   includeIndex?: boolean;
   /** @deprecated Ignored — OKF concepts are frontmatter-only. */
   conceptBody?: string;
+  /** When set, replaces the built-in enrichment skill for this run. */
+  skillsPath?: string | null;
+  /** Additive package skills (wiki/skills/) for enrichment context. */
+  packageSkills?: SkillDoc[];
 };
 
 /** Single-document OKF (dev CLI / per-file bundles). */
@@ -104,6 +110,9 @@ export type BuildOkfDocumentInput = {
    * (e.g. `../sample-docs/a.pdf`).
    */
   sources: OkfSourceRef[];
+  /** When set, replaces the built-in enrichment skill for this run. */
+  skillsPath?: string | null;
+  packageSkills?: SkillDoc[];
 };
 
 export type OkfFile = {

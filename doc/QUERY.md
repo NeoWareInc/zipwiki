@@ -38,16 +38,21 @@ Prefer **streamed `read`** over **`extract`**. Extract only when something on di
 
 ### `open` — document catalog (start here)
 
-Pretty table: documents, OKF concept count, and per-document next-read hints.
+Pretty table: documents, OKF concept count, query skills, and per-document next-read hints.
+
+Skills load automatically: built-in query skill + any `wiki/skills/*.md` in the package.
+`--skills` **replaces** the built-in query skill (package skills still append).
 
 ```bash
 zipwiki open ./knowledge/docs.zipwiki
-zipwiki open ./knowledge/docs.zipwiki -j          # full JSON catalog
+zipwiki open ./knowledge/docs.zipwiki -j          # full JSON catalog (includes skills)
+zipwiki open ./knowledge/docs.zipwiki --skills ./my-query.md
 ```
 
 | Flag | Effect |
 | --- | --- |
-| `-j, --json` | Full catalog object (rows, counts, digests) |
+| `-j, --json` | Full catalog object (rows, counts, digests, skills) |
+| `--skills <path>` | Replace built-in query skill with a file or directory of markdown |
 
 Same output as `catalog` and `list --catalog`.
 

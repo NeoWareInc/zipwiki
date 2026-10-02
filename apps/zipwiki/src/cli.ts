@@ -120,6 +120,10 @@ function withPipelineFlags(cmd: Command): Command {
     )
     .option("--okf-model <id>", "OKF enrichment model id")
     .option(
+      "--skills <path>",
+      "Replace built-in enrichment skill with markdown from a file or directory",
+    )
+    .option(
       "--no-ocr",
       "Disable OCR for LiteParse (local tessdata) and LlamaParse API (default: OCR on)",
     )
@@ -749,6 +753,10 @@ program
   )
   .option("--no-ai-okf", "Skip AI for OKF on added/updated files")
   .option("--no-okf", "Do not write OKF for added/updated files")
+  .option(
+    "--skills <path>",
+    "Replace built-in enrichment skill with markdown from a file or directory",
+  )
   .option("--omit-original", "Omit omittable originals for new/updated files")
   .option(
     "--include-original",
@@ -794,6 +802,7 @@ program
       update: opts.update,
       noAiOkf: opts.noAiOkf === true || opts.aiOkf === false,
       noOkf: opts.noOkf === true || opts.okf === false,
+      skillsPath: opts.skills,
       omitOriginal: opts.omitOriginal === true,
       includeOriginal: opts.includeOriginal === true,
       parser: opts.parser,

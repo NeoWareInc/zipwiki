@@ -11,12 +11,14 @@ Portable knowledge lives in **`.zipwiki`** packages (ZIP + `META-INF/manifest.js
 ## Open sequence (always)
 
 1. Pack (or open an existing package)
-2. Catalog — `open`
+2. Catalog — `open` (skills load automatically: built-in query + package `wiki/skills/`)
 3. Prefer `search` / `query` when available; else `read_okf_index` + `read_okf`
 4. Follow `sources` to `read_parsed` (or originals via `read_entry` — stream, verified)
 5. Prefer OKF descriptions before dumping full parses
 6. `origin` (`fetch: true`) to download Extra Field `0x014F` originals and verify CRC-32
 7. `read` to stream entry bodies; `extract` only when a filesystem path is required
+
+`--skills` on pack/update replaces the built-in **enrichment** skill; on open/search it replaces the built-in **query** skill. Package `wiki/skills/` is always additive.
 
 Default package: `package` tool arg, or `wiki.zipwiki` in the MCP cwd.
 

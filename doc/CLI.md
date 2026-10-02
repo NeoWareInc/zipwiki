@@ -30,6 +30,7 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 | `-r, --recursive` | Recurse directories |
 | `--parser liteparse` | Local parse (default for Free) |
 | `--no-ai-okf` | Skip hosted/AI OKF; enrich later via MCP `okf_enrich` |
+| `--skills <path>` | Replace the built-in OKF enrichment skill with markdown from a file or directory (package `wiki/skills/` still appends when present) |
 | `--omit-original` | Store parse + Extra Field `0x014F` locator instead of the original document bytes |
 | `--compression zstd\|deflate\|store` | ZIP method (default zstd) |
 | `--sha256` | Extra Field `0x014E` on members |

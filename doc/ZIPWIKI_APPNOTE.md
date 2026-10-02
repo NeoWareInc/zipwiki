@@ -110,6 +110,8 @@ archive.zipwiki
     │   ├── index.md               # Bundle listing + okf_version (ZipWiki SHOULD emit)
     │   ├── document.md            # Concept for document.pdf (stem = primary basename)
     │   └── notes.md               # Concept for notes.docx (even when parse is missing)
+    ├── skills/                    # Optional ZipWiki skill docs (§5.4) — not OKF concepts
+    │   └── query-hints.md         # Archive-specific query tips (writers MAY emit)
     └── parsed/                    # Optional parsed text per primary
         ├── document.pdf.md
         └── document.pdf.assets/
@@ -122,6 +124,11 @@ optional `index.md`. A legacy package-level `document.md` alone is still
 valid OKF, but new writers **SHOULD** prefer per-primary concepts. OKF
 **MAY** be omitted entirely (`ai.okf` absent / `present: false`) while still
 shipping `parsed/` (and vice versa).
+
+Optional **skills** under `{R}/skills/*.md` are ZipWiki-owned markdown with
+YAML frontmatter (`name`, `description`, `kind: enrichment|query`). They are
+**not** OKF concepts: catalog / concept counts **MUST** ignore `{R}/skills/`.
+When present, writers **SHOULD** declare `ai.skills` (§5.4).
 
 Layouts with `ai/` or `context/` match this structure except for the
 top-level directory name.
@@ -461,7 +468,24 @@ Writers **MUST** keep `ai.okf` consistent with the central directory. When
 no OKF members exist, writers **MUST** omit `ai.okf` or set
 `present: false`.
 
-### 5.3 `ai.parser` object (optional)
+### 5.3 `ai.skills` object (optional)
+
+Archive-specific skill documents under `{ai.root}/skills/` (default
+`wiki/skills/`). Skills guide OKF enrichment or Knowledge Archive query; they
+are **not** counted as OKF concepts.
+
+| Field | Type | Description |
+| :---- | :---- | :---- |
+| `present` | boolean | `true` when one or more skill markdown files are in the package |
+| `root` | string | Zip prefix, normally `"{ai.root}/skills/"` e.g. `"wiki/skills/"` |
+| `files` | string[] | Entry paths relative to the zip root (e.g. `"wiki/skills/query-hints.md"`) |
+
+Writers **MUST** keep `ai.skills` consistent with the central directory. When
+no skill members exist, writers **MUST** omit `ai.skills` or set
+`present: false`. Readers **MUST NOT** treat `{R}/skills/**` as OKF concepts
+or include them in concept counts.
+
+### 5.4 `ai.parser` object (optional)
 
 | Field | Type | Description |
 | :---- | :---- | :---- |
@@ -469,9 +493,9 @@ no OKF members exist, writers **MUST** omit `ai.okf` or set
 | `engineVersion` | string | Optional (installed `@llamaindex/liteparse` / `@llamaindex/llama-cloud` version) |
 | `notes` | string | Optional free text |
 | `includeComplexity` | boolean | OPTIONAL — `true` when pack collected per-page complexity |
-| `complexity` | object | OPTIONAL — rollup of LiteParse complexity / layout risk (§5.3.1) |
-| `ocrConfidence` | object | OPTIONAL — aggregate of per-text-item OCR confidence when present (§5.3.2) |
-| `route` | object | OPTIONAL — pack-time routing (§5.3.3), e.g. auto-escalation |
+| `complexity` | object | OPTIONAL — rollup of LiteParse complexity / layout risk (§5.4.1) |
+| `ocrConfidence` | object | OPTIONAL — aggregate of per-text-item OCR confidence when present (§5.4.2) |
+| `route` | object | OPTIONAL — pack-time routing (§5.4.3), e.g. auto-escalation |
 
 `complexity` and `ocrConfidence` are **routing / inspection signals**, not a
 document-level parse-accuracy score. Native PDF text usually has no OCR
@@ -480,7 +504,7 @@ confidence (`ocrConfidence.scoredItemCount === 0`).
 Collection packs **MAY** merge per-primary parser summaries into one
 package-level `ai.parser` block (histogram sums, concatenated `pages[]`).
 
-#### 5.3.1 `ai.parser.complexity`
+#### 5.4.1 `ai.parser.complexity`
 
 NeoZip lists the compact rollup. ZipWiki **MAY** also emit the extra
 per-page fields LiteParse provides (not required for NeoZip readers):
@@ -511,7 +535,7 @@ Each `pages[]` entry:
 | `textTableRunCount` | number | OPTIONAL ZipWiki extra |
 | `figureCount` | number | OPTIONAL ZipWiki extra |
 
-#### 5.3.2 `ai.parser.ocrConfidence`
+#### 5.4.2 `ai.parser.ocrConfidence`
 
 | Field | Type | Description |
 | :---- | :---- | :---- |
@@ -519,7 +543,7 @@ Each `pages[]` entry:
 | `scoredItemCount` | number | Items that carried a numeric `confidence` |
 | `mean` / `min` / `max` | number | Present only when `scoredItemCount > 0` (rounded to 4 decimal places) |
 
-#### 5.3.3 `ai.parser.route`
+#### 5.4.3 `ai.parser.route`
 
 Present when pack used auto routing (or recorded a skipped escalate):
 

@@ -39,6 +39,7 @@ export const PACKAGE_SPEC_VERSION = "0.2.0" as const;
 export const DEFAULT_AI_ROOT = "wiki" as const;
 export const DEFAULT_PARSED_DIR = "parsed" as const;
 export const DEFAULT_OKF_DIR = "okf" as const;
+export const DEFAULT_SKILLS_DIR = "skills" as const;
 export const DEFAULT_OKF_VERSION = "0.2" as const;
 
 const MANIFEST_ENTRY = "META-INF/manifest.json";
@@ -54,6 +55,13 @@ export type NeoZipAiOkf = {
   root?: string;
   index?: string;
   version?: string;
+};
+
+/** Optional package skills under `{ai.root}/skills/` (APPNOTE §5.3). */
+export type NeoZipAiSkills = {
+  present: boolean;
+  root?: string;
+  files?: string[];
 };
 
 /** Compact per-page complexity / layout signals (LiteParse `includeComplexity`). */
@@ -139,6 +147,8 @@ export type NeoZipAi = {
   assetEntryCount?: number;
   digest?: string;
   okf?: NeoZipAiOkf;
+  /** Optional ZipWiki skill docs under `{ai.root}/skills/`. */
+  skills?: NeoZipAiSkills;
   parser?: NeoZipAiParser;
   /** Optional advisory file summary; CD is the inventory. */
   primaries?: NeoZipAiPrimary[];
@@ -165,6 +175,16 @@ export type OkfWriteInput = {
   version?: string;
 };
 
+/** Skill file relative to `{aiRoot}/skills/` (e.g. `query-hints.md`). */
+export type SkillsWriteFile = {
+  name: string;
+  data: string | Buffer;
+};
+
+export type SkillsWriteInput = {
+  files: SkillsWriteFile[];
+};
+
 export type BundleWriteInput = {
   /** Destination `.nzip` path on disk. */
   outputPath: string;
@@ -183,6 +203,8 @@ export type BundleWriteInput = {
   parserEngine?: string;
   /** Optional OKF bundle files under `{ai.root}/okf/`. */
   okf?: OkfWriteInput;
+  /** Optional skill docs under `{ai.root}/skills/`. */
+  skills?: SkillsWriteInput;
   /**
    * Optional parser metadata for `ai.parser` (engine, complexity, OCR confidence).
    * Merged over `{ engine: parserEngine ?? "liteparse" }`.
@@ -243,6 +265,8 @@ export type CollectionWriteInput = {
   parserEngine?: string;
   /** Optional package-level OKF under `{ai.root}/okf/`. */
   okf?: OkfWriteInput;
+  /** Optional skill docs under `{ai.root}/skills/`. */
+  skills?: SkillsWriteInput;
   /** Optional parser metadata for `ai.parser`. */
   parser?: NeoZipAiParser;
   /** ZIP compression (default zstd level 7). */
@@ -419,6 +443,16 @@ export function okfPathFor(
   return `${aiRoot.replace(/\/+$/, "")}/${okfDir.replace(/\/+$/, "")}/${name}`;
 }
 
+/** Zip entry path for a skill file under `{aiRoot}/skills/`. */
+export function skillsPathFor(
+  relativeName: string,
+  aiRoot: string = DEFAULT_AI_ROOT,
+  skillsDir: string = DEFAULT_SKILLS_DIR,
+): string {
+  const name = relativeName.replace(/\\/g, "/").replace(/^\/+/, "");
+  return `${aiRoot.replace(/\/+$/, "")}/${skillsDir.replace(/\/+$/, "")}/${name}`;
+}
+
 function toOkfZipEntries(
   okf: OkfWriteInput | undefined,
   aiRoot: string,
@@ -432,6 +466,19 @@ function toOkfZipEntries(
     })
     .map((f) => ({
       name: okfPathFor(f.name, aiRoot),
+      data: Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data, "utf-8"),
+    }));
+}
+
+function toSkillsZipEntries(
+  skills: SkillsWriteInput | undefined,
+  aiRoot: string,
+): ZipEntry[] {
+  if (!skills?.files?.length) return [];
+  return skills.files
+    .filter((f) => f.name.replace(/\\/g, "/").toLowerCase().endsWith(".md"))
+    .map((f) => ({
+      name: skillsPathFor(f.name, aiRoot),
       data: Buffer.isBuffer(f.data) ? f.data : Buffer.from(f.data, "utf-8"),
     }));
 }
@@ -450,6 +497,20 @@ function okfManifestBlock(
     root,
     index: hasIndex ? `${root}index.md` : undefined,
     version: okf.version ?? DEFAULT_OKF_VERSION,
+  };
+}
+
+function skillsManifestBlock(
+  skills: SkillsWriteInput | undefined,
+  aiRoot: string,
+): NeoZipAiSkills | undefined {
+  const entries = toSkillsZipEntries(skills, aiRoot);
+  if (entries.length === 0) return undefined;
+  const root = `${aiRoot.replace(/\/+$/, "")}/${DEFAULT_SKILLS_DIR}/`;
+  return {
+    present: true,
+    root,
+    files: entries.map((e) => e.name).sort(),
   };
 }
 
@@ -620,6 +681,8 @@ export type BuildNeoZipManifestInput = {
    * Omit when no OKF is present.
    */
   okf?: OkfWriteInput | NeoZipAiOkf;
+  /** Skills as pack input files, or a pre-built `ai.skills` block. */
+  skills?: SkillsWriteInput | NeoZipAiSkills;
   parserEngine?: string;
   parser?: NeoZipAiParser;
   parsedDir?: string;
@@ -639,6 +702,17 @@ function resolveOkfBlock(
   return okfManifestBlock(okf, aiRoot);
 }
 
+function resolveSkillsBlock(
+  skills: SkillsWriteInput | NeoZipAiSkills | undefined,
+  aiRoot: string,
+): NeoZipAiSkills | undefined {
+  if (!skills) return undefined;
+  if ("present" in skills) {
+    return skills.present ? skills : undefined;
+  }
+  return skillsManifestBlock(skills, aiRoot);
+}
+
 /**
  * Build APPNOTE §4 `META-INF/manifest.json` body from parse + OKF signals.
  * Used by the `.nzip` writer and the standalone `zipwiki manifest` / `okf` flow.
@@ -652,6 +726,7 @@ export function buildNeoZipManifest(
   const parsedCount =
     input.parsedCount ?? primaries.filter((p) => p.hasParsed).length;
   const aiOkf = resolveOkfBlock(input.okf, aiRoot);
+  const aiSkills = resolveSkillsBlock(input.skills, aiRoot);
   const digest = input.digest?.trim() || undefined;
 
   return {
@@ -669,6 +744,7 @@ export function buildNeoZipManifest(
         : {}),
       ...(digest ? { digest } : {}),
       ...(aiOkf ? { okf: aiOkf } : {}),
+      ...(aiSkills ? { skills: aiSkills } : {}),
       parser: buildAiParser(input.parserEngine, input.parser),
       ...(primaries.length > 0 ? { primaries } : {}),
     },
@@ -705,6 +781,7 @@ export function writeNzipBundle(input: BundleWriteInput): BundleWriteResult {
     aiRoot: input.aiRoot,
     parserEngine: input.parserEngine,
     okf: input.okf,
+    skills: input.skills,
     parser: input.parser,
     compression: input.compression,
     level: input.level,
@@ -787,6 +864,7 @@ export function writeNzipCollectionBundle(
   const digest = input.digest?.trim() || undefined;
 
   const okfEntries = toOkfZipEntries(input.okf, aiRoot);
+  const skillEntries = toSkillsZipEntries(input.skills, aiRoot);
   const parsedMembers = byPath.filter((m) => m.hasParsed);
   const includedPrimaries = byPath.filter((m) => m.sourceIncluded);
   const omittedPrimaries = byPath.filter((m) => !m.sourceIncluded);
@@ -811,6 +889,7 @@ export function writeNzipCollectionBundle(
       };
     }),
     ...okfEntries,
+    ...skillEntries,
   ].sort((a, b) =>
     Buffer.from(a.name, "utf-8").compare(Buffer.from(b.name, "utf-8")),
   );
@@ -830,6 +909,7 @@ export function writeNzipCollectionBundle(
   const createdAt = new Date().toISOString();
 
   const aiOkf = okfManifestBlock(input.okf, aiRoot);
+  const aiSkills = skillsManifestBlock(input.skills, aiRoot);
   const primaries: NeoZipAiPrimary[] = byPath.map((m) => ({
     path: m.path,
     ...(m.mimeType ? { mimeType: m.mimeType } : {}),
@@ -843,6 +923,7 @@ export function writeNzipCollectionBundle(
     digest,
     primaries,
     okf: aiOkf,
+    skills: aiSkills,
     parserEngine: input.parserEngine,
     parser: input.parser,
     profiles:

@@ -45,9 +45,15 @@ export function registerTools(server: McpServer): void {
     "open",
     {
       description:
-        "Open a local .zipwiki: catalog (one row per input document with OKF title/type, parsed?, original?, next-read hints), manifest summary, and open sequence.",
+        "Open a local .zipwiki: catalog (one row per input document with OKF title/type, parsed?, original?, next-read hints), manifest summary, open sequence, and query skills (built-in + package wiki/skills/).",
       inputSchema: {
         package: packageArg,
+        skills: z
+          .string()
+          .optional()
+          .describe(
+            "Path to a file or directory that replaces the built-in query skill (package wiki/skills/ still append)",
+          ),
       },
     },
     async (args) => respond(await open(args)),
@@ -277,6 +283,12 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe("Optional: run hosted/BYO AI OKF during pack"),
+        skills: z
+          .string()
+          .optional()
+          .describe(
+            "Replace built-in enrichment skill when useZipcodexOkf runs AI OKF (file or directory path)",
+          ),
         noOkf: z.boolean().optional(),
         noOcr: z.boolean().optional(),
         recurse: z.boolean().optional(),
@@ -395,6 +407,12 @@ export function registerTools(server: McpServer): void {
           .optional()
           .describe("Input document path for sources"),
         enrichment: enrichmentSchema,
+        skills: z
+          .string()
+          .optional()
+          .describe(
+            "Optional: path or markdown for enrichment skill (returned so the host can apply it before calling with enrichment)",
+          ),
       },
     },
     async (args) => respond(await okfEnrich(args)),

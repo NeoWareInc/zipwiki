@@ -86,6 +86,8 @@ export type UpdatePackageInput = {
   update?: UpdateSpec[];
   noAiOkf?: boolean;
   noOkf?: boolean;
+  /** Replace built-in enrichment skill for AI OKF on add/update. */
+  skillsPath?: string;
   omitOriginalDocuments?: boolean;
   parser?: StageOptions["parser"];
   parserMode?: StageOptions["parserMode"];
@@ -353,6 +355,7 @@ async function ingestFile(input: {
         omitOriginalDocuments: omit,
         includeSha256:
           input.originSha256 === true || opts.sha256Extra === true,
+        skillsPath: opts.skillsPath,
       });
       okfMode = okf.mode;
       entries.push({
@@ -424,6 +427,19 @@ function patchManifest(
     };
   } else if (ai.okf && typeof ai.okf === "object") {
     ai.okf = { ...ai.okf, present: false };
+  }
+  const skillsRoot = `${inventory.aiRoot}/skills/`;
+  const skillFiles = [...map.keys()]
+    .filter((n) => n.startsWith(skillsRoot) && n.toLowerCase().endsWith(".md"))
+    .sort();
+  if (skillFiles.length > 0) {
+    ai.skills = {
+      present: true,
+      root: skillsRoot,
+      files: skillFiles,
+    };
+  } else if (ai.skills && typeof ai.skills === "object") {
+    ai.skills = { ...ai.skills, present: false };
   }
   man.ai = ai;
   map.set(BUNDLE_PATHS.manifest, {
@@ -518,6 +534,7 @@ export async function updatePackage(
     originFile: input.originFile,
     sha256Extra: input.sha256Extra,
     originSha256: input.originSha256,
+    skillsPath: input.skillsPath,
   };
   const originOverlay = cliOriginOverlay({
     originPattern: input.originPattern,

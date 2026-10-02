@@ -32,6 +32,8 @@ export const BUNDLE_PATHS = {
   okfRoot: "wiki/okf/",
   okfIndex: "wiki/okf/index.md",
   okfDocument: "wiki/okf/document.md",
+  /** Optional ZipWiki skills (not OKF concepts). */
+  skillsRoot: "wiki/skills/",
   /** Legacy only. Writers must not emit this. */
   okfLog: "wiki/okf/log.md",
   /** Legacy only. Writers must not emit this. Search scans OKF markdown. */
@@ -99,18 +101,22 @@ export type {
   NeoZipAiOkf,
   NeoZipAiParser,
   NeoZipAiPrimary,
+  NeoZipAiSkills,
   NeoZipManifest,
   NeoZipOcrConfidence,
   NeoZipParseComplexity,
   NeoZipParseComplexityPage,
   OkfWriteFile,
   OkfWriteInput,
+  SkillsWriteFile,
+  SkillsWriteInput,
 } from "./nzip.js";
 export {
   DEFAULT_AI_ROOT,
   DEFAULT_OKF_DIR,
   DEFAULT_OKF_VERSION,
   DEFAULT_PARSED_DIR,
+  DEFAULT_SKILLS_DIR,
   PACKAGE_SPEC_VERSION,
   assignContentPaths,
   relativeContentPath,
@@ -119,6 +125,7 @@ export {
   findOrphanParses,
   isOmittableDocumentSource,
   okfPathFor,
+  skillsPathFor,
   parsedPathFor,
   parsedMarkdownFileName,
   serializeNeoZipManifest,
