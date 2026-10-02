@@ -2,11 +2,11 @@ import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { IntegrityDialog } from "../components/IntegrityDialog";
 import { MarkdownViewDialog } from "../components/MarkdownViewDialog";
 import { PromptSection } from "../components/ZipWikiPrompts";
 import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
-  integritySummary,
   openNzip,
   queryPackage,
   readPackageFollow,
@@ -168,6 +168,7 @@ export default function KnowledgePage() {
   const [summary, setSummary] = useState<NzipOpenSummary | null>(null);
   const [opened, setOpened] = useState<PackageSection[]>([]);
   const [integrity, setIntegrity] = useState<IntegrityLine[] | null>(null);
+  const [integrityOpen, setIntegrityOpen] = useState(false);
   const [testing, setTesting] = useState(false);
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState<"searching" | "answering" | "reading" | null>(null);
@@ -200,6 +201,7 @@ export default function KnowledgePage() {
       setSummary(null);
       setOpened([]);
       setIntegrity(null);
+      setIntegrityOpen(false);
       setQuestion("");
       setAsking(null);
       setAskError("");
@@ -246,6 +248,7 @@ export default function KnowledgePage() {
     setError("");
     setOpened([]);
     setIntegrity(null);
+    setIntegrityOpen(false);
     setTesting(false);
     setQuestion("");
     setAsking(null);
@@ -261,6 +264,7 @@ export default function KnowledgePage() {
     const buf = archiveRef.current;
     if (!buf || !summary || testing) return;
     setTesting(true);
+    setIntegrityOpen(true);
     setIntegrity([]);
     try {
       await testArchiveIntegrity(buf, summary.entries, (line) => {
@@ -804,35 +808,6 @@ export default function KnowledgePage() {
             )}
           </section>
 
-          {integrity && (
-            <section>
-              <h2 className="font-display text-xl font-semibold">
-                Integrity
-              </h2>
-              <div className="mt-3 rounded-xl border border-(--border) bg-white p-4">
-                <ul className="space-y-1 font-mono text-xs">
-                  {integrity.map((line) => (
-                    <li key={line.name}>
-                      testing: {line.name} ...{" "}
-                      <span
-                        className={
-                          line.ok ? "text-green-700" : "text-red-700"
-                        }
-                      >
-                        {line.status}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {!testing && (
-                  <p className="mt-3 text-sm font-medium text-(--ink)">
-                    {integritySummary(integrity)}
-                  </p>
-                )}
-              </div>
-            </section>
-          )}
-
           {opened.map((id) => (
             <SectionBody
               key={id}
@@ -871,6 +846,13 @@ export default function KnowledgePage() {
           )}
         </>
       )}
+      {integrityOpen && integrity ? (
+        <IntegrityDialog
+          lines={integrity}
+          testing={testing}
+          onClose={() => setIntegrityOpen(false)}
+        />
+      ) : null}
       {viewingEntry && openArchive ? (
         <MarkdownViewDialog
           archive={openArchive}
