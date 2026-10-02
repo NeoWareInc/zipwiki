@@ -26,9 +26,9 @@ export const CREATE_PROMPTS: ZipWikiPrompt[] = [
     description:
       "Pack knowledge/test2 (PDFs, office files, and fax images) and enrich OKF with the agent LLM.",
     prompt:
-      'Using ZipWiki MCP, pack "./knowledge/test2" into ./knowledge/sample-docs.zipwiki, enrich every document with AI OKF via okf_enrich, and tell me the output path.',
+      'Using ZipWiki MCP, pack "./knowledge/test2" into ./knowledge/test2.zipwiki, enrich every document with AI OKF via okf_enrich, and tell me the output path.',
     debugCli:
-      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/sample-docs.zipwiki --no-ai-okf",
+      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/test2.zipwiki --no-ai-okf",
   },
   {
     id: "folder",
@@ -61,38 +61,38 @@ export const QUERY_PROMPTS: ZipWikiPrompt[] = [
     debugCli: "pnpm zipwiki -- catalog ./knowledge/test1.zipwiki",
   },
   {
-    id: "open",
-    title: "Open package",
-    description: "Summarize what’s inside a .zipwiki.",
+    id: "open-test2",
+    title: "Open mixed sample",
+    description: "Summarize the packed test2 package.",
     prompt:
-      "Using ZipWiki MCP, open ./knowledge/sample-docs.zipwiki and summarize the package (manifest, OKF, documents).",
-    debugCli: "pnpm zipwiki -- catalog ./knowledge/sample-docs.zipwiki",
+      "Using ZipWiki MCP, open ./knowledge/test2.zipwiki and summarize the package (manifest, OKF, documents).",
+    debugCli: "pnpm zipwiki -- catalog ./knowledge/test2.zipwiki",
   },
   {
     id: "search",
     title: "Search",
     description: "Find concepts matching a question.",
     prompt:
-      'Using ZipWiki MCP, search ./knowledge/sample-docs.zipwiki for "lease" and show the top hits with short snippets.',
+      'Using ZipWiki MCP, search ./knowledge/test2.zipwiki for "lease" and show the top hits with short snippets.',
     debugCli:
-      'pnpm zipwiki -- search ./knowledge/sample-docs.zipwiki "lease"',
+      'pnpm zipwiki -- search ./knowledge/test2.zipwiki "lease"',
   },
   {
     id: "read-okf",
     title: "Read OKF catalog",
     description: "Browse the concept index / one concept.",
     prompt:
-      "Using ZipWiki MCP, read the OKF index for ./knowledge/sample-docs.zipwiki and summarize the concepts.",
+      "Using ZipWiki MCP, read the OKF index for ./knowledge/test2.zipwiki and summarize the concepts.",
     debugCli:
-      "pnpm zipwiki -- read -p ./knowledge/sample-docs.zipwiki --path wiki/okf/index.md",
+      "pnpm zipwiki -- read -p ./knowledge/test2.zipwiki --path wiki/okf/index.md",
   },
   {
     id: "read-parsed",
     title: "Read parsed text",
     description: "Pull parsed markdown for a document.",
     prompt:
-      'Using ZipWiki MCP on ./knowledge/sample-docs.zipwiki, read the parsed text for "property-deed" and give a short summary.',
+      'Using ZipWiki MCP on ./knowledge/test2.zipwiki, read the parsed text for "property-deed" and give a short summary.',
     debugCli:
-      "pnpm zipwiki -- read -p ./knowledge/sample-docs.zipwiki --path wiki/parsed/property-deed.pdf.md",
+      "pnpm zipwiki -- read -p ./knowledge/test2.zipwiki --path wiki/parsed/property-deed.pdf.md",
   },
 ];

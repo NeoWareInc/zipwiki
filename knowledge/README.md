@@ -6,14 +6,14 @@ Source corpora for pack / query smoke.
 | --- | --- |
 | `test1/` | Office docs (docx / odt / pptx / xlsx) — Gettysburg + Bill of Rights |
 | `test1-update/` | Replacement `gettysburg-address.docx` for `update:test1:update` |
-| `test1.zipwiki` | Packed test1 example (`pnpm sample-zipwiki:test1`, gitignored) |
+| `test1.zipwiki` | Packed test1 example (`pnpm archive:test1`, gitignored) |
 | `test2/` | Mixed PDFs, ODT, DOCX, fax images (includes `property-deed.pdf`) |
-| `sample-docs.zipwiki` | Packed test2 example (`pnpm sample-zipwiki`, gitignored) |
+| `test2.zipwiki` | Packed test2 example (`pnpm archive:test2`, gitignored) |
 | `fax/` | Extra junk-fax images |
 | `florida-laws.zipwiki-origins.json` | Origin pattern for the Florida Laws pack |
 | `florida-laws-2025.zipwiki` | Packed Laws of Florida 2025 (`pnpm archive:florida-laws`, gitignored) |
 | `.stage/{test1,test2,florida-laws}/` | Pack staging (gitignored) |
-| `.output/{test1,test2,florida-laws}/` | Packed archives + extract / origin fetch (gitignored) |
+| `.output/{test1,test2,florida-laws}/` | Extract / origin-fetch output only (gitignored) |
 
 Phase 2 smoke (no login, LiteParse):
 
@@ -23,7 +23,7 @@ pnpm sample-zipwiki:test1
 pnpm smoke:zipwiki
 ```
 
-Stage / pack (writes `.output/test1/test1.zipwiki` + extract):
+Stage / pack (writes `knowledge/test1.zipwiki` or `knowledge/test2.zipwiki`, then extracts under `.output/`):
 
 ```bash
 pnpm archive:test1

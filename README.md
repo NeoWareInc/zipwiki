@@ -35,9 +35,9 @@ Until then, the lab checkout is `zip-codex`. This repo is what we ship as ZipWik
 pnpm install
 pnpm --filter @zipwiki/web dev
 pnpm --filter @zipwiki/server dev   # http://localhost:3001
-pnpm zipwiki -- pack knowledge/test2 -o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse
-pnpm zipwiki -- open knowledge/sample-docs.zipwiki
-pnpm zipwiki -- search knowledge/sample-docs.zipwiki deed
+pnpm zipwiki -- pack knowledge/test2 -o knowledge/test2.zipwiki --no-ai-okf --parser liteparse
+pnpm zipwiki -- open knowledge/test2.zipwiki
+pnpm zipwiki -- search knowledge/test2.zipwiki deed
 ```
 
 Production-like build:

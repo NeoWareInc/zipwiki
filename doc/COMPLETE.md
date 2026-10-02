@@ -46,7 +46,7 @@ Need `npx convex dev` (new ZipWiki project) before settings persist.
 New Convex/Stripe projects later — not zipcodex.ai credentials.
 
 **Phase 2 — TypeScript engine (done):** `pnpm zipwiki -- pack knowledge/test2
--o knowledge/sample-docs.zipwiki --no-ai-okf --parser liteparse`; then
+-o knowledge/test2.zipwiki --no-ai-okf --parser liteparse`; then
 `pnpm smoke:zipwiki`. MCP handlers `open` / `search` / `read_okf` /
 `read_parsed`.
 
