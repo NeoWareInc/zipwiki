@@ -122,6 +122,17 @@ export type QueryTranscriptTurn =
 export type QueryRead = {
   id: string;
   path: string;
+  offset: number;
+};
+
+export type QuerySearch = {
+  id: string;
+  phrase: string;
+};
+
+export type QueryOrigin = {
+  id: string;
+  path: string;
 };
 
 export type QueryTurn =
@@ -129,6 +140,8 @@ export type QueryTurn =
       status: "answer";
       answer: string;
       reads: [];
+      search: null;
+      origin: null;
       assistant: [];
       model: string;
       inputTokens?: number;
@@ -138,6 +151,30 @@ export type QueryTurn =
       status: "read";
       answer: "";
       reads: QueryRead[];
+      search: null;
+      origin: null;
+      assistant: unknown[];
+      model: string;
+      inputTokens?: number;
+      outputTokens?: number;
+    }
+  | {
+      status: "search";
+      answer: "";
+      reads: [];
+      search: QuerySearch;
+      origin: null;
+      assistant: unknown[];
+      model: string;
+      inputTokens?: number;
+      outputTokens?: number;
+    }
+  | {
+      status: "origin";
+      answer: "";
+      reads: [];
+      search: null;
+      origin: QueryOrigin;
       assistant: unknown[];
       model: string;
       inputTokens?: number;
@@ -170,7 +207,7 @@ export function isQueryFollowPath(path: string): boolean {
 const READ_ZIPWIKI_TOOL = {
   name: "read_zipwiki",
   description:
-    "Read one more text entry from the open .zipwiki. Use a wiki/parsed or wiki/okf markdown path, or a stored .txt or .md primary named in the excerpts. Do not use this for PDF, Office, or image files: if the excerpts say no extract was stored, that text is not in the package.",
+    "Read one text entry from the open .zipwiki. Use a wiki/parsed or wiki/okf markdown path, or a stored .txt or .md primary named in the excerpts. Do not use this for PDF, Office, or image files: if the excerpts say no extract was stored, that text is not in the package.",
   input_schema: {
     type: "object",
     properties: {
@@ -178,10 +215,74 @@ const READ_ZIPWIKI_TOOL = {
         type: "string",
         description: "Archive path, for example wiki/parsed/deed.pdf.md",
       },
+      offset: {
+        type: "integer",
+        description:
+          "Character index to start at. Use the offset from a search hit, or the next value from the previous read. Omit to start at 0.",
+      },
     },
     required: ["path"],
   },
 };
+
+const SEARCH_ZIPWIKI_TOOL = {
+  name: "search_zipwiki",
+  description:
+    "Find an exact phrase in the open .zipwiki. Scans concept cards, parsed markdown, and stored .txt or .md files. Does not open PDF, Office, or image bytes.",
+  input_schema: {
+    type: "object",
+    properties: {
+      phrase: {
+        type: "string",
+        description: "Exact phrase to find. At least 2 characters.",
+      },
+    },
+    required: ["phrase"],
+  },
+};
+
+const ORIGIN_ZIPWIKI_TOOL = {
+  name: "origin_zipwiki",
+  description:
+    "Return the original file's link from Extra Field 0x014F. Does not download the file. Pass a wiki/parsed path or the primary name, for example wiki/parsed/deed.pdf.md.",
+  input_schema: {
+    type: "object",
+    properties: {
+      path: {
+        type: "string",
+        description: "Parsed path or primary name.",
+      },
+    },
+    required: ["path"],
+  },
+};
+
+const QUERY_TOOLS = [SEARCH_ZIPWIKI_TOOL, READ_ZIPWIKI_TOOL, ORIGIN_ZIPWIKI_TOOL];
+
+function searchPhraseFrom(input: unknown): string | null {
+  if (!input || typeof input !== "object") return null;
+  const phrase = (input as { phrase?: unknown }).phrase;
+  if (typeof phrase !== "string") return null;
+  const clean = phrase.trim().replace(/\s+/g, " ");
+  if (clean.length < 2 || clean.length > 200) return null;
+  return clean;
+}
+
+function readOffsetFrom(input: unknown): number | null {
+  if (!input || typeof input !== "object" || !("offset" in input)) return 0;
+  const raw = (input as { offset?: unknown }).offset;
+  if (raw === undefined || raw === null) return 0;
+  const value = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+  if (!Number.isFinite(value) || value < 0 || value > 50_000_000) return null;
+  return Math.floor(value);
+}
+
+function toolPathFrom(input: unknown): string | null {
+  if (!input || typeof input !== "object") return null;
+  const path = (input as { path?: unknown }).path;
+  if (typeof path !== "string" || !isQueryFollowPath(path)) return null;
+  return path.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+}
 
 function queryPrompt(question: string, excerpts: QueryExcerpt[], finish: boolean): string {
   const blocks = excerpts
@@ -209,18 +310,18 @@ function queryPrompt(question: string, excerpts: QueryExcerpt[], finish: boolean
     })
     .join("\n\n");
   const follow = finish
-    ? "No further reads are available. Answer from the excerpts and any documents already read."
+    ? "No further searches or reads are available. Answer from the excerpts and any documents already read. Include the parsed path and the original document link if one was returned."
     : [
         "The excerpts are concept cards, passages from cited text, and gaps.",
         "A gap means no extract was stored when the package was created. Say that the package does not contain that document's text. Do not invent it and do not ask to read a PDF, Office, or image file.",
-        "When a passage is not enough, call read_zipwiki once with a wiki/parsed path, a wiki/okf path, or a stored .txt or .md primary named above.",
+        "Call one tool, then wait for its result. search_zipwiki finds an exact phrase and reports the character offset of each hit. read_zipwiki reads 12000 characters of one wiki/parsed path, one wiki/okf path, or a stored .txt or .md primary, starting at offset. The result begins with offset, next, and total. If the line you need is not in the window and next is less than total, call read_zipwiki again with offset set to next. When a search hit includes an offset, pass that offset so the read starts at the phrase. origin_zipwiki returns only the original file's link. It does not download the file.",
       ].join(" ");
   return [
     "Answer the question using the open ZipWiki package.",
     follow,
     "Do not use outside knowledge and do not invent amounts, dates, or names.",
     "If the package does not contain the answer, say that it does not.",
-    "When you use a passage, name its full document path (the parsed text file), not only the concept card.",
+    "When you use a passage, name its full parsed path in bold, not only the concept card. Before you answer, call origin_zipwiki with that parsed path and include the returned URL as the link to the original document. Do not invent the URL.",
     "",
     `Question: ${question}`,
     "",
@@ -230,12 +331,13 @@ function queryPrompt(question: string, excerpts: QueryExcerpt[], finish: boolean
 
 function toolResultContent(result: QueryToolResult): string {
   if (result.error?.trim()) return result.error.trim().slice(0, 500);
-  return (result.text ?? "").slice(0, MAX_PARSE_CHARS);
+  return (result.text ?? "").slice(0, MAX_PARSE_CHARS + 256);
 }
 
 /**
- * One model turn. A `read` result asks the caller to load those archive
- * paths locally and send them back. The Anthropic key stays on this API.
+ * One model turn. A `read`, `search`, or `origin` result asks the caller to
+ * run that command on the open archive and send the text back. The Anthropic
+ * key stays on this API.
  */
 export async function invokeQueryTurn(
   input: {
@@ -278,7 +380,7 @@ export async function invokeQueryTurn(
     body: JSON.stringify({
       model: resolved,
       max_tokens: 1024,
-      ...(finish ? {} : { tools: [READ_ZIPWIKI_TOOL] }),
+      ...(finish ? {} : { tools: QUERY_TOOLS }),
       messages,
     }),
   });
@@ -295,37 +397,93 @@ export async function invokeQueryTurn(
     usage?: { input_tokens?: number; output_tokens?: number };
   };
   const content = body.content ?? [];
-  const reads: QueryRead[] = [];
-  const assistant: unknown[] = [];
-  for (const block of content) {
-    if (block.type === "text" && block.text) {
-      assistant.push({ type: "text", text: block.text });
-      continue;
-    }
-    if (finish || block.type !== "tool_use" || block.name !== "read_zipwiki") continue;
-    const path =
-      block.input && typeof block.input === "object"
-        ? (block.input as { path?: unknown }).path
-        : undefined;
-    const id = typeof block.id === "string" ? block.id.trim() : "";
-    if (!id || typeof path !== "string" || !isQueryFollowPath(path)) continue;
-    const clean = path.trim().replace(/\\/g, "/").replace(/^\/+/, "");
-    if (reads.length >= 1) continue;
-    reads.push({ id, path: clean });
-    assistant.push({
-      type: "tool_use",
-      id,
-      name: "read_zipwiki",
-      input: { path: clean },
-    });
-  }
   const usage = {
     model: body.model ?? resolved,
     inputTokens: body.usage?.input_tokens,
     outputTokens: body.usage?.output_tokens,
   };
-  if (reads.length > 0) {
-    return { status: "read", answer: "", reads, assistant, ...usage };
+  const assistant: unknown[] = [];
+  let tool:
+    | { name: "read_zipwiki"; id: string; path: string; offset: number }
+    | { name: "search_zipwiki"; id: string; phrase: string }
+    | { name: "origin_zipwiki"; id: string; path: string }
+    | null = null;
+  for (const block of content) {
+    if (block.type === "text" && block.text) {
+      assistant.push({ type: "text", text: block.text });
+      continue;
+    }
+    if (finish || tool || block.type !== "tool_use") continue;
+    const id = typeof block.id === "string" ? block.id.trim() : "";
+    if (!id) continue;
+    if (block.name === "search_zipwiki") {
+      const phrase = searchPhraseFrom(block.input);
+      if (!phrase) continue;
+      tool = { name: "search_zipwiki", id, phrase };
+      assistant.push({
+        type: "tool_use",
+        id,
+        name: "search_zipwiki",
+        input: { phrase },
+      });
+      continue;
+    }
+    if (block.name === "origin_zipwiki") {
+      const path = toolPathFrom(block.input);
+      if (!path) continue;
+      tool = { name: "origin_zipwiki", id, path };
+      assistant.push({
+        type: "tool_use",
+        id,
+        name: "origin_zipwiki",
+        input: { path },
+      });
+      continue;
+    }
+    if (block.name !== "read_zipwiki") continue;
+    const path = toolPathFrom(block.input);
+    const offset = readOffsetFrom(block.input);
+    if (!path || offset === null) continue;
+    tool = { name: "read_zipwiki", id, path, offset };
+    assistant.push({
+      type: "tool_use",
+      id,
+      name: "read_zipwiki",
+      input: { path, offset },
+    });
+  }
+  if (tool?.name === "search_zipwiki") {
+    return {
+      status: "search",
+      answer: "",
+      reads: [],
+      search: { id: tool.id, phrase: tool.phrase },
+      origin: null,
+      assistant,
+      ...usage,
+    };
+  }
+  if (tool?.name === "origin_zipwiki") {
+    return {
+      status: "origin",
+      answer: "",
+      reads: [],
+      search: null,
+      origin: { id: tool.id, path: tool.path },
+      assistant,
+      ...usage,
+    };
+  }
+  if (tool?.name === "read_zipwiki") {
+    return {
+      status: "read",
+      answer: "",
+      reads: [{ id: tool.id, path: tool.path, offset: tool.offset }],
+      search: null,
+      origin: null,
+      assistant,
+      ...usage,
+    };
   }
   const answer = content
     .filter((block) => block.type === "text" && block.text)
@@ -333,7 +491,15 @@ export async function invokeQueryTurn(
     .join("\n")
     .trim();
   if (!answer) throw new Error("Claude returned an empty answer");
-  return { status: "answer", answer, reads: [], assistant: [], ...usage };
+  return {
+    status: "answer",
+    answer,
+    reads: [],
+    search: null,
+    origin: null,
+    assistant: [],
+    ...usage,
+  };
 }
 
 export async function invokeAnthropic(

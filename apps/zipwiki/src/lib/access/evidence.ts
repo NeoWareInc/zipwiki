@@ -150,12 +150,103 @@ export function attachEvidence(
 }
 
 const FOLLOW_CHARS = 12_000;
+const PHRASE_HITS = 8;
+const PHRASE_WINDOW = 240;
+
+export type PhraseHit = {
+  path: string;
+  text: string;
+  kind: "parsed" | "okf" | "original";
+  /** Character index of the phrase in the stored text. */
+  offset: number;
+};
+
+export type FollowWindow = {
+  text: string;
+  offset: number;
+  next: number;
+  total: number;
+};
+
+/** One slice of a stored text file. `next` is the offset of the following slice. */
+export function followWindow(
+  text: string,
+  offset = 0,
+  maxChars = FOLLOW_CHARS,
+): FollowWindow {
+  const total = text.length;
+  const start =
+    Number.isFinite(offset) && offset > 0 ? Math.min(Math.floor(offset), total) : 0;
+  const end = Math.min(total, start + maxChars);
+  return { text: text.slice(start, end), offset: start, next: end, total };
+}
+
+/** Header the model uses to ask for the next slice. */
+export function formatFollowWindow(window: FollowWindow): string {
+  return `offset ${window.offset}\nnext ${window.next}\ntotal ${window.total}\n\n${window.text}`;
+}
+
+function phraseKind(path: string): PhraseHit["kind"] {
+  if (path.startsWith("wiki/okf/")) return "okf";
+  if (path.startsWith(`${BUNDLE_PATHS.parsed}`)) return "parsed";
+  return "original";
+}
+
+function windowAround(text: string, at: number, phraseLength: number): string {
+  const start = Math.max(0, at - Math.floor((PHRASE_WINDOW - phraseLength) / 2));
+  let slice = text.slice(start, start + PHRASE_WINDOW).replace(/\s+/g, " ").trim();
+  if (start > 0) slice = `…${slice}`;
+  if (start + PHRASE_WINDOW < text.length) slice = `${slice}…`;
+  return slice;
+}
+
+/**
+ * Exact phrase scan of concept cards, parsed markdown, and stored text
+ * primaries. Unparsed PDF, Office, and image bytes are not opened.
+ */
+export function searchPhrase(packagePath: string, phrase: string): PhraseHit[] {
+  const needle = phrase.trim().replace(/\s+/g, " ");
+  if (needle.length < 2) return [];
+  const lowerNeedle = needle.toLowerCase();
+  return useZipHandle(packagePath, () => {
+    const hits: PhraseHit[] = [];
+    for (const entry of listZipEntries(packagePath)) {
+      if (hits.length >= PHRASE_HITS) break;
+      const name = entry.name.replace(/\\/g, "/");
+      if (queryReadKind(name) !== "text") continue;
+      const text = readMember(packagePath, name);
+      if (!text) continue;
+      const at = text.toLowerCase().indexOf(lowerNeedle);
+      if (at < 0) continue;
+      hits.push({
+        path: name,
+        kind: phraseKind(name),
+        offset: at,
+        text: windowAround(text, at, needle.length),
+      });
+    }
+    return hits;
+  });
+}
+
+export function formatPhraseHits(phrase: string, hits: PhraseHit[]): string {
+  if (hits.length === 0) {
+    return `No stored text contains "${phrase}".`;
+  }
+  return hits
+    .map(
+      (hit, index) =>
+        `${index + 1}. ${hit.path} (${hit.kind}) offset ${hit.offset}\n${hit.text}`,
+    )
+    .join("\n\n");
+}
 
 /** Load one model-requested path, or refuse when pack stored no extract. */
 export function readFollow(
   packagePath: string,
   requestPath: string,
-): { text: string; truncated: boolean } | { error: string } {
+  offset = 0,
+): FollowWindow | { error: string } {
   const name = requestPath.trim().replace(/\\/g, "/").replace(/^\/+/, "");
   const kind = queryReadKind(name);
   if (kind === "binary") return { error: NO_EXTRACT_REASON };
@@ -165,10 +256,7 @@ export function readFollow(
     if (!names.has(name)) return { error: `Not in this package: ${name}` };
     const text = readMember(packagePath, name);
     if (text == null) return { error: `Could not read ${name}` };
-    return {
-      text: text.slice(0, FOLLOW_CHARS),
-      truncated: text.length > FOLLOW_CHARS,
-    };
+    return followWindow(text, offset);
   });
 }
 

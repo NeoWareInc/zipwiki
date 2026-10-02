@@ -9,6 +9,11 @@
   --border: #c5d2d8;
   --accent: #0f6e6a;
   --accent-bright: #14948e;
+  /* Original-document URLs are blue. Files stored in the .zipwiki are teal. */
+  --link-origin: #1d4ed8;
+  --link-origin-hover: #1e3a8a;
+  --link-package: #0f6e6a;
+  --link-package-hover: #14948e;
   --sand: #d9c8a9;
   --flow-fill: #ffffff;
   --flow-stroke: #1f3a44;
@@ -174,9 +179,55 @@ body {
   margin-top: 0.25em;
 }
 
-.markdown-view :where(a) {
-  color: var(--accent);
+.link-origin,
+.link-package {
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: none;
+  font-weight: 700;
+  font-size: inherit;
+  line-height: inherit;
   text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-origin {
+  color: var(--link-origin);
+}
+
+.link-origin:hover {
+  color: var(--link-origin-hover);
+}
+
+.link-package {
+  color: var(--link-package);
+}
+
+.link-package:hover {
+  color: var(--link-package-hover);
+}
+
+.markdown-view :where(a) {
+  font-weight: 700;
+  font-size: inherit;
+  color: var(--link-package);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-view :where(a:hover) {
+  color: var(--link-package-hover);
+}
+
+.markdown-view a[href^="http://"],
+.markdown-view a[href^="https://"] {
+  color: var(--link-origin);
+}
+
+.markdown-view a[href^="http://"]:hover,
+.markdown-view a[href^="https://"]:hover {
+  color: var(--link-origin-hover);
 }
 
 .markdown-view :where(code) {

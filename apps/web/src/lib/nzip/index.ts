@@ -18,9 +18,14 @@ export {
   type IntegrityLine,
 } from "./integrity";
 export {
+  formatFollowWindow,
+  formatPhraseHits,
+  originLink,
   queryPackage,
   readPackageFollow,
+  searchPackagePhrase,
   type PackageQuery,
+  type PhraseHit,
   type QueryExcerpt,
   type QueryGap,
   type QueryHit,

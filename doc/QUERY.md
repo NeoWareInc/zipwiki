@@ -100,7 +100,7 @@ zipwiki query ./knowledge/docs.zipwiki "deed" -j
 
 ### `ask` — hosted answer over the local evidence
 
-Reads the same local bundle, then asks the hosted model. The model may request one more text file (`wiki/okf`, `wiki/parsed`, or a stored `.txt` / `.md`). A request for an unparsed PDF or Office file is refused. Uses hosted credits (`zipwiki login`).
+Reads the same local bundle, then asks the hosted model. The model may search for a phrase, read 12,000 characters of one text file (`wiki/okf`, `wiki/parsed`, or a stored `.txt` / `.md`) starting at an offset, or ask for the original's link, up to four times, then it must answer. A search hit includes the character offset of the phrase so the next read can start there. A request for an unparsed PDF or Office file is refused. Uses hosted credits (`zipwiki login`).
 
 ```bash
 zipwiki ask ./knowledge/docs.zipwiki "Who signed the deed?"
@@ -186,6 +186,7 @@ For packages that omit original bytes (`--omit-original` at pack time).
 
 ```bash
 zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf
+zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --link
 zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
 zipwiki origin -p ./knowledge/docs.zipwiki --path wiki/parsed/deed.pdf.md --fetch
 ```
@@ -195,11 +196,12 @@ zipwiki origin -p ./knowledge/docs.zipwiki --path wiki/parsed/deed.pdf.md --fetc
 | `-p, --package <path>` | Archive path |
 | `--parsed <name>` | Document / parse name |
 | `--path <entry>` | Parsed or document entry path |
+| `--link` | Print only the origin URI |
 | `--fetch` | Download `originUri` and verify CRC-32 |
 | `-o, --output <path>` | Write downloaded original |
 | `--overwrite` | Overwrite dest |
 
-Without `--fetch`, prints locator JSON (URI, CRC/size/mtime/sha256 when present).
+Without `--fetch`, prints locator JSON (URI, CRC/size/mtime/sha256 when present). `--link` prints only the URI and does not download.
 
 ---
 

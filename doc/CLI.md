@@ -57,7 +57,7 @@ zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
 | `search` | Ranked OKF hits (snippets). Parsed text only when OKF misses |
 | `read` | Stream OKF, parsed, or entry bodies |
 | `extract` | Verified write to disk |
-| `origin` | Extra Field `0x014F`; `--fetch` downloads and checks CRC-32 |
+| `origin` | Extra Field `0x014F`; `--link` prints the URI; `--fetch` downloads and checks CRC-32 |
 
 Default package when omitted: `wiki.zipwiki` in the current directory.
 

@@ -243,7 +243,7 @@ export function registerQueryCommands(program: Command): void {
     .command("ask")
     .helpGroup(QUERY)
     .description(
-      "Ask a question. Matching text is read locally first. The model may request one more text file. Uses hosted credits.",
+      "Ask a question. Matching text is read locally first. The model may search or read the open package, then answer. Uses hosted credits.",
     )
     .argument("<package>", "Path to .zipwiki")
     .argument("<question>", "Question")
@@ -262,8 +262,16 @@ export function registerQueryCommands(program: Command): void {
           question,
           apiUrl,
           apiKey,
-          onRead(path) {
-            if (!opts.json) console.error(`Reading ${path}`);
+          onRead(path, offset) {
+            if (!opts.json) {
+              console.error(offset > 0 ? `Reading ${path} at ${offset}` : `Reading ${path}`);
+            }
+          },
+          onSearch(phrase) {
+            if (!opts.json) console.error(`Searching ${phrase}`);
+          },
+          onOrigin(path) {
+            if (!opts.json) console.error(`Origin ${path}`);
           },
         });
         if (opts.json) {
@@ -400,6 +408,7 @@ export function registerQueryCommands(program: Command): void {
     )
     .option("--parsed <name>", "Parsed primary name")
     .option("--path <entry>", "Parsed or primary entry path")
+    .option("--link", "Print only the origin URI")
     .option("--fetch", "Download originUri and verify CRC-32")
     .option("-o, --output <path>", "Write downloaded original here")
     .option("--overwrite", "Overwrite dest if it already exists")
@@ -410,6 +419,7 @@ export function registerQueryCommands(program: Command): void {
           package?: string;
           parsed?: string;
           path?: string;
+          link?: boolean;
           fetch?: boolean;
           output?: string;
           overwrite?: boolean;
@@ -429,6 +439,15 @@ export function registerQueryCommands(program: Command): void {
             process.exit(1);
           }
           const pkg = resolvePkg(args.packagePath);
+          if (opts.link && !opts.fetch && !opts.output) {
+            const found = lookupOrigin({ package: pkg, path: args.selector });
+            if (!found.originUri) {
+              console.error("zipwiki origin: no URI on this entry");
+              process.exit(1);
+            }
+            process.stdout.write(`${found.originUri}\n`);
+            return;
+          }
           if (opts.fetch || opts.output) {
             const fetched = await fetchOrigin({
               package: pkg,

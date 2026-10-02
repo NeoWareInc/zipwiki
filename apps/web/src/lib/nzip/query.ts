@@ -566,12 +566,134 @@ function gapFor(entries: ZipListEntry[], path: string): QueryGap {
   };
 }
 
+const PHRASE_HITS = 8;
+const PHRASE_WINDOW = 240;
+
+export type PhraseHit = {
+  path: string;
+  text: string;
+  kind: "parsed" | "okf" | "original";
+  offset: number;
+};
+
+export type FollowWindow = {
+  text: string;
+  offset: number;
+  next: number;
+  total: number;
+};
+
+/** One slice of a stored text file. `next` is the offset of the following slice. */
+export function followWindow(
+  text: string,
+  offset = 0,
+  maxChars = QUERY_BODY_CHARS,
+): FollowWindow {
+  const total = text.length;
+  const start =
+    Number.isFinite(offset) && offset > 0 ? Math.min(Math.floor(offset), total) : 0;
+  const end = Math.min(total, start + maxChars);
+  return { text: text.slice(start, end), offset: start, next: end, total };
+}
+
+/** Header the model uses to ask for the next slice. */
+export function formatFollowWindow(window: FollowWindow): string {
+  return `offset ${window.offset}\nnext ${window.next}\ntotal ${window.total}\n\n${window.text}`;
+}
+
+function phraseKind(path: string): PhraseHit["kind"] {
+  if (path.startsWith("wiki/okf/")) return "okf";
+  if (path.startsWith(`${BUNDLE_PATHS.parsed}`)) return "parsed";
+  return "original";
+}
+
+function windowAround(text: string, at: number, phraseLength: number): string {
+  const start = Math.max(0, at - Math.floor((PHRASE_WINDOW - phraseLength) / 2));
+  let slice = text.slice(start, start + PHRASE_WINDOW).replace(/\s+/g, " ").trim();
+  if (start > 0) slice = `…${slice}`;
+  if (start + PHRASE_WINDOW < text.length) slice = `${slice}…`;
+  return slice;
+}
+
+export function formatPhraseHits(phrase: string, hits: PhraseHit[]): string {
+  if (hits.length === 0) return `No stored text contains "${phrase}".`;
+  return hits
+    .map(
+      (hit, index) =>
+        `${index + 1}. ${hit.path} (${hit.kind}) offset ${hit.offset}\n${hit.text}`,
+    )
+    .join("\n\n");
+}
+
+/** Exact phrase scan of stored text. PDF, Office, and image bytes stay closed. */
+export async function searchPackagePhrase(
+  buf: ArrayBuffer,
+  entries: ZipListEntry[],
+  phrase: string,
+): Promise<PhraseHit[]> {
+  const needle = phrase.trim().replace(/\s+/g, " ");
+  if (needle.length < 2) return [];
+  const lowerNeedle = needle.toLowerCase();
+  const hits: PhraseHit[] = [];
+  for (const entry of entries) {
+    if (hits.length >= PHRASE_HITS) break;
+    const name = entry.name.replace(/\\/g, "/");
+    if (queryReadKind(name) !== "text") continue;
+    try {
+      const data = await readZipEntryPayload(buf, entry);
+      if (!payloadCrcMatches(data, entry.crc32)) continue;
+      const text = new TextDecoder("utf-8").decode(data);
+      const at = text.toLowerCase().indexOf(lowerNeedle);
+      if (at < 0) continue;
+      hits.push({
+        path: name,
+        kind: phraseKind(name),
+        offset: at,
+        text: windowAround(text, at, needle.length),
+      });
+    } catch {
+      continue;
+    }
+  }
+  return hits;
+}
+
+/** Extra Field 0x014F URI for a parsed path or primary name. Does not download. */
+export function originLink(entries: ZipListEntry[], selector: string): string | null {
+  const name = selector.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+  if (!name) return null;
+  const prefix = BUNDLE_PATHS.parsed;
+  const candidates = new Set<string>([name]);
+  if (name.startsWith(prefix)) {
+    candidates.add(name.endsWith(".md") ? name : `${name}.md`);
+  } else {
+    const asName = name.endsWith(".md") ? name : `${name}.md`;
+    candidates.add(`${prefix}${asName}`);
+    candidates.add(`${prefix}${name}.md`);
+  }
+  for (const entry of entries) {
+    if (candidates.has(entry.name) && entry.originUri) return entry.originUri;
+  }
+  const base = name.split("/").pop() ?? name;
+  for (const entry of entries) {
+    if (!entry.name.startsWith(prefix) || !entry.name.endsWith(".md") || !entry.originUri) {
+      continue;
+    }
+    const primary = entry.name.slice(prefix.length, -".md".length);
+    if (primary === name || primary === base || entry.name.endsWith(`/${base}.md`)) {
+      return entry.originUri;
+    }
+  }
+  return null;
+}
+
 /** Load one model-requested path, or refuse when pack stored no extract. */
 export async function readPackageFollow(
   buf: ArrayBuffer,
   entries: ZipListEntry[],
   requestPath: string,
-): Promise<{ text: string; truncated: boolean } | { error: string }> {
+  offset = 0,
+): Promise<FollowWindow | { error: string }> {
   const name = requestPath.trim().replace(/\\/g, "/").replace(/^\/+/, "");
   const kind = queryReadKind(name);
   if (kind === "binary") return { error: NO_EXTRACT_REASON };
@@ -584,10 +706,7 @@ export async function readPackageFollow(
       return { error: `CRC-32 mismatch: ${name}` };
     }
     const full = new TextDecoder("utf-8").decode(data);
-    return {
-      text: full.slice(0, QUERY_BODY_CHARS),
-      truncated: full.length > QUERY_BODY_CHARS,
-    };
+    return followWindow(full, offset);
   } catch {
     return { error: `Could not read ${name}` };
   }

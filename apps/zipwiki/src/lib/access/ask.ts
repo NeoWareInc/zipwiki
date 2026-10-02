@@ -1,10 +1,42 @@
 /**
- * Hosted package question. The archive stays local: search, passages, and
- * one follow-up read happen here. The model runs on the ZipWiki API.
+ * Hosted package question. The archive stays local. The model may search
+ * for a phrase or read stored text, up to four times, on this package.
  */
 import { basename } from "node:path";
-import { queryArchive, readFollow } from "./evidence.js";
+import {
+  formatFollowWindow,
+  formatPhraseHits,
+  queryArchive,
+  readFollow,
+  searchPhrase,
+} from "./evidence.js";
+import { lookupOrigin } from "./origin.js";
 import type { EvidenceGap } from "./search.js";
+
+function collapsePriorReads(
+  transcript: Array<
+    | { role: "assistant"; content: unknown[] }
+    | {
+        role: "user";
+        results: Array<{ id: string; path: string; text?: string; error?: string }>;
+      }
+  >,
+): void {
+  for (const turn of transcript) {
+    if (turn.role !== "user") continue;
+    for (const result of turn.results) {
+      if (!result.text) continue;
+      const lines = result.text.split("\n");
+      if (
+        lines[0]?.startsWith("offset ") &&
+        lines[1]?.startsWith("next ") &&
+        lines[2]?.startsWith("total ")
+      ) {
+        result.text = lines.slice(0, 3).join("\n");
+      }
+    }
+  }
+}
 
 const BODY_CHARS = 12_000;
 
@@ -19,6 +51,7 @@ export type AskExcerpt = {
 export type AskArchiveResult = {
   answer: string;
   reads: string[];
+  searches: string[];
   gaps: EvidenceGap[];
   model: string;
   creditsCharged: number;
@@ -29,7 +62,9 @@ export type AskArchiveResult = {
 type TurnBody = {
   status?: string;
   answer?: string;
-  reads?: Array<{ id?: string; path?: string }>;
+  reads?: Array<{ id?: string; path?: string; offset?: number }>;
+  search?: { id?: string; phrase?: string } | null;
+  origin?: { id?: string; path?: string } | null;
   assistant?: unknown[];
   model?: string;
   inputTokens?: number;
@@ -39,6 +74,14 @@ type TurnBody = {
   creditsUnlimited?: boolean;
   error?: string;
 };
+
+type AskTranscript = Array<
+  | { role: "assistant"; content: unknown[] }
+  | {
+      role: "user";
+      results: Array<{ id: string; path: string; text?: string; error?: string }>;
+    }
+>;
 
 function gapText(gap: EvidenceGap): string {
   return gap.originUri
@@ -114,8 +157,9 @@ async function postTurn(
 }
 
 /**
- * Ask one question of a local package. At most two model calls: the evidence
- * bundle, then one local read if the model asks for it.
+ * Ask one question of a local package. The first call sends the evidence
+ * bundle. The model may then search or read up to four times. The fifth
+ * call, if needed, must answer.
  */
 export async function askArchive(args: {
   package?: string;
@@ -123,7 +167,9 @@ export async function askArchive(args: {
   apiUrl: string;
   apiKey: string;
   fetchImpl?: typeof fetch;
-  onRead?: (path: string) => void;
+  onRead?: (path: string, offset: number) => void;
+  onSearch?: (phrase: string) => void;
+  onOrigin?: (path: string) => void;
 }): Promise<AskArchiveResult> {
   const question = args.question.trim();
   if (!question) throw new Error("question is required");
@@ -136,6 +182,7 @@ export async function askArchive(args: {
     return {
       answer: "No concept matched this question.",
       reads: [],
+      searches: [],
       gaps: [],
       model: "",
       creditsCharged: 0,
@@ -147,67 +194,123 @@ export async function askArchive(args: {
   let creditsCharged = 0;
   let creditsRemaining = 0;
   let creditsUnlimited = false;
-  let reads: string[] = [];
-  const first = await postTurn(args.apiUrl, args.apiKey, fetchImpl, {
-    question,
-    filename,
-    excerpts: bundled.excerpts,
-  });
-  creditsCharged += first.creditsCharged ?? 0;
-  creditsRemaining = first.creditsRemaining ?? creditsRemaining;
-  creditsUnlimited = first.creditsUnlimited === true;
-  const requested = (first.reads ?? []).find(
-    (read) => typeof read.id === "string" && typeof read.path === "string",
-  );
-  if (first.status !== "read" || !requested?.id || !requested.path) {
-    const answer = first.answer?.trim() ?? "";
+  let model = "";
+  const reads: string[] = [];
+  const searches: string[] = [];
+  const transcript: Array<
+    | { role: "assistant"; content: unknown[] }
+    | {
+        role: "user";
+        results: Array<{ id: string; path: string; text?: string; error?: string }>;
+      }
+  > = [];
+  for (let round = 0; round < 5; round += 1) {
+    const turn = await postTurn(args.apiUrl, args.apiKey, fetchImpl, {
+      question,
+      filename,
+      excerpts: bundled.excerpts,
+      ...(transcript.length > 0 ? { transcript } : {}),
+      ...(round === 4 ? { finish: true } : {}),
+    });
+    creditsCharged += turn.creditsCharged ?? 0;
+    creditsRemaining = turn.creditsRemaining ?? creditsRemaining;
+    creditsUnlimited = turn.creditsUnlimited === true || creditsUnlimited;
+    model = turn.model ?? model;
+    const finish = round === 4;
+    const requested = (turn.reads ?? []).find(
+      (read) => typeof read.id === "string" && typeof read.path === "string",
+    );
+    const searchId = turn.search?.id;
+    const searchPhraseText = turn.search?.phrase;
+    if (
+      !finish &&
+      turn.status === "search" &&
+      typeof searchId === "string" &&
+      typeof searchPhraseText === "string"
+    ) {
+      args.onSearch?.(searchPhraseText);
+      searches.push(searchPhraseText);
+      const hits = searchPhrase(bundled.packagePath, searchPhraseText);
+      collapsePriorReads(transcript);
+      transcript.push(
+        { role: "assistant", content: turn.assistant ?? [] },
+        {
+          role: "user",
+          results: [
+            {
+              id: searchId,
+              path: "search",
+              text: formatPhraseHits(searchPhraseText, hits),
+            },
+          ],
+        },
+      );
+      continue;
+    }
+    const originId = turn.origin?.id;
+    const originPath = turn.origin?.path;
+    if (
+      !finish &&
+      turn.status === "origin" &&
+      typeof originId === "string" &&
+      typeof originPath === "string"
+    ) {
+      args.onOrigin?.(originPath);
+      let text = `No origin link for ${originPath}`;
+      try {
+        const found = lookupOrigin({ package: bundled.packagePath, path: originPath });
+        if (found.originUri) text = found.originUri;
+      } catch (err) {
+        text = err instanceof Error ? err.message : String(err);
+      }
+      collapsePriorReads(transcript);
+      transcript.push(
+        { role: "assistant", content: turn.assistant ?? [] },
+        {
+          role: "user",
+          results: [{ id: originId, path: originPath, text }],
+        },
+      );
+      continue;
+    }
+    if (!finish && turn.status === "read" && requested?.id && requested.path) {
+      const offset =
+        typeof requested.offset === "number" && requested.offset > 0
+          ? Math.floor(requested.offset)
+          : 0;
+      args.onRead?.(requested.path, offset);
+      reads.push(requested.path);
+      const loaded = readFollow(bundled.packagePath, requested.path, offset);
+      collapsePriorReads(transcript);
+      transcript.push(
+        { role: "assistant", content: turn.assistant ?? [] },
+        {
+          role: "user",
+          results: [
+            {
+              id: requested.id,
+              path: requested.path,
+              ...("error" in loaded
+                ? { error: loaded.error }
+                : { text: formatFollowWindow(loaded) }),
+            },
+          ],
+        },
+      );
+      continue;
+    }
+    const answer = turn.answer?.trim() ?? "";
     if (!answer) throw new Error("Claude returned an empty answer");
     return {
       answer,
       reads,
+      searches,
       gaps: bundled.gaps,
-      model: first.model ?? "",
+      model,
       creditsCharged,
       creditsRemaining,
       creditsUnlimited,
     };
   }
-  args.onRead?.(requested.path);
-  reads = [requested.path];
-  const loaded = readFollow(bundled.packagePath, requested.path);
-  const follow = await postTurn(args.apiUrl, args.apiKey, fetchImpl, {
-    question,
-    filename,
-    excerpts: bundled.excerpts,
-    finish: true,
-    transcript: [
-      { role: "assistant", content: first.assistant ?? [] },
-      {
-        role: "user",
-        results: [
-          {
-            id: requested.id,
-            path: requested.path,
-            ...("error" in loaded
-              ? { error: loaded.error }
-              : { text: loaded.text }),
-          },
-        ],
-      },
-    ],
-  });
-  creditsCharged += follow.creditsCharged ?? 0;
-  creditsRemaining = follow.creditsRemaining ?? creditsRemaining;
-  creditsUnlimited = follow.creditsUnlimited === true || creditsUnlimited;
-  const answer = follow.answer?.trim() ?? "";
-  if (!answer) throw new Error("Claude returned an empty answer");
-  return {
-    answer,
-    reads,
-    gaps: bundled.gaps,
-    model: follow.model ?? first.model ?? "",
-    creditsCharged,
-    creditsRemaining,
-    creditsUnlimited,
-  };
+  throw new Error("Claude returned an empty answer");
 }

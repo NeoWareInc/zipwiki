@@ -8,7 +8,10 @@ import {
   NO_EXTRACT_REASON,
   queryArchive,
   queryReadKind,
+  followWindow,
+  formatFollowWindow,
   readFollow,
+  searchPhrase,
 } from "./evidence.js";
 
 const dir = mkdtempSync(join(tmpdir(), "zipwiki-evidence-"));
@@ -143,6 +146,37 @@ describe("local query evidence", () => {
     assert.ok("text" in text && text.text.includes("4400"));
     const refused = readFollow(pkg, "legacy.docx");
     assert.deepEqual(refused, { error: NO_EXTRACT_REASON });
+    const found = searchPhrase(pkg, "oak street parcel");
+    assert.ok(
+      found.some(
+        (hit) =>
+          hit.path === "wiki/parsed/deed.pdf.md" &&
+          hit.kind === "parsed" &&
+          hit.text.toLowerCase().includes("oak street parcel") &&
+          hit.offset >= 0,
+      ),
+    );
+    const parked = followWindow("abcdefghijklmnopqrstuvwxyz", 10, 5);
+    assert.deepEqual(parked, {
+      text: "klmno",
+      offset: 10,
+      next: 15,
+      total: 26,
+    });
+    assert.equal(
+      formatFollowWindow(parked),
+      "offset 10\nnext 15\ntotal 26\n\nklmno",
+    );
+    assert.deepEqual(followWindow("abcdefghijklmnopqrstuvwxyz", 100, 5), {
+      text: "",
+      offset: 26,
+      next: 26,
+      total: 26,
+    });
+    const rent = searchPhrase(pkg, "4400 dollars");
+    assert.ok(rent.some((hit) => hit.path === "notes.txt" && hit.kind === "original"));
+    const secret = JSON.stringify(searchPhrase(pkg, "SECRET-UNPARSED"));
+    assert.equal(secret.includes("SECRET-UNPARSED"), false);
     const parsed = readFollow(pkg, "wiki/parsed/deed.pdf.md");
     assert.ok("text" in parsed && parsed.text.includes("oak street parcel"));
   });

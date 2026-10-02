@@ -362,8 +362,170 @@ describe("POST /api/query/answer", () => {
     };
     assert.equal(body.status, "read");
     assert.deepEqual(body.reads, [
-      { id: "tool_1", path: "wiki/parsed/deed.pdf.md" },
+      { id: "tool_1", path: "wiki/parsed/deed.pdf.md", offset: 0 },
     ]);
+    await app.close();
+  });
+
+  it("returns one phrase search and does not read the archive", async () => {
+    let tools: Array<{ name?: string }> = [];
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async (_url, init) => {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          tools?: Array<{ name?: string }>;
+        };
+        tools = body.tools ?? [];
+        return json({
+          model: "claude-haiku-4-5",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool_search",
+              name: "search_zipwiki",
+              input: { phrase: "oak street" },
+            },
+            {
+              type: "tool_use",
+              id: "tool_extra",
+              name: "read_zipwiki",
+              input: { path: "wiki/parsed/deed.pdf.md" },
+            },
+          ],
+          usage: { input_tokens: 4, output_tokens: 2 },
+        });
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "Where is oak street?",
+        excerpts: [
+          { path: "wiki/okf/deed.md", kind: "okf", text: "See the deed." },
+        ],
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as {
+      status: string;
+      reads: unknown[];
+      search: { id: string; phrase: string } | null;
+    };
+    assert.equal(body.status, "search");
+    assert.deepEqual(body.reads, []);
+    assert.deepEqual(body.search, { id: "tool_search", phrase: "oak street" });
+    assert.deepEqual(
+      tools.map((tool) => tool.name),
+      ["search_zipwiki", "read_zipwiki", "origin_zipwiki"],
+    );
+    await app.close();
+  });
+
+  it("forwards a read offset and does not slice the archive", async () => {
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () =>
+        json({
+          model: "claude-haiku-4-5",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool_off",
+              name: "read_zipwiki",
+              input: { path: "wiki/parsed/A Tale of Two Cities.epub.md", offset: 12000 },
+            },
+          ],
+          usage: { input_tokens: 4, output_tokens: 2 },
+        }),
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "Quote Sydney Carton's last line.",
+        excerpts: [
+          {
+            path: "wiki/okf/A Tale of Two Cities.md",
+            kind: "okf",
+            text: "See the novel.",
+          },
+        ],
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as {
+      status: string;
+      reads: Array<{ id: string; path: string; offset: number }>;
+      origin: unknown;
+    };
+    assert.equal(body.status, "read");
+    assert.deepEqual(body.reads, [
+      {
+        id: "tool_off",
+        path: "wiki/parsed/A Tale of Two Cities.epub.md",
+        offset: 12000,
+      },
+    ]);
+    assert.equal(body.origin, null);
+    await app.close();
+  });
+
+  it("returns an origin link request and does not download", async () => {
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () =>
+        json({
+          model: "claude-haiku-4-5",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool_origin",
+              name: "origin_zipwiki",
+              input: { path: "wiki/parsed/A Tale of Two Cities.epub.md" },
+            },
+          ],
+          usage: { input_tokens: 4, output_tokens: 2 },
+        }),
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "Where is the original of A Tale of Two Cities?",
+        excerpts: [
+          {
+            path: "wiki/okf/A Tale of Two Cities.md",
+            kind: "okf",
+            text: "See the novel.",
+          },
+        ],
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    const body = res.json() as {
+      status: string;
+      reads: unknown[];
+      origin: { id: string; path: string } | null;
+    };
+    assert.equal(body.status, "origin");
+    assert.deepEqual(body.reads, []);
+    assert.deepEqual(body.origin, {
+      id: "tool_origin",
+      path: "wiki/parsed/A Tale of Two Cities.epub.md",
+    });
     await app.close();
   });
 

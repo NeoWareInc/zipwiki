@@ -213,7 +213,7 @@ export type QueryExcerptInput = {
 
 function clipTranscript(raw: QueryTranscriptTurn[] | undefined): QueryTranscriptTurn[] {
   const turns: QueryTranscriptTurn[] = [];
-  for (const turn of (raw ?? []).slice(0, 2)) {
+  for (const turn of (raw ?? []).slice(0, 8)) {
     if (turn.role === "assistant" && Array.isArray(turn.content)) {
       turns.push({ role: "assistant", content: turn.content.slice(0, 4) });
       continue;
@@ -224,7 +224,7 @@ function clipTranscript(raw: QueryTranscriptTurn[] | undefined): QueryTranscript
       results: turn.results.slice(0, 1).map((result) => ({
         id: result.id.slice(0, 128),
         path: result.path.slice(0, 512),
-        ...(result.text ? { text: result.text.slice(0, QUERY_BODY_CHARS) } : {}),
+        ...(result.text ? { text: result.text.slice(0, QUERY_BODY_CHARS + 256) } : {}),
         ...(result.error ? { error: result.error.slice(0, 500) } : {}),
       })),
     });
@@ -234,7 +234,7 @@ function clipTranscript(raw: QueryTranscriptTurn[] | undefined): QueryTranscript
 
 /**
  * One answer turn with the Fly-held Anthropic key.
- * A `read` body asks the caller to load one archive path locally.
+ * A `read`, `search`, or `origin` body asks the caller to run that command on the open archive.
  * Credit checks stay with the caller.
  */
 export async function handleQueryAnswer(

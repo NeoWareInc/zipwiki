@@ -8,8 +8,12 @@ import { PromptSection } from "../components/ZipWikiPrompts";
 import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
   openNzip,
+  formatFollowWindow,
+  formatPhraseHits,
+  originLink,
   queryPackage,
   readPackageFollow,
+  searchPackagePhrase,
   readZipEntryPayload,
   testArchiveIntegrity,
   zipMethodLabel,
@@ -35,6 +39,155 @@ function formatBytes(n: number): string {
 
 function isMarkdownPath(path: string): boolean {
   return path.replace(/\\/g, "/").toLowerCase().endsWith(".md");
+}
+
+type AnswerPiece = { kind: "text"; text: string } | { kind: "path"; path: string };
+
+/** Turn archive paths in an answer into pieces, including **path** and `path`. */
+function splitAnswerLinks(text: string, paths: string[]): AnswerPiece[] {
+  const known = [...new Set(paths.filter((path) => path.length > 0))].sort(
+    (a, b) => b.length - a.length,
+  );
+  if (known.length === 0) return [{ kind: "text", text }];
+  const pieces: AnswerPiece[] = [];
+  let rest = text;
+  while (rest.length > 0) {
+    let best: { index: number; path: string; raw: string } | null = null;
+    for (const path of known) {
+      for (const raw of [`**${path}**`, `\`${path}\``, path]) {
+        const index = rest.indexOf(raw);
+        if (index < 0) continue;
+        if (
+          !best ||
+          index < best.index ||
+          (index === best.index && raw.length > best.raw.length)
+        ) {
+          best = { index, path, raw };
+        }
+      }
+    }
+    if (!best) {
+      pieces.push({ kind: "text", text: rest });
+      break;
+    }
+    if (best.index > 0) pieces.push({ kind: "text", text: rest.slice(0, best.index) });
+    pieces.push({ kind: "path", path: best.path });
+    rest = rest.slice(best.index + best.raw.length);
+  }
+  return pieces;
+}
+
+function AnswerText({
+  text,
+  paths,
+  onOpen,
+}: {
+  text: string;
+  paths: string[];
+  onOpen: (path: string) => void;
+}) {
+  const pieces = splitAnswerLinks(text, paths);
+  return (
+    <p className="whitespace-pre-wrap text-sm text-(--ink)">
+      {pieces.map((piece, index) =>
+        piece.kind === "path" ? (
+          <button
+            key={`${piece.path}-${index}`}
+            type="button"
+            onClick={() => onOpen(piece.path)}
+            className="link-package font-mono"
+          >
+            {piece.path}
+          </button>
+        ) : (
+          <AnswerInline key={index} text={piece.text} />
+        ),
+      )}
+    </p>
+  );
+}
+
+function AnswerInline({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        const bold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
+        return (
+          <AnswerUrls key={index} text={bold ? part.slice(2, -2) : part} bold={bold} />
+        );
+      })}
+    </>
+  );
+}
+
+function AnswerUrls({ text, bold }: { text: string; bold: boolean }) {
+  const parts = text.split(/(https?:\/\/[^\s<>"']+)/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part.startsWith("http://") && !part.startsWith("https://")) {
+          return bold ? <strong key={index}>{part}</strong> : <span key={index}>{part}</span>;
+        }
+        const href = part.replace(/[),.;]+$/, "");
+        const tail = part.slice(href.length);
+        return (
+          <span key={index}>
+            <a href={href} target="_blank" rel="noreferrer" className="link-origin">
+              {href}
+            </a>
+            {tail}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
+type AskSource = { path: string; kind: "parsed" | "okf" | "original" };
+
+function sourceKind(path: string): AskSource["kind"] {
+  if (path.startsWith("wiki/okf/")) return "okf";
+  if (path.startsWith("wiki/parsed/")) return "parsed";
+  return "original";
+}
+
+function collapsePriorReads(
+  transcript: Array<
+    | { role: "assistant"; content: unknown[] }
+    | {
+        role: "user";
+        results: Array<{ id: string; path: string; text?: string; error?: string }>;
+      }
+  >,
+): void {
+  for (const turn of transcript) {
+    if (turn.role !== "user") continue;
+    for (const result of turn.results) {
+      if (!result.text) continue;
+      const lines = result.text.split("\n");
+      if (
+        lines[0]?.startsWith("offset ") &&
+        lines[1]?.startsWith("next ") &&
+        lines[2]?.startsWith("total ")
+      ) {
+        result.text = lines.slice(0, 3).join("\n");
+      }
+    }
+  }
+}
+
+function rememberSource(current: AskSource[], path: string): AskSource[] {
+  if (!path || current.some((item) => item.path === path)) return current;
+  return [...current, { path, kind: sourceKind(path) }];
+}
+
+function primaryFromParsed(path: string): string | null {
+  const prefix = "wiki/parsed/";
+  if (!path.startsWith(prefix) || !path.endsWith(".md") || path.includes(".assets/")) {
+    return null;
+  }
+  return path.slice(prefix.length, -".md".length);
 }
 
 function primaryPath(p: NzipOpenSummary["primaries"][number]): string {
@@ -182,6 +335,8 @@ export default function KnowledgePage() {
     creditsUnlimited: boolean;
   } | null>(null);
   const [followPath, setFollowPath] = useState("");
+  const [followKind, setFollowKind] = useState<"read" | "search" | "origin" | null>(null);
+  const [askSources, setAskSources] = useState<AskSource[]>([]);
   const archiveRef = useRef<ArrayBuffer | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const reportActivity = useMutation(api.usage.reportActivity);
@@ -207,6 +362,9 @@ export default function KnowledgePage() {
       setAskError("");
       setPackageQuery(null);
       setAnswer(null);
+      setFollowPath("");
+      setFollowKind(null);
+      setAskSources([]);
       setViewing(null);
       archiveRef.current = null;
       try {
@@ -255,6 +413,9 @@ export default function KnowledgePage() {
     setAskError("");
     setPackageQuery(null);
     setAnswer(null);
+    setFollowPath("");
+    setFollowKind(null);
+    setAskSources([]);
     setViewing(null);
     archiveRef.current = null;
     if (inputRef.current) inputRef.current.value = "";
@@ -307,6 +468,8 @@ export default function KnowledgePage() {
     setPackageQuery(null);
     setAnswer(null);
     setFollowPath("");
+    setFollowKind(null);
+    setAskSources([]);
   }
 
   async function askPackage() {
@@ -317,10 +480,17 @@ export default function KnowledgePage() {
     setAnswer(null);
     setPackageQuery(null);
     setFollowPath("");
+    setFollowKind(null);
+    setAskSources([]);
     setAsking("searching");
     try {
       const found = await queryPackage(buf, summary.entries, q);
       setPackageQuery(found);
+      let sources: AskSource[] = [];
+      for (const passage of found.passages) {
+        sources = rememberSource(sources, passage.path);
+      }
+      setAskSources(sources);
       if (found.excerpts.length === 0) return;
       const pendingPassages = [...found.passages];
       const excerpts: Array<{
@@ -382,8 +552,10 @@ export default function KnowledgePage() {
       let remaining = 0;
       let unlimited = false;
       const followReads: string[] = [];
-      for (let round = 0; round < 2; round += 1) {
-        setAsking(round === 0 ? "answering" : "reading");
+      for (let round = 0; round < 5; round += 1) {
+        const finish = round === 4;
+        setFollowKind(null);
+        setAsking(finish || round === 0 ? "answering" : "reading");
         const result = await ask({
           question: q,
           filename: summary.filename,
@@ -391,42 +563,103 @@ export default function KnowledgePage() {
           ...(transcript.length > 0
             ? { transcript: JSON.stringify(transcript) }
             : {}),
-          ...(round === 1 ? { finish: true } : {}),
+          ...(finish ? { finish: true } : {}),
         });
         charged += result.creditsCharged;
         remaining = result.creditsRemaining;
         unlimited = result.creditsUnlimited;
         const reads = Array.isArray(result.reads) ? result.reads : [];
         const read = reads[0];
-        if (result.status !== "read" || !read || round === 1) {
-          setAnswer({
-            text: result.answer ?? "",
-            reads: followReads,
-            creditsCharged: charged,
-            creditsRemaining: remaining,
-            creditsUnlimited: unlimited,
-          });
-          return;
+        const phrase = result.search;
+        if (!finish && result.status === "search" && phrase) {
+          setFollowKind("search");
+          setFollowPath(phrase.phrase);
+          setAsking("reading");
+          const hits = await searchPackagePhrase(buf, summary.entries, phrase.phrase);
+          for (const hit of hits) sources = rememberSource(sources, hit.path);
+          setAskSources(sources);
+          const assistant = JSON.parse(result.assistant || "[]") as unknown[];
+          collapsePriorReads(transcript);
+          transcript = [
+            ...transcript,
+            { role: "assistant", content: assistant },
+            {
+              role: "user",
+              results: [
+                {
+                  id: phrase.id,
+                  path: "search",
+                  text: formatPhraseHits(phrase.phrase, hits),
+                },
+              ],
+            },
+          ];
+          continue;
         }
-        setFollowPath(read.path);
-        const loaded = await readPackageFollow(buf, summary.entries, read.path);
-        followReads.push(read.path);
-        const assistant = JSON.parse(result.assistant || "[]") as unknown[];
-        transcript = [
-          { role: "assistant", content: assistant },
-          {
-            role: "user",
-            results: [
-              {
-                id: read.id,
-                path: read.path,
-                ...("error" in loaded
-                  ? { error: loaded.error }
-                  : { text: loaded.text }),
-              },
-            ],
-          },
-        ];
+        const origin = result.origin;
+        if (!finish && result.status === "origin" && origin) {
+          setFollowKind("origin");
+          setFollowPath(origin.path);
+          setAsking("reading");
+          const link = originLink(summary.entries, origin.path);
+          sources = rememberSource(sources, origin.path);
+          setAskSources(sources);
+          const assistant = JSON.parse(result.assistant || "[]") as unknown[];
+          collapsePriorReads(transcript);
+          transcript = [
+            ...transcript,
+            { role: "assistant", content: assistant },
+            {
+              role: "user",
+              results: [
+                {
+                  id: origin.id,
+                  path: origin.path,
+                  text: link ?? `No origin link for ${origin.path}`,
+                },
+              ],
+            },
+          ];
+          continue;
+        }
+        if (!finish && result.status === "read" && read) {
+          const offset =
+            typeof read.offset === "number" && read.offset > 0 ? Math.floor(read.offset) : 0;
+          setFollowKind("read");
+          setFollowPath(offset > 0 ? `${read.path} at ${offset}` : read.path);
+          setAsking("reading");
+          const loaded = await readPackageFollow(buf, summary.entries, read.path, offset);
+          followReads.push(read.path);
+          sources = rememberSource(sources, read.path);
+          setAskSources(sources);
+          const assistant = JSON.parse(result.assistant || "[]") as unknown[];
+          collapsePriorReads(transcript);
+          transcript = [
+            ...transcript,
+            { role: "assistant", content: assistant },
+            {
+              role: "user",
+              results: [
+                {
+                  id: read.id,
+                  path: read.path,
+                  ...("error" in loaded
+                    ? { error: loaded.error }
+                    : { text: formatFollowWindow(loaded) }),
+                },
+              ],
+            },
+          ];
+          continue;
+        }
+        setAnswer({
+          text: result.answer ?? "",
+          reads: followReads,
+          creditsCharged: charged,
+          creditsRemaining: remaining,
+          creditsUnlimited: unlimited,
+        });
+        return;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -645,13 +878,15 @@ export default function KnowledgePage() {
                 }
                 className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
-                {asking === "searching"
+                {asking === "searching" || (asking === "reading" && followKind === "search")
                   ? "Searching…"
-                  : asking === "reading"
-                    ? "Reading…"
-                    : asking === "answering"
-                      ? "Answering…"
-                      : "Ask"}
+                  : asking === "reading" && followKind === "origin"
+                    ? "Origin…"
+                    : asking === "reading"
+                      ? "Reading…"
+                      : asking === "answering"
+                        ? "Answering…"
+                        : "Ask"}
               </button>
               <button
                 type="button"
@@ -682,9 +917,13 @@ export default function KnowledgePage() {
               <p className="mt-2 text-sm text-(--muted)">
                 {asking === "searching"
                   ? "Searching the package…"
-                  : asking === "reading"
-                    ? `Reading ${followPath}…`
-                    : "Answering from the package…"}
+                  : asking === "reading" && followKind === "search"
+                    ? `Searching for ${followPath}…`
+                    : asking === "reading" && followKind === "origin"
+                      ? `Origin of ${followPath}…`
+                      : asking === "reading"
+                        ? `Reading ${followPath}…`
+                        : "Answering from the package…"}
               </p>
             )}
             {askError && (
@@ -699,9 +938,13 @@ export default function KnowledgePage() {
             )}
             {answer && (
               <div className="mt-4 rounded-xl border border-(--border) bg-white p-4">
-                <p className="whitespace-pre-wrap text-sm text-(--ink)">
-                  {answer.text}
-                </p>
+                <AnswerText
+                  text={answer.text}
+                  paths={(summary?.entries ?? [])
+                    .map((entry) => entry.name)
+                    .filter(isMarkdownPath)}
+                  onOpen={setViewing}
+                />
                 <p className="mt-3 text-sm font-medium text-(--ink)">
                   {answer.creditsUnlimited
                     ? "Unlimited · no charge"
@@ -709,8 +952,33 @@ export default function KnowledgePage() {
                 </p>
                 {answer.reads.length > 0 && (
                   <p className="mt-2 text-sm text-(--muted)">
-                    Also read {answer.reads.join(", ")}
+                    Also read{" "}
+                    {answer.reads.map((path, index) => (
+                      <span key={path}>
+                        {index > 0 ? ", " : null}
+                        {entryNamed(path) && isMarkdownPath(path) ? (
+                          <PackageFileLink path={path} onOpen={() => setViewing(path)} />
+                        ) : (
+                          <span className="font-mono">{path}</span>
+                        )}
+                      </span>
+                    ))}
                   </p>
+                )}
+                {summary && askSources.length > 0 && (
+                  <ul className="mt-3 space-y-2 text-sm">
+                    {askSources.map((source) => (
+                      <AskSourceRow
+                        key={source.path}
+                        source={source}
+                        summary={summary}
+                        stored={entryNamed(source.path) != null}
+                        primaryStored={(name) => entryNamed(name) != null}
+                        onView={setViewing}
+                        onDownload={(path) => void downloadEntry(path)}
+                      />
+                    ))}
+                  </ul>
                 )}
               </div>
             )}
@@ -718,7 +986,15 @@ export default function KnowledgePage() {
               <ul className="mt-3 space-y-1 text-sm text-(--muted)">
                 {packageQuery.passages.map((passage) => (
                   <li key={passage.path}>
-                    Passage from <span className="font-mono text-xs">{passage.path}</span>
+                    Passage from{" "}
+                    {entryNamed(passage.path) && isMarkdownPath(passage.path) ? (
+                      <PackageFileLink
+                        path={passage.path}
+                        onOpen={() => setViewing(passage.path)}
+                      />
+                    ) : (
+                      <span className="font-mono">{passage.path}</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -727,10 +1003,23 @@ export default function KnowledgePage() {
               <ul className="mt-3 space-y-1 text-sm text-(--ink)">
                 {packageQuery.gaps.map((gap) => (
                   <li key={gap.path}>
-                    <span className="font-mono text-xs">{gap.path}</span>
+                    {entryNamed(gap.path) && isMarkdownPath(gap.path) ? (
+                      <PackageFileLink path={gap.path} onOpen={() => setViewing(gap.path)} />
+                    ) : (
+                      <span className="font-mono">{gap.path}</span>
+                    )}
                     {": "}
                     {gap.reason}
-                    {gap.originUri ? ` Original: ${gap.originUri}` : ""}
+                    {gap.originUri && /^https?:\/\//i.test(gap.originUri) ? (
+                      <>
+                        {" "}
+                        Original: <OriginLink href={gap.originUri} />
+                      </>
+                    ) : gap.originUri ? (
+                      ` Original: ${gap.originUri}`
+                    ) : (
+                      ""
+                    )}
                   </li>
                 ))}
               </ul>
@@ -748,7 +1037,14 @@ export default function KnowledgePage() {
                   return (
                     <li key={hit.path} className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="mr-2 font-mono text-xs">{hit.path}</span>
+                        {entryNamed(hit.path) && isMarkdownPath(hit.path) ? (
+                          <PackageFileLink
+                            path={hit.path}
+                            onOpen={() => setViewing(hit.path)}
+                          />
+                        ) : (
+                          <span className="mr-2 font-mono">{hit.path}</span>
+                        )}
                         {hit.kind === "parsed" && entryNamed(hit.path) ? (
                           <>
                             {isMarkdownPath(hit.path) ? (
@@ -771,7 +1067,11 @@ export default function KnowledgePage() {
                       {hit.kind === "okf"
                         ? documents.map((doc) => (
                             <div key={doc} className="flex items-center gap-2">
-                              <span className="mr-2 font-mono text-xs">{doc}</span>
+                              {entryNamed(doc) && isMarkdownPath(doc) ? (
+                                <PackageFileLink path={doc} onOpen={() => setViewing(doc)} />
+                              ) : (
+                                <span className="mr-2 font-mono">{doc}</span>
+                              )}
                               {entryNamed(doc) ? (
                                 <>
                                   {isMarkdownPath(doc) ? (
@@ -897,9 +1197,30 @@ function SectionBody({
                   key={`${path}-${i}`}
                   className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
                 >
-                  <span className="mr-2 font-mono text-xs">
-                    {path}
-                    {origin.uri ? `: ${origin.uri}` : ""}
+                  <span className="mr-2">
+                    {stored && isMarkdownPath(stored.name) ? (
+                      <PackageFileLink
+                        path={stored.name}
+                        label={path}
+                        onOpen={() => onView(stored.name)}
+                      />
+                    ) : stored ? (
+                      <PackageFileLink
+                        path={stored.name}
+                        label={path}
+                        onOpen={() => onDownload(stored.name)}
+                      />
+                    ) : (
+                      <span className="font-mono">{path}</span>
+                    )}
+                    {origin.uri && /^https?:\/\//i.test(origin.uri) ? (
+                      <>
+                        {": "}
+                        <OriginLink href={origin.uri} />
+                      </>
+                    ) : origin.uri ? (
+                      `: ${origin.uri}`
+                    ) : null}
                     {origin.bits.length > 0 ? (
                       <span className="text-(--muted)">
                         {" "}
@@ -945,7 +1266,11 @@ function SectionBody({
               const stored = entryNamed(c);
               return (
                 <li key={c} className="flex items-center gap-2">
-                  <span className="mr-2 font-mono text-xs">{c}</span>
+                  {stored && isMarkdownPath(stored.name) ? (
+                    <PackageFileLink path={c} onOpen={() => onView(stored.name)} />
+                  ) : (
+                    <span className="mr-2 font-mono">{c}</span>
+                  )}
                   {stored ? (
                     <>
                       {isMarkdownPath(stored.name) ? (
@@ -991,7 +1316,11 @@ function SectionBody({
               const stored = markdown ? entryNamed(c) : null;
               return (
                 <li key={c} className="flex items-center gap-2">
-                  <span className="mr-2 font-mono text-xs">{c}</span>
+                  {stored ? (
+                    <PackageFileLink path={c} onOpen={() => onView(stored.name)} />
+                  ) : (
+                    <span className="mr-2 font-mono">{c}</span>
+                  )}
                   {stored ? (
                     <>
                       <ViewButton
@@ -1035,7 +1364,13 @@ function SectionBody({
           <tbody>
             {summary.entries.map((e) => (
               <tr key={e.name} className="border-b border-(--border) last:border-0">
-                <td className="max-w-md truncate px-3 py-1.5 font-mono">{e.name}</td>
+                <td className="max-w-md truncate px-3 py-1.5 font-mono">
+                  {isMarkdownPath(e.name) ? (
+                    <PackageFileLink path={e.name} onOpen={() => onView(e.name)} />
+                  ) : (
+                    e.name
+                  )}
+                </td>
                 <td className="px-3 py-1.5">{zipMethodLabel(e.method)}</td>
                 <td className="px-3 py-1.5 tabular-nums">{e.uncompressedSize}</td>
                 <td className="px-3 py-1.5 tabular-nums">{e.compressedSize}</td>
@@ -1045,6 +1380,102 @@ function SectionBody({
         </table>
       </div>
     </ContentsSection>
+  );
+}
+
+function AskSourceRow({
+  source,
+  summary,
+  stored,
+  primaryStored,
+  onView,
+  onDownload,
+}: {
+  source: AskSource;
+  summary: NzipOpenSummary;
+  stored: boolean;
+  primaryStored: (path: string) => boolean;
+  onView: (path: string) => void;
+  onDownload: (path: string) => void;
+}) {
+  const primaryName = source.kind === "parsed" ? primaryFromParsed(source.path) : null;
+  const primary = primaryName
+    ? summary.primaries.find((item) => primaryPath(item) === primaryName)
+    : null;
+  const origin = primary ? documentOrigin(summary, primary) : null;
+  const originHttp = Boolean(origin?.uri && /^https?:\/\//i.test(origin.uri));
+  const originalInZip = primaryName != null && primaryStored(primaryName);
+  const fileLabel =
+    source.kind === "okf" ? "concept" : source.kind === "parsed" ? "parsed" : "original";
+  return (
+    <li className="flex flex-wrap items-center gap-2">
+      {stored && isMarkdownPath(source.path) ? (
+        <PackageFileLink path={source.path} onOpen={() => onView(source.path)} />
+      ) : (
+        <span className="font-mono">{source.path}</span>
+      )}
+      {stored && isMarkdownPath(source.path) ? (
+        <span className="inline-flex items-center gap-1">
+          <ViewButton path={source.path} onView={() => onView(source.path)} />
+          <span className="text-(--muted)">{fileLabel}</span>
+        </span>
+      ) : null}
+      {stored && !isMarkdownPath(source.path) ? (
+        <span className="inline-flex items-center gap-1">
+          <DownloadIconButton
+            path={source.path}
+            onDownload={() => onDownload(source.path)}
+          />
+          <span className="text-(--muted)">{fileLabel}</span>
+        </span>
+      ) : null}
+      {primaryName && originalInZip && isMarkdownPath(primaryName) ? (
+        <span className="inline-flex items-center gap-1">
+          <ViewButton path={primaryName} onView={() => onView(primaryName)} />
+          <span className="text-(--muted)">original</span>
+        </span>
+      ) : null}
+      {primaryName && originalInZip && !isMarkdownPath(primaryName) ? (
+        <span className="inline-flex items-center gap-1">
+          <DownloadIconButton
+            path={primaryName}
+            onDownload={() => onDownload(primaryName)}
+          />
+          <span className="text-(--muted)">original</span>
+        </span>
+      ) : null}
+      {primaryName && !originalInZip && origin?.uri ? (
+        originHttp ? (
+          <OriginLink href={origin.uri}>Original</OriginLink>
+        ) : (
+          <span className="text-(--muted)">{origin.uri}</span>
+        )
+      ) : null}
+    </li>
+  );
+}
+
+function PackageFileLink({
+  path,
+  onOpen,
+  label,
+}: {
+  path: string;
+  onOpen: () => void;
+  label?: string;
+}) {
+  return (
+    <button type="button" onClick={onOpen} className="link-package font-mono">
+      {label ?? path}
+    </button>
+  );
+}
+
+function OriginLink({ href, children }: { href: string; children?: ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="link-origin">
+      {children ?? href}
+    </a>
   );
 }
 
