@@ -8,48 +8,6 @@ export type ZipWikiPrompt = {
   debugCli: string;
 };
 
-/** Create a .zipwiki — one sentence; agent AI OKF via okf_enrich (MCP). */
-export const CREATE_PROMPTS: ZipWikiPrompt[] = [
-  {
-    id: "test1",
-    title: "Office docs (test1)",
-    description:
-      "Pack knowledge/test1 (Gettysburg and the Bill of Rights) and enrich OKF with the agent LLM.",
-    prompt:
-      'Using ZipWiki MCP, pack "./knowledge/test1" into ./knowledge/test1.zipwiki, enrich every document with AI OKF via okf_enrich, and tell me the output path.',
-    debugCli:
-      "pnpm zipwiki -- pack knowledge/test1 -o ./knowledge/test1.zipwiki --no-ai-okf",
-  },
-  {
-    id: "sample-docs",
-    title: "Mixed docs (test2)",
-    description:
-      "Pack knowledge/test2 (PDFs, office files, and fax images) and enrich OKF with the agent LLM.",
-    prompt:
-      'Using ZipWiki MCP, pack "./knowledge/test2" into ./knowledge/sample-docs.zipwiki, enrich every document with AI OKF via okf_enrich, and tell me the output path.',
-    debugCli:
-      "pnpm zipwiki -- pack knowledge/test2 -o ./knowledge/sample-docs.zipwiki --no-ai-okf",
-  },
-  {
-    id: "folder",
-    title: "Document folder",
-    description: "Pack a folder and enrich OKF — replace the paths first.",
-    prompt:
-      'Using ZipWiki MCP, pack "./path/to/docs" into ./knowledge/my-docs.zipwiki (recurse if needed). If the folder is books, pass okfProfile "book"; if it is laws, pass okfProfile "legislation"; if it is invoices, pass okfProfile "invoice". Enrich every document with AI OKF via okf_enrich using that profile, and tell me the output path.',
-    debugCli:
-      "mkdir -p knowledge && pnpm zipwiki -- pack ./path/to/docs -o ./knowledge/my-docs.zipwiki -r",
-  },
-  {
-    id: "single-file",
-    title: "Single file",
-    description: "Pack one file and enrich OKF — replace the paths first.",
-    prompt:
-      'Using ZipWiki MCP, pack "./path/to/document.pdf" into ./knowledge/document.zipwiki, enrich it with AI OKF via okf_enrich, and tell me the output path.',
-    debugCli:
-      "mkdir -p knowledge && pnpm zipwiki -- pack ./path/to/document.pdf -o ./knowledge/document.zipwiki",
-  },
-];
-
 /** Query an existing .zipwiki — one sentence each. */
 export const QUERY_PROMPTS: ZipWikiPrompt[] = [
   {

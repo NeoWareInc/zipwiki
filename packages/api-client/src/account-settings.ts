@@ -124,7 +124,7 @@ export const DEFAULT_ACCOUNT_SETTINGS: AccountSettingsBody =
       },
     },
     okf: {
-      useAi: false,
+      useAi: true,
       provider: "anthropic",
       model: "claude-haiku-4-5",
     },
@@ -133,7 +133,7 @@ export const DEFAULT_ACCOUNT_SETTINGS: AccountSettingsBody =
       omitOriginalDocuments: true,
       compression: "zstd",
       level: 7,
-      recurse: false,
+      recurse: true,
       storeSuffixes: [
         ".pdf",
         ".png",

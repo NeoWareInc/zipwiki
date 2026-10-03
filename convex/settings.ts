@@ -7,8 +7,13 @@ const DEFAULT_SETTINGS = JSON.stringify({
   parseCredential: "local",
   okfCredential: "local",
   parser: { engine: "liteparse", mode: "fixed" },
-  pack: { compression: "zstd", level: 7 },
-  okf: { useAi: false, model: "claude-haiku-4-5" },
+  pack: {
+    compression: "zstd",
+    level: 7,
+    omitOriginalDocuments: true,
+    recurse: true,
+  },
+  okf: { useAi: true, model: "claude-haiku-4-5" },
 });
 
 export const getByAccountId = internalQuery({

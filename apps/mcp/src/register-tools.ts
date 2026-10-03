@@ -265,14 +265,14 @@ export function registerTools(server: McpServer): void {
     "pack",
     {
       description:
-        "Pack a local file/directory into a .zipwiki. Defaults to noAiOkf so the host LLM can enrich via okf_enrich. Parse may use ZipWiki API (billable) or BYO LlamaParse.",
+        "Pack a local file/directory into a .zipwiki. AI OKF runs during pack by default. Pass noAiOkf true to skip and enrich later via okf_enrich. Parse may use ZipWiki API (billable) or BYO LlamaParse.",
       inputSchema: {
         source: z.string().describe("File or directory to pack"),
         output: z.string().optional().describe("Output .zipwiki path"),
         noAiOkf: z
           .boolean()
           .optional()
-          .describe("Skip AI OKF (default true for MCP)"),
+          .describe("Skip AI OKF during pack (default false)"),
         useZipcodexOkf: z
           .boolean()
           .optional()
@@ -323,7 +323,7 @@ export function registerTools(server: McpServer): void {
     "update",
     {
       description:
-        "Add, update, or delete documents in a local .zipwiki (one full rewrite; copies unchanged compressed members). Parse + optional OKF for add/update; delete drops parse/assets/OKF. AI OKF skipped by default.",
+        "Add, update, or delete documents in a local .zipwiki (one full rewrite; copies unchanged compressed members). Parse + optional OKF for add/update; delete drops parse/assets/OKF. AI OKF runs by default; pass noAiOkf true to skip.",
       inputSchema: {
         package: z.string().describe("Path to existing .zipwiki"),
         output: z
@@ -355,7 +355,7 @@ export function registerTools(server: McpServer): void {
         noAiOkf: z
           .boolean()
           .optional()
-          .describe("Skip AI OKF (default true for MCP)"),
+          .describe("Skip AI OKF during add/update (default false)"),
         useZipcodexOkf: z
           .boolean()
           .optional()

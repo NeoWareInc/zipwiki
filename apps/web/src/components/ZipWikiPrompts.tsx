@@ -51,7 +51,7 @@ function PromptCard({ prompt }: { prompt: ZipWikiPrompt }) {
   );
 }
 
-function CopyButton({ value, label }: { value: string; label: string }) {
+export function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {

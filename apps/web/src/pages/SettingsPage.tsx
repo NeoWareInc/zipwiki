@@ -321,7 +321,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
         )}
       </section>
 
-      <section className="space-y-3">
+      <section id="packing" className="scroll-mt-24 space-y-3">
         <h2 className="font-display text-xl font-semibold">
           Knowledge Archive packing
         </h2>
@@ -613,6 +613,15 @@ function hostedOkfModelLabel(model: string | undefined): string {
 }
 
 export default function SettingsPage() {
+  useEffect(() => {
+    if (window.location.hash !== "#packing") return;
+    // Wait a tick so the packing section is in the DOM.
+    const id = window.setTimeout(() => {
+      document.getElementById("packing")?.scrollIntoView({ behavior: "smooth" });
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>

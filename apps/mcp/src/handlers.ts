@@ -367,13 +367,14 @@ export async function okfEnrich(args: {
 
 /**
  * Pack sources on the local filesystem (or mounted cloud drive).
- * Defaults to skipping ZipWiki AI OKF so the host LLM can enrich via
- * `okf_enrich`. Pass `useZipcodexOkf: true` for hosted/BYO OKF.
+ * AI OKF runs during pack by default (accurate concepts). Pass
+ * `noAiOkf: true` to skip and enrich later via `okf_enrich`, or
+ * `useZipcodexOkf: true` to force hosted/BYO OKF.
  */
 export async function pack(args: {
   source: string;
   output?: string;
-  /** Default true for MCP — skip hosted AI OKF. */
+  /** Default false — run AI OKF during pack. Set true to skip. */
   noAiOkf?: boolean;
   /** When true, run AI OKF via account credential (ZipWiki or BYO). */
   useZipcodexOkf?: boolean;
@@ -407,7 +408,7 @@ export async function pack(args: {
     await mkdir(resolve(outAbs, ".."), { recursive: true });
 
     const useZipcodexOkf = args.useZipcodexOkf === true;
-    const noAiOkf = useZipcodexOkf ? false : (args.noAiOkf ?? true);
+    const noAiOkf = useZipcodexOkf ? false : (args.noAiOkf ?? false);
 
     await runPack([source], {
       output: outAbs,
@@ -436,8 +437,8 @@ export async function pack(args: {
     invalidatePackageCache(outAbs);
 
     const enrichHint = noAiOkf
-      ? "AI OKF was skipped (MCP default / Free-path). Read parsed docs with read_parsed, then call okf_enrich with host-LLM enrichment (title, description, type, tags, keyFacts)."
-      : "AI OKF ran via account credentials when ZipWiki OKF quota remained. Call open on the output.";
+      ? "AI OKF was skipped. Read parsed docs with read_parsed, then call okf_enrich with host-LLM enrichment (title, description, type, tags, keyFacts)."
+      : "AI OKF ran during pack. Call open on the output.";
 
     return jsonResult({
       output: outAbs,
@@ -517,7 +518,7 @@ export async function update(args: {
       };
     });
     const useZipcodexOkf = args.useZipcodexOkf === true;
-    const noAiOkf = useZipcodexOkf ? false : (args.noAiOkf ?? true);
+    const noAiOkf = useZipcodexOkf ? false : (args.noAiOkf ?? false);
     const omitOriginalDocuments =
       args.includeOriginal === true ? false : args.omitOriginalDocuments;
     const result = await updatePackage({

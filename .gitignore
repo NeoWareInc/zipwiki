@@ -18,6 +18,8 @@ out/
 .cache/
 .vite/
 *.local
+.pack/
+*.tgz
 
 # Environment & secrets
 .env
