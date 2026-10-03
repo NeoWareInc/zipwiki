@@ -193,6 +193,7 @@ export async function runStage(
       configPath: opts.config,
       parserEngine: opts.parser,
       parserMode: opts.parserMode,
+      llamaTier: opts.llamaTier,
       noAiOkf: opts.noAiOkf,
       noOcr: opts.noOcr,
       omitOriginalDocuments: opts.omitOriginalDocuments,
@@ -362,6 +363,7 @@ export async function runStage(
         okf: packOkfMode(opts, useAi),
         compression: opts.compression ?? project.pack.compression,
         parser: project.parser.engine === "llamaparse" ? "llamaparse" : "liteparse",
+        llamaTier: project.parser.llamaparse?.tier,
       });
       await runPackConfirmLoop({
         printPlan: () => {
@@ -400,6 +402,14 @@ export async function runStage(
           opts.compression = next.compression;
           opts.parser = next.parser;
           project.parser.engine = next.parser;
+          if (next.parser === "llamaparse") {
+            const tier = next.llamaTier?.trim() || "cost_effective";
+            opts.llamaTier = tier;
+            project.parser.llamaparse = {
+              ...project.parser.llamaparse,
+              tier,
+            };
+          }
           recurse = next.recurse;
           opts.recurse = next.recurse;
           if (next.okf === "off") {

@@ -47,14 +47,24 @@ function onOff(v: boolean): string {
 function shortLlamaTier(tier?: string): string | undefined {
   const t = tier?.trim().toLowerCase();
   if (!t) return undefined;
-  if (t === "cost_effective" || t === "turbo" || t === "fast") return "fast";
+  if (
+    t === "cost_effective" ||
+    t === "turbo" ||
+    t === "fast" ||
+    t === "quick" ||
+    t === "cost-effective"
+  ) {
+    return "fast";
+  }
   if (t === "agentic") return "agentic";
   if (t === "agentic_plus") return "agentic+";
   return t;
 }
 
 /** Selectable parser summary, e.g. `llamaparse, fast` or `liteparse`. */
-export function formatParseEngineSummary(info: ParseHeaderInfo): string {
+export function formatParseEngineSummary(
+  info: Pick<ParseHeaderInfo, "engine" | "llamaTier">,
+): string {
   if (info.engine === "llamaparse") {
     const tier = shortLlamaTier(info.llamaTier);
     return tier ? `llamaparse, ${tier}` : "llamaparse";

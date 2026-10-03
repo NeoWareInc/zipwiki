@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
+import { withActivityDots } from "../../cli/activity-dots.js";
 import { isLlamaCloudConfigured } from "../../config/index.js";
 import {
   jobIdFromPayload,
@@ -72,66 +73,77 @@ export class LlamaParseAdapter implements DocumentParser {
       );
     }
 
-    const lp = opts.project.parser.llamaparse;
-    const client = this.clientFactory
-      ? this.clientFactory()
-      : await createDefaultClient();
+    const filename = basename(path);
+    return withActivityDots(
+      filename,
+      { quiet: opts.cli?.quiet, activity: "llamaparse" },
+      async () => {
+        const lp = opts.project.parser.llamaparse;
+        const client = this.clientFactory
+          ? this.clientFactory()
+          : await createDefaultClient();
 
-    const expand = Array.from(
-      new Set([...(lp.expand.length > 0 ? lp.expand : ["markdown"]), "usage"]),
+        const expand = Array.from(
+          new Set([
+            ...(lp.expand.length > 0 ? lp.expand : ["markdown"]),
+            "usage",
+          ]),
+        );
+        const bytes = readFileSync(path);
+        const upload_file = new File([bytes], filename);
+        const ocrWanted = resolveParseOcrEnabled(opts.cli, opts.project);
+
+        const result = await client.parsing.parse({
+          tier: lp.tier,
+          version: lp.version,
+          expand,
+          upload_file,
+          ...(ocrWanted
+            ? {}
+            : {
+                // Classic LlamaParse job flag; v2 SDK forwards extra body fields.
+                disable_ocr: true,
+                processing_options: {
+                  ignore: { ignore_text_in_image: true },
+                },
+              }),
+        });
+
+        const pages = (result.markdown?.pages ?? []).map((p, i) => ({
+          pageNum: p.pageNum ?? p.page ?? i + 1,
+          markdown: p.markdown ?? "",
+          text: p.markdown ?? "",
+        }));
+
+        const text =
+          (typeof result.markdown_full === "string" &&
+          result.markdown_full.trim()
+            ? result.markdown_full
+            : pages.map((p) => p.markdown).filter(Boolean).join("\n\n")) || "";
+
+        if (!text.trim()) {
+          throw new Error(`LlamaParse returned empty markdown for ${path}`);
+        }
+
+        let llamaCredits = llamaCreditsFromPayload(result);
+        const jobId = jobIdFromPayload(result);
+        const apiKey = process.env.LLAMA_CLOUD_API_KEY?.trim();
+        if (llamaCredits == null && jobId && apiKey) {
+          llamaCredits = await pollLlamaJobCredits(jobId, apiKey);
+        }
+
+        const engineVersion = llamaparseEngineVersion();
+        return {
+          engine: "llamaparse",
+          ...(engineVersion ? { engineVersion } : {}),
+          text,
+          pages: pages.length > 0 ? pages : undefined,
+          ...(llamaCredits != null ? { llamaCredits } : {}),
+          ...(jobId ? { jobId } : {}),
+          raw: result,
+        };
+      },
     );
-    const bytes = readFileSync(path);
-    const upload_file = new File([bytes], basename(path));
-    const ocrWanted = resolveParseOcrEnabled(opts.cli, opts.project);
-
-    const result = await client.parsing.parse({
-      tier: lp.tier,
-      version: lp.version,
-      expand,
-      upload_file,
-      ...(ocrWanted
-        ? {}
-        : {
-            // Classic LlamaParse job flag; v2 SDK forwards extra body fields.
-            disable_ocr: true,
-            processing_options: {
-              ignore: { ignore_text_in_image: true },
-            },
-          }),
-    });
-
-    const pages = (result.markdown?.pages ?? []).map((p, i) => ({
-      pageNum: p.pageNum ?? p.page ?? i + 1,
-      markdown: p.markdown ?? "",
-      text: p.markdown ?? "",
-    }));
-
-    const text =
-      (typeof result.markdown_full === "string" && result.markdown_full.trim()
-        ? result.markdown_full
-        : pages.map((p) => p.markdown).filter(Boolean).join("\n\n")) || "";
-
-    if (!text.trim()) {
-      throw new Error(`LlamaParse returned empty markdown for ${path}`);
-    }
-
-    let llamaCredits = llamaCreditsFromPayload(result);
-    const jobId = jobIdFromPayload(result);
-    const apiKey = process.env.LLAMA_CLOUD_API_KEY?.trim();
-    if (llamaCredits == null && jobId && apiKey) {
-      llamaCredits = await pollLlamaJobCredits(jobId, apiKey);
-    }
-
-    const engineVersion = llamaparseEngineVersion();
-    return {
-      engine: "llamaparse",
-      ...(engineVersion ? { engineVersion } : {}),
-      text,
-      pages: pages.length > 0 ? pages : undefined,
-      ...(llamaCredits != null ? { llamaCredits } : {}),
-      ...(jobId ? { jobId } : {}),
-      raw: result,
-    };
   }
 }
 

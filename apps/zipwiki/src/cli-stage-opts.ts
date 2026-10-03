@@ -70,6 +70,10 @@ export function stageOptionsFromCli(
         : undefined,
     parser: opts.parser as StageOptions["parser"],
     parserMode: opts.parserMode as StageOptions["parserMode"],
+    llamaTier:
+      typeof opts.llamaTier === "string" && opts.llamaTier.trim()
+        ? opts.llamaTier.trim()
+        : undefined,
     compression: opts.compression as StageOptions["compression"],
     level: levelFlag,
     deflate: opts.deflate === true || opts.pkzipCompress === true,

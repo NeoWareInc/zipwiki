@@ -122,6 +122,8 @@ function collectOkfFiles(dir: string, prefix = ""): { name: string; data: string
 export type ParseFileResult = {
   member: StageMember;
   markdown: string;
+  /** Parse engine that produced the markdown (for stage log labels). */
+  engine?: string;
 };
 
 export async function parseOneFile(
@@ -181,6 +183,7 @@ export async function parseOneFile(
   });
   return {
     markdown,
+    engine: parsed.engine,
     member: {
       abs,
       originalName,
@@ -460,7 +463,9 @@ export async function runParseAndOkfPhase(input: {
             engine: project.parser.engine,
           });
           if (!opts.quiet) {
-            stageLog(`[stage] parse ${result.member.originalName}`);
+            const verb =
+              result.engine === "llamaparse" ? "llamaparse done" : "parse";
+            stageLog(`[stage] ${verb} ${result.member.originalName}`);
           }
           return { ...result, parsePath };
         } catch (err) {
@@ -522,7 +527,9 @@ export async function runParseAndOkfPhase(input: {
           engine: project.parser.engine,
         });
         if (!opts.quiet) {
-          stageLog(`[stage] parse ${result.member.originalName}`);
+          const verb =
+            result.engine === "llamaparse" ? "llamaparse done" : "parse";
+          stageLog(`[stage] ${verb} ${result.member.originalName}`);
         }
         return { ...result, parsePath, parseFailed: false as const };
       } catch (err) {

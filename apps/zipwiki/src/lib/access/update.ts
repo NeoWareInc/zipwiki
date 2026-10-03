@@ -93,6 +93,7 @@ export type UpdatePackageInput = {
   omitOriginalDocuments?: boolean;
   parser?: StageOptions["parser"];
   parserMode?: StageOptions["parserMode"];
+  llamaTier?: string;
   compression?: CompressOptions["compression"];
   level?: number;
   deflate?: boolean;
@@ -535,6 +536,7 @@ export async function updatePackage(
       omitOriginalDocuments: input.omitOriginalDocuments,
       parserEngine: input.parser,
       parserMode: input.parserMode,
+      llamaTier: input.llamaTier,
       noOcr: input.noOcr,
     },
     process.cwd(),

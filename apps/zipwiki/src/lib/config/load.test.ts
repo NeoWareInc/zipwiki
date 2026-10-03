@@ -78,4 +78,17 @@ describe("zipwiki config", () => {
     assert.equal(config.parser.engine, "liteparse");
     assert.equal(config.okf.useAi, false);
   });
+
+  it("maps --llama-tier quick to cost_effective", () => {
+    const dir = mkdtempSync(join(tmpdir(), "zc-cfg-tier-"));
+    const { config } = loadZipwikiConfig(
+      {
+        parserEngine: "llamaparse",
+        llamaTier: "quick",
+      },
+      dir,
+    );
+    assert.equal(config.parser.engine, "llamaparse");
+    assert.equal(config.parser.llamaparse.tier, "cost_effective");
+  });
 });

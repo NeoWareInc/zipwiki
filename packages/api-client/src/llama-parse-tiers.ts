@@ -62,8 +62,13 @@ export function resolveLlamaParseTier(
 ): LlamaParseTier {
   const trimmed = value?.trim();
   if (trimmed && isLlamaParseTier(trimmed)) return trimmed;
-  // Legacy / mistaken “turbo” maps to fastest markdown Parse tier.
-  if (trimmed === "turbo" || trimmed === "fast") {
+  // Legacy / shorthand names for the fastest markdown Parse tier.
+  if (
+    trimmed === "turbo" ||
+    trimmed === "fast" ||
+    trimmed === "quick" ||
+    trimmed === "cost-effective"
+  ) {
     return DEFAULT_LLAMA_PARSE_TIER;
   }
   return DEFAULT_LLAMA_PARSE_TIER;

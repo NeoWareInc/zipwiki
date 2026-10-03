@@ -61,6 +61,7 @@ describe("pack confirm", () => {
     assert.match(text, /parsed text only/);
     assert.match(text, /deterministic/);
     assert.match(text, /zstd 7/);
+    assert.match(text, /parser\s+liteparse/);
     assert.doesNotMatch(text, /a\.docx/);
     assert.doesNotMatch(text, /b\.pdf/);
     assert.match(
@@ -78,6 +79,22 @@ describe("pack confirm", () => {
       }),
       /account\s+steve@neoware\.io/,
     );
+  });
+
+  it("shows LlamaParse tier as llamaparse, fast", () => {
+    const text = formatPackPlan({
+      outputPath: "/tmp/out.zipwiki",
+      files: ["/tmp/a.pdf"],
+      fileBytes: 100,
+      phase: "all",
+      recurse: false,
+      omitOriginalDocuments: true,
+      okf: "ai",
+      compression: "zstd",
+      parser: "llamaparse",
+      llamaTier: "cost_effective",
+    });
+    assert.match(text, /parser\s+llamaparse, fast/);
   });
 
   it("labels OKF from the flags that will actually run", () => {

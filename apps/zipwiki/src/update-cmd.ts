@@ -19,6 +19,7 @@ export type UpdateCommandOptions = {
   includeOriginal?: boolean;
   parser?: string;
   parserMode?: string;
+  llamaTier?: string;
   compression?: string;
   level?: number;
   deflate?: boolean;
@@ -82,6 +83,7 @@ export async function runUpdateCommand(
       omitOriginalDocuments,
       parser,
       parserMode,
+      llamaTier: opts.llamaTier,
       compression,
       level: opts.level,
       deflate: opts.deflate,

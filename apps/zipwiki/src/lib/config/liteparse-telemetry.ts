@@ -2,6 +2,7 @@ import {
   reportLiteParseTelemetry,
   reportLlamaParseUsage,
 } from "@zipwiki/api-client";
+import { stageLog } from "../cli/activity-dots.js";
 import {
   isRemoteParseMode,
   resolveParseCredentialSource,
@@ -65,7 +66,7 @@ export async function maybeReportLlamaParseUsage(input: {
   if (!url || !key) {
     if (!warnedUnbilledLlama && !input.quiet) {
       warnedUnbilledLlama = true;
-      console.error(
+      stageLog(
         "[zipwiki] LlamaParse was not charged to an account. Run `zipwiki login` so each job's Llama credits are deducted.",
       );
     }
@@ -85,12 +86,12 @@ export async function maybeReportLlamaParseUsage(input: {
         input.llamaCredits != null
           ? `${input.llamaCredits} Llama credits`
           : "Llama credits pending";
-      console.error(`[zipwiki] billed ${llama}`);
+      stageLog(`[zipwiki] billed ${llama}`);
     }
   } catch (err) {
     if (!input.quiet) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[zipwiki] LlamaParse billing: ${msg}`);
+      stageLog(`[zipwiki] LlamaParse billing: ${msg}`);
     }
   }
 }

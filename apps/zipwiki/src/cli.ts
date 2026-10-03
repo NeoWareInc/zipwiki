@@ -152,6 +152,10 @@ function withPipelineFlags(cmd: Command): Command {
       "Parser routing: fixed|auto (auto = LiteParse probe, escalate to LlamaParse)",
     )
     .option(
+      "--llama-tier <tier>",
+      "LlamaParse tier: quick|cost_effective|agentic|agentic_plus (quick = cost_effective)",
+    )
+    .option(
       "--compression <alg>",
       "ZIP compression: zstd|deflate|store (default: zstd)",
     )
@@ -776,6 +780,10 @@ program
   )
   .option("--parser <engine>", "Document parser: liteparse|llamaparse")
   .option("--parser-mode <mode>", "Parser routing: fixed|auto")
+  .option(
+    "--llama-tier <tier>",
+    "LlamaParse tier: quick|cost_effective|agentic|agentic_plus (quick = cost_effective)",
+  )
   .option("--compression <alg>", "ZIP compression for new members: zstd|deflate|store")
   .option("--deflate", "Force deflate compression for new members")
   .option("--legacy", "Force deflate/store for new members")

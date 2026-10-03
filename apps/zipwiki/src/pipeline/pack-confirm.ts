@@ -7,6 +7,7 @@ import { statSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import type { StageOptions } from "./types.js";
 import { isInteractiveTty } from "../interactive/tty.js";
+import { formatParseEngineSummary } from "../lib/parse/parse-header.js";
 
 export type PackOkfMode = "ai" | "fallback" | "off";
 
@@ -17,6 +18,8 @@ export type PackPlanSettings = {
   okf: PackOkfMode;
   compression: "zstd" | "deflate" | "store";
   parser: "liteparse" | "llamaparse";
+  /** LlamaParse tier when parser is llamaparse (e.g. cost_effective → "fast"). */
+  llamaTier?: string;
 };
 
 export type PackPlan = PackPlanSettings & {
@@ -113,6 +116,13 @@ function okfLabel(mode: PackOkfMode): string {
   return "AI enrichment";
 }
 
+export function parserLabel(plan: Pick<PackPlanSettings, "parser" | "llamaTier">): string {
+  return formatParseEngineSummary({
+    engine: plan.parser,
+    llamaTier: plan.parser === "llamaparse" ? plan.llamaTier : undefined,
+  });
+}
+
 /** Pack configuration printed after the parse session header (no file paths). */
 export function formatPackPlan(plan: PackPlan): string {
   return [
@@ -124,7 +134,7 @@ export function formatPackPlan(plan: PackPlan): string {
     `[zipwiki] okf         ${okfLabel(plan.okf)}`,
     `[zipwiki] compression ${plan.compression}${plan.level !== undefined ? ` ${plan.level}` : ""}`,
     `[zipwiki] recurse     ${plan.recurse ? "on" : "off"}`,
-    `[zipwiki] parser      ${plan.parser}`,
+    `[zipwiki] parser      ${parserLabel(plan)}`,
     "[zipwiki] ────────────────────────────────",
   ].join("\n");
 }
@@ -183,7 +193,7 @@ async function promptPackSettings(
         {
           value: "parser",
           label: "Document parser",
-          hint: next.parser,
+          hint: parserLabel(next),
         },
         { value: "done", label: "Done" },
       ],
@@ -263,6 +273,9 @@ async function promptPackSettings(
     });
     if (cancelMeansAbort(value)) return "abort";
     next.parser = value as PackPlanSettings["parser"];
+    if (next.parser === "llamaparse" && !next.llamaTier?.trim()) {
+      next.llamaTier = "cost_effective";
+    }
   }
 }
 

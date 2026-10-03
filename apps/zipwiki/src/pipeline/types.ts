@@ -60,6 +60,8 @@ export type StageOptions = CliParseOptions & {
   config?: string;
   parser?: ParseEngineId;
   parserMode?: ParserMode;
+  /** LlamaParse tier override (quick|cost_effective|agentic|agentic_plus). */
+  llamaTier?: string;
   compression?: "zstd" | "deflate" | "store";
   level?: number;
   deflate?: boolean;

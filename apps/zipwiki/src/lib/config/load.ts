@@ -80,6 +80,8 @@ export type ZipwikiConfigOverrides = {
   configPath?: string;
   parserEngine?: ParseEngineId;
   parserMode?: ParserMode;
+  /** LlamaParse tier (quick|fast|cost_effective|agentic|agentic_plus). */
+  llamaTier?: string;
   noAiOkf?: boolean;
   noOcr?: boolean;
   omitOriginalDocuments?: boolean;
@@ -133,6 +135,16 @@ function cliOverlay(overrides: ZipwikiConfigOverrides): ZipwikiConfigInput {
       },
     };
   }
+  if (overrides.llamaTier?.trim()) {
+    overlay.parser = {
+      ...(overlay.parser ?? {}),
+      llamaparse: {
+        ...((overlay.parser as { llamaparse?: object } | undefined)?.llamaparse ??
+          {}),
+        tier: resolveLlamaParseTier(overrides.llamaTier),
+      },
+    };
+  }
   if (overrides.noAiOkf === true) {
     overlay.okf = { ...(overlay.okf ?? {}), useAi: false };
   }
@@ -174,9 +186,15 @@ function resolveFromPartials(
     cli as unknown as Record<string, unknown>,
   ) as ResolvedZipwikiConfig;
 
-  // `--parser` is the per-command override and wins over the account.
+  // `--parser` / `--llama-tier` are per-command overrides and win over the account.
   if (cli.parser?.engine) merged.parser.engine = cli.parser.engine;
   if (cli.parser?.mode) merged.parser.mode = cli.parser.mode;
+  if (cli.parser?.llamaparse?.tier) {
+    merged.parser.llamaparse = {
+      ...merged.parser.llamaparse,
+      tier: resolveLlamaParseTier(cli.parser.llamaparse.tier),
+    };
+  }
 
   // Re-apply nested defaults for partially specified sections.
   merged.parser = {
@@ -190,7 +208,8 @@ function resolveFromPartials(
       ...DEFAULT_ZIPWIKI_CONFIG.parser.llamaparse,
       ...merged.parser.llamaparse,
       tier: resolveLlamaParseTier(
-        merged.parser.llamaparse?.tier ??
+        cli.parser?.llamaparse?.tier ??
+          merged.parser.llamaparse?.tier ??
           DEFAULT_ZIPWIKI_CONFIG.parser.llamaparse.tier,
       ),
     },
