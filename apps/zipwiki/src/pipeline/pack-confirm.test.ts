@@ -95,6 +95,27 @@ describe("pack confirm", () => {
       llamaTier: "cost_effective",
     });
     assert.match(text, /parser\s+llamaparse, fast/);
+    assert.match(text, /origin\s+\(none\)/);
+  });
+
+  it("shows origin locator in the pack plan", () => {
+    const text = formatPackPlan({
+      outputPath: "/tmp/out.zipwiki",
+      files: ["/tmp/a.pdf"],
+      fileBytes: 100,
+      phase: "all",
+      recurse: false,
+      omitOriginalDocuments: true,
+      okf: "ai",
+      compression: "zstd",
+      parser: "liteparse",
+      originPattern: String.raw`Ch_(?<year>\d{4})-(?<chapter>\d+)`,
+      originUrlTemplate: "https://laws.flrules.org/{year}/{chapter}",
+      originFile: true,
+    });
+    assert.match(text, /origin\s+https:\/\/laws\.flrules\.org\/\{year\}\/\{chapter\}/);
+    assert.match(text, /pattern Ch_\(\?<year>/);
+    assert.match(text, /file: URI/);
   });
 
   it("labels OKF from the flags that will actually run", () => {

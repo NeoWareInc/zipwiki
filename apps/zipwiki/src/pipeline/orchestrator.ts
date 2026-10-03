@@ -364,6 +364,10 @@ export async function runStage(
         compression: opts.compression ?? project.pack.compression,
         parser: project.parser.engine === "llamaparse" ? "llamaparse" : "liteparse",
         llamaTier: project.parser.llamaparse?.tier,
+        originPattern: opts.originPattern,
+        originUrlTemplate: opts.originUrlTemplate,
+        originFile: opts.originFile === true,
+        originDrive: opts.originDrive === true,
       });
       await runPackConfirmLoop({
         printPlan: () => {

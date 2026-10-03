@@ -20,6 +20,10 @@ export type PackPlanSettings = {
   parser: "liteparse" | "llamaparse";
   /** LlamaParse tier when parser is llamaparse (e.g. cost_effective → "fast"). */
   llamaTier?: string;
+  originPattern?: string;
+  originUrlTemplate?: string;
+  originFile?: boolean;
+  originDrive?: boolean;
 };
 
 export type PackPlan = PackPlanSettings & {
@@ -123,6 +127,24 @@ export function parserLabel(plan: Pick<PackPlanSettings, "parser" | "llamaTier">
   });
 }
 
+/** Human-readable Extra Field 0x014F origin locator plan. */
+export function originLabel(
+  plan: Pick<
+    PackPlanSettings,
+    "originPattern" | "originUrlTemplate" | "originFile" | "originDrive"
+  >,
+): string {
+  const bits: string[] = [];
+  const pattern = plan.originPattern?.trim();
+  const template = plan.originUrlTemplate?.trim();
+  if (template) bits.push(template);
+  if (pattern) bits.push(`pattern ${pattern}`);
+  if (plan.originFile) bits.push("file: URI");
+  if (plan.originDrive) bits.push("Google Drive URL");
+  if (bits.length === 0) return "(none)";
+  return bits.join(" · ");
+}
+
 /** Pack configuration printed after the parse session header (no file paths). */
 export function formatPackPlan(plan: PackPlan): string {
   return [
@@ -131,6 +153,7 @@ export function formatPackPlan(plan: PackPlan): string {
     `[zipwiki] output      ${plan.outputPath ? displayPath(plan.outputPath) : "(set -o, or change settings)"}`,
     `[zipwiki] files       ${plan.files.length} (${formatBytes(plan.fileBytes)})`,
     `[zipwiki] contents    ${plan.omitOriginalDocuments ? "parsed text only" : "parsed text + original files"}`,
+    `[zipwiki] origin      ${originLabel(plan)}`,
     `[zipwiki] okf         ${okfLabel(plan.okf)}`,
     `[zipwiki] compression ${plan.compression}${plan.level !== undefined ? ` ${plan.level}` : ""}`,
     `[zipwiki] recurse     ${plan.recurse ? "on" : "off"}`,
