@@ -15,6 +15,12 @@ export type ZipListEntry = {
   uncompressedSize: number;
   crc32: number;
   localHeaderOffset: number;
+  /** Central-directory MS-DOS last-mod time. */
+  dosTime: number;
+  /** Central-directory MS-DOS last-mod date. */
+  dosDate: number;
+  /** Unix seconds from DOS last-mod (local calendar fields). */
+  mtimeSeconds: number;
   originUri?: string;
   originCrc32?: string;
   originSize?: number;
@@ -22,6 +28,23 @@ export type ZipListEntry = {
   originMtimeUtc?: string;
   originSha256?: string;
 };
+
+/** Decode MS-DOS date/time to Unix seconds (local wall clock). */
+export function dosDateTimeToUnixSeconds(
+  dosTime: number,
+  dosDate: number,
+): number {
+  const year = 1980 + ((dosDate >> 9) & 0x7f);
+  const month = (dosDate >> 5) & 0x0f;
+  const day = dosDate & 0x1f;
+  const hours = (dosTime >> 11) & 0x1f;
+  const minutes = (dosTime >> 5) & 0x3f;
+  const seconds = (dosTime & 0x1f) * 2;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return 0;
+  const ms = new Date(year, month - 1, day, hours, minutes, seconds).getTime();
+  if (Number.isNaN(ms)) return 0;
+  return Math.floor(ms / 1000);
+}
 
 export function zipMethodLabel(method: number): string {
   if (method === 0) return "Stored";
@@ -171,6 +194,8 @@ export function listZipEntriesFromBuffer(buf: ArrayBuffer): ZipListEntry[] {
       throw new Error(`Invalid central directory signature at ${offset}`);
     }
     const method = u16(view, offset + 10);
+    const dosTime = u16(view, offset + 12);
+    const dosDate = u16(view, offset + 14);
     const crc32 = u32(view, offset + 16);
     const compressedSize = u32(view, offset + 20);
     const uncompressedSize = u32(view, offset + 24);
@@ -192,6 +217,9 @@ export function listZipEntriesFromBuffer(buf: ArrayBuffer): ZipListEntry[] {
       uncompressedSize,
       crc32,
       localHeaderOffset,
+      dosTime,
+      dosDate,
+      mtimeSeconds: dosDateTimeToUnixSeconds(dosTime, dosDate),
       ...originToApiFields(origin),
     });
     offset += 46 + nameLen + extraLen + commentLen;

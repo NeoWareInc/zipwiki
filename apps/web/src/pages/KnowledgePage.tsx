@@ -198,6 +198,10 @@ function primaryPath(p: NzipOpenSummary["primaries"][number]): string {
   );
 }
 
+/**
+ * Size / mtime for an input document: prefer the original bytes stored in the
+ * archive; otherwise Extra Field 0x014F on the parse (omit-original packs).
+ */
 function documentOrigin(
   summary: NzipOpenSummary,
   p: NzipOpenSummary["primaries"][number],
@@ -206,14 +210,33 @@ function documentOrigin(
   const matched = summary.origins.find((o) => o.primaryPath === key);
   const uri =
     (typeof p.originUri === "string" && p.originUri) || matched?.originUri;
-  const size =
-    typeof p.originSize === "number" ? p.originSize : matched?.originSize;
-  const mtime =
-    typeof p.originMtime === "number" ? p.originMtime : matched?.originMtime;
+  // Bytes at the primary path are the original in-archive; omit-original packs
+  // leave that path out and keep size/mtime on Extra Field 0x014F instead.
+  const stored = listedEntry(summary, key);
+
+  let size: number | undefined;
+  let mtime: number | undefined;
+  if (stored) {
+    size = stored.uncompressedSize;
+    mtime =
+      typeof stored.originMtime === "number"
+        ? stored.originMtime
+        : stored.mtimeSeconds > 0
+          ? stored.mtimeSeconds
+          : typeof p.originMtime === "number"
+            ? p.originMtime
+            : matched?.originMtime;
+  } else {
+    size =
+      typeof p.originSize === "number" ? p.originSize : matched?.originSize;
+    mtime =
+      typeof p.originMtime === "number" ? p.originMtime : matched?.originMtime;
+  }
+
   const bits: string[] = [];
   if (size !== undefined) bits.push(formatBytes(size));
   if (mtime !== undefined) bits.push(`modified ${formatOriginMtime(mtime)}`);
-  return { uri, size, bits };
+  return { uri, size, mtime, bits, storedInArchive: Boolean(stored) };
 }
 
 function isOkfTopic(path: string): boolean {
@@ -254,7 +277,7 @@ function inputDocumentSummary(summary: NzipOpenSummary): string {
   let sized = 0;
   for (const primary of summary.primaries) {
     const { size } = documentOrigin(summary, primary);
-    if (size === undefined) continue;
+    if (typeof size !== "number") continue;
     bytes += size;
     sized += 1;
   }
@@ -291,13 +314,8 @@ function archiveSizeLine(summary: NzipOpenSummary): string {
 function documentSizeLine(summary: NzipOpenSummary): string {
   let original = 0;
   for (const primary of summary.primaries) {
-    const entry = listedEntry(summary, primaryPath(primary));
-    if (entry) {
-      original += entry.uncompressedSize;
-      continue;
-    }
     const { size } = documentOrigin(summary, primary);
-    if (size !== undefined) original += size;
+    if (typeof size === "number") original += size;
   }
 
   let parsedCompressed = 0;
