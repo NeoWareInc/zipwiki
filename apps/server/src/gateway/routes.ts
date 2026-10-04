@@ -291,6 +291,7 @@ export async function registerGateway(
     const bytes = (body as { bytes?: unknown }).bytes;
     const filename = (body as { filename?: unknown }).filename;
     const jobId = (body as { jobId?: unknown }).jobId;
+    const userKey = (body as { userKey?: unknown }).userKey === true;
     let validated;
     try {
       validated = await deps.convex.validateKey(token, "parse");
@@ -300,14 +301,15 @@ export async function registerGateway(
     if (!validated.ok) {
       return reply.code(validated.status).send({ error: validated.error });
     }
-    if (!validated.billable || validated.fallback) {
+    if (!userKey && (!validated.billable || validated.fallback)) {
       return reply.code(402).send({ error: "quota_fallback_free" });
     }
     try {
       const recorded = await deps.convex.recordUsage({
         accountId: validated.accountId,
         kind: "parse",
-        billable: true,
+        billable: !userKey,
+        userKey,
         usage: {
           provider: "llamaparse",
           engine: "llamaparse",

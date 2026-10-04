@@ -38,6 +38,16 @@ describe("parse header", () => {
       }),
       "llamaparse, fast",
     );
+    assert.equal(
+      formatParseEngineSummary({
+        command: "pack",
+        engine: "llamaparse",
+        ocr: true,
+        llamaTier: "cost_effective",
+        userApiKey: true,
+      }),
+      "llamaparse, fast (user api key)",
+    );
     const lines = formatParseHeader({
       command: "pack",
       engine: "llamaparse",

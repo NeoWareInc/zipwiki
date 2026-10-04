@@ -3,7 +3,9 @@ import { tmpdir } from "node:os";
 import { basename, join, parse as parsePath, relative } from "node:path";
 import LiteParse, { type OutputFormat } from "@llamaindex/liteparse";
 import {
+  isLlamaCloudConfigured,
   loadZipwikiConfig,
+  resolveParseCredentialSource,
   type ParseEngineId,
   type ParserMode,
 } from "../config/index.js";
@@ -78,6 +80,10 @@ export async function runParseFile(
       printParseHeader({
         command: "parse-file",
         engine: engineLabel,
+        userApiKey:
+          project.parser.engine === "llamaparse" &&
+          resolveParseCredentialSource() !== "zipwiki" &&
+          isLlamaCloudConfigured(),
         mode: project.parser.mode,
         ocr: ocrEnabled,
         format,
@@ -316,6 +322,10 @@ export async function runBatchParse(
       printParseHeader({
         command: "batch-parse",
         engine: engineLabel,
+        userApiKey:
+          project.parser.engine === "llamaparse" &&
+          resolveParseCredentialSource() !== "zipwiki" &&
+          isLlamaCloudConfigured(),
         mode: project.parser.mode,
         ocr: ocrEnabled,
         format,

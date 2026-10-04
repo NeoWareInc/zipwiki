@@ -20,6 +20,8 @@ export type PackPlanSettings = {
   parser: "liteparse" | "llamaparse";
   /** LlamaParse tier when parser is llamaparse (e.g. cost_effective → "fast"). */
   llamaTier?: string;
+  /** True when LlamaParse uses LLAMA_CLOUD_API_KEY on this machine. */
+  userApiKey?: boolean;
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
@@ -120,10 +122,13 @@ function okfLabel(mode: PackOkfMode): string {
   return "AI enrichment";
 }
 
-export function parserLabel(plan: Pick<PackPlanSettings, "parser" | "llamaTier">): string {
+export function parserLabel(
+  plan: Pick<PackPlanSettings, "parser" | "llamaTier" | "userApiKey">,
+): string {
   return formatParseEngineSummary({
     engine: plan.parser,
     llamaTier: plan.parser === "llamaparse" ? plan.llamaTier : undefined,
+    userApiKey: plan.parser === "llamaparse" && plan.userApiKey === true,
   });
 }
 

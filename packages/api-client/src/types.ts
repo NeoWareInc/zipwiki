@@ -17,6 +17,8 @@ export const ClientConfigSchema = z.object({
       liteparseFailCount: z.number().default(0),
       parseCreditsSpent: z.number().default(0),
       okfCreditsSpent: z.number().default(0),
+      byoLlamaCount: z.number().optional(),
+      byoLlamaCredits: z.number().optional(),
       periodStart: z.string(),
       periodEnd: z.string(),
     })

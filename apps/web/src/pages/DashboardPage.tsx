@@ -139,6 +139,7 @@ function formatBytes(n: number | null): string {
 }
 
 function eventLabel(type: string, engine?: string | null): string {
+  if (type === "llamaparse_byo") return "LlamaParse (your key)";
   if (type === "parse") return "Parsing";
   if (type === "okf") return "OKF Enrichment";
   if (type === "liteparse") return "LiteParse";
@@ -194,6 +195,8 @@ export default function DashboardPage() {
   const parsePages = Math.max(usage?.parsePages ?? 0, logParsePages);
   const parseCredits = usage?.parseCreditsSpent ?? 0;
   const okfCredits = usage?.okfCreditsSpent ?? 0;
+  const ownKeyFiles = usage?.byoLlamaCount ?? 0;
+  const ownKeyCredits = usage?.byoLlamaCredits ?? 0;
 
   return (
     <div className="space-y-8">
@@ -287,6 +290,24 @@ export default function DashboardPage() {
               </p>
             </KindCard>
           </div>
+
+          {ownKeyFiles > 0 || ownKeyCredits > 0 ? (
+            <div className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm">
+              <p className="font-medium text-(--ink)">
+                LlamaParse (your API key)
+              </p>
+              <p className="mt-1 tabular-nums">
+                {ownKeyFiles.toLocaleString()} file
+                {ownKeyFiles === 1 ? "" : "s"}
+                {" · "}
+                {ownKeyCredits.toLocaleString()} Llama credits
+              </p>
+              <p className="mt-2 text-xs text-(--muted)">
+                Billed by LlamaParse on your key. These jobs do not spend
+                ZipWiki credits.
+              </p>
+            </div>
+          ) : null}
 
           <div className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm">
             <p className="font-medium text-(--ink)">
@@ -406,10 +427,16 @@ export default function DashboardPage() {
                             : "—"}
                       </td>
                       <td className="py-2">
-                        <CreditAmount
-                          type={row.type}
-                          creditCost={row.creditCost}
-                        />
+                        {row.type === "llamaparse_byo" ? (
+                          <span className="tabular-nums text-(--muted)">
+                            {(row.llamaCredits ?? 0).toLocaleString()} Llama
+                          </span>
+                        ) : (
+                          <CreditAmount
+                            type={row.type}
+                            creditCost={row.creditCost}
+                          />
+                        )}
                       </td>
                     </tr>
                   );

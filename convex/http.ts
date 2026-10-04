@@ -347,6 +347,7 @@ http.route({
         llama_credits?: number;
         filename?: string;
         job_id?: string;
+        user_key?: boolean;
       };
       if (!body.account_id || !body.kind) {
         return json({ error: "invalid_request" }, 400);
@@ -365,6 +366,7 @@ http.route({
         llamaCredits: body.llama_credits,
         filename: body.filename,
         jobId: body.job_id,
+        userKey: body.user_key === true,
       });
       return json({ ok: true, ...result });
     } catch {

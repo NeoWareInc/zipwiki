@@ -44,6 +44,8 @@ export interface ConvexGateway {
     accountId: string;
     kind: UsageKind;
     billable: boolean;
+    /** Account's own LlamaParse key. Record only; do not debit ZipWiki credits. */
+    userKey?: boolean;
     usage: UsageMeta;
   }): Promise<RecordResult>;
   getAccountSettings(accountId: string): Promise<AccountSettingsPayload>;

@@ -1,6 +1,9 @@
 import { apiFetch } from "./client-config.js";
 
-/** Report one local LlamaParse job so ZipWiki can debit that account. */
+/**
+ * Report one local LlamaParse job.
+ * `userKey` records Llama credits for the dashboard and does not debit ZipWiki.
+ */
 export async function reportLlamaParseUsage(
   baseUrl: string,
   apiKey: string,
@@ -10,6 +13,7 @@ export async function reportLlamaParseUsage(
     bytes?: number;
     filename?: string;
     jobId?: string;
+    userKey?: boolean;
   },
 ): Promise<void> {
   const res = await apiFetch(baseUrl, "/api/usage/llamaparse", {
@@ -21,6 +25,7 @@ export async function reportLlamaParseUsage(
       bytes: input.bytes,
       filename: input.filename,
       jobId: input.jobId,
+      userKey: input.userKey === true,
     }),
   });
   if (!res.ok) {

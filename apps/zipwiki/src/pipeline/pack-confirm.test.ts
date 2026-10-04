@@ -94,8 +94,25 @@ describe("pack confirm", () => {
       parser: "llamaparse",
       llamaTier: "cost_effective",
     });
-    assert.match(text, /parser\s+llamaparse, fast/);
+    assert.match(text, /parser\s+llamaparse, fast$/m);
     assert.match(text, /origin\s+\(none\)/);
+  });
+
+  it("marks a local LlamaParse key on the pack plan", () => {
+    const text = formatPackPlan({
+      outputPath: "/tmp/out.zipwiki",
+      files: ["/tmp/a.pdf"],
+      fileBytes: 100,
+      phase: "all",
+      recurse: false,
+      omitOriginalDocuments: true,
+      okf: "ai",
+      compression: "zstd",
+      parser: "llamaparse",
+      llamaTier: "cost_effective",
+      userApiKey: true,
+    });
+    assert.match(text, /parser\s+llamaparse, fast \(user api key\)/);
   });
 
   it("shows origin locator in the pack plan", () => {

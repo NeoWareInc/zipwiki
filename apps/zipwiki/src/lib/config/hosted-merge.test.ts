@@ -79,4 +79,45 @@ describe("formatClientUsageSummary", () => {
       ].join("\n"),
     );
   });
+
+  it("lists a user LlamaParse key apart from ZipWiki credits", () => {
+    const previous = config({
+      creditsRemaining: 770,
+      usage: {
+        parseCount: 0,
+        okfCount: 0,
+        liteparseSuccessCount: 0,
+        liteparseFailCount: 0,
+        parseCreditsSpent: 0,
+        okfCreditsSpent: 0,
+        byoLlamaCount: 0,
+        byoLlamaCredits: 0,
+        periodStart: "2026-10-01T00:00:00.000Z",
+        periodEnd: "2026-11-01T00:00:00.000Z",
+      },
+    });
+    const current = config({
+      creditsRemaining: 770,
+      usage: {
+        parseCount: 0,
+        okfCount: 0,
+        liteparseSuccessCount: 0,
+        liteparseFailCount: 0,
+        parseCreditsSpent: 0,
+        okfCreditsSpent: 0,
+        byoLlamaCount: 5,
+        byoLlamaCredits: 441,
+        periodStart: "2026-10-01T00:00:00.000Z",
+        periodEnd: "2026-11-01T00:00:00.000Z",
+      },
+    });
+    assert.equal(
+      formatClientUsageSummary(current, "done", previous),
+      [
+        "[zipwiki] done",
+        "[zipwiki]   LlamaParse   5 files · 441 Llama credits (your key)",
+        "[zipwiki]   remaining    770",
+      ].join("\n"),
+    );
+  });
 });

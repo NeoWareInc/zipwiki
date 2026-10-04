@@ -43,7 +43,18 @@ function usageSlice(config: ClientConfig) {
     liteFail: config.usage?.liteparseFailCount ?? 0,
     parseCredits: config.usage?.parseCreditsSpent ?? 0,
     okfCredits: config.usage?.okfCreditsSpent ?? 0,
+    byoCount: config.usage?.byoLlamaCount ?? 0,
+    byoCredits: config.usage?.byoLlamaCredits ?? 0,
   };
+}
+
+function ownKeyLine(files: number, llamaCredits: number): string {
+  const label = "LlamaParse".padEnd(12);
+  const amount =
+    llamaCredits > 0
+      ? ` · ${llamaCredits} Llama credit${llamaCredits === 1 ? "" : "s"} (your key)`
+      : " (your key)";
+  return `[zipwiki]   ${label} ${files} file${files === 1 ? "" : "s"}${amount}`;
 }
 
 function serviceLine(
@@ -87,9 +98,14 @@ export function formatClientUsageSummary(
     const dOkf = cur.okf - prev.okf;
     const dParseCredits = cur.parseCredits - prev.parseCredits;
     const dOkfCredits = cur.okfCredits - prev.okfCredits;
+    const dByo = cur.byoCount - prev.byoCount;
+    const dByoCredits = cur.byoCredits - prev.byoCredits;
 
     if (dLite > 0) {
       lines.push(serviceLine("LiteParse", dLite, null));
+    }
+    if (dByo > 0) {
+      lines.push(ownKeyLine(dByo, dByoCredits));
     }
     if (dParse > 0) {
       lines.push(serviceLine("LlamaParse", dParse, dParseCredits));

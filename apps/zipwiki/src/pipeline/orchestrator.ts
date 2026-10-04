@@ -19,6 +19,7 @@ import {
   refreshAndPrintClientUsage,
   resolveOmitOriginalDocuments,
   credentialForRemoteOkf,
+  isLlamaCloudConfigured,
   resolveOkfCredentialSource,
   resolveParseCredentialSource,
 } from "../lib/config/index.js";
@@ -319,9 +320,14 @@ export async function runStage(
       showedHeader = true;
       const engineLabel =
         project.parser.mode === "auto" ? "auto" : project.parser.engine;
+      const userApiKey =
+        project.parser.engine === "llamaparse" &&
+        parseCredential !== "zipwiki" &&
+        isLlamaCloudConfigured();
       printParseHeader({
         command: phase === "all" ? "pack" : "stage",
         engine: engineLabel,
+        userApiKey,
         mode: project.parser.mode,
         ocr: ocrEnabled,
         format: "markdown",
@@ -364,6 +370,10 @@ export async function runStage(
         compression: opts.compression ?? project.pack.compression,
         parser: project.parser.engine === "llamaparse" ? "llamaparse" : "liteparse",
         llamaTier: project.parser.llamaparse?.tier,
+        userApiKey:
+          project.parser.engine === "llamaparse" &&
+          parseCredential !== "zipwiki" &&
+          isLlamaCloudConfigured(),
         originPattern: opts.originPattern,
         originUrlTemplate: opts.originUrlTemplate,
         originFile: opts.originFile === true,

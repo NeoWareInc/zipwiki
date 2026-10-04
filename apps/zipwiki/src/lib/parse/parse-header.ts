@@ -33,6 +33,8 @@ export type ParseHeaderInfo = {
   complexity?: boolean;
   /** LlamaParse tier when engine is llamaparse or auto. */
   llamaTier?: string;
+  /** True when LlamaParse calls LlamaCloud with this machine's API key. */
+  userApiKey?: boolean;
   escalateNeedsOcrRatio?: number;
   escalateLayoutRatio?: number;
   fileCount?: number;
@@ -63,11 +65,12 @@ function shortLlamaTier(tier?: string): string | undefined {
 
 /** Selectable parser summary, e.g. `llamaparse, fast` or `liteparse`. */
 export function formatParseEngineSummary(
-  info: Pick<ParseHeaderInfo, "engine" | "llamaTier">,
+  info: Pick<ParseHeaderInfo, "engine" | "llamaTier" | "userApiKey">,
 ): string {
   if (info.engine === "llamaparse") {
     const tier = shortLlamaTier(info.llamaTier);
-    return tier ? `llamaparse, ${tier}` : "llamaparse";
+    const label = tier ? `llamaparse, ${tier}` : "llamaparse";
+    return info.userApiKey ? `${label} (user api key)` : label;
   }
   if (info.engine === "auto") {
     const tier = shortLlamaTier(info.llamaTier);

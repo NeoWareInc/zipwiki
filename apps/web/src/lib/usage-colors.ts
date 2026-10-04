@@ -2,7 +2,9 @@
 export type UsageVisualKind = "parse" | "okf" | "query" | "other";
 
 export function usageVisualKind(type: string): UsageVisualKind {
-  if (type === "parse" || type === "liteparse") return "parse";
+  if (type === "parse" || type === "liteparse" || type === "llamaparse_byo") {
+    return "parse";
+  }
   if (type === "okf") return "okf";
   if (type === "query" || type === "pack") return "query";
   return "other";

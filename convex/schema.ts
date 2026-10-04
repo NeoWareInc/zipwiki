@@ -109,6 +109,10 @@ export default defineSchema({
     /** Soft pack / query activity counts. */
     packCount: v.optional(v.number()),
     queryCount: v.optional(v.number()),
+    /** Documents parsed with the account's own LlamaParse key. Not ZipWiki credits. */
+    byoLlamaCount: v.optional(v.number()),
+    /** LlamaParse `job.usage.credits` for those documents. */
+    byoLlamaCredits: v.optional(v.number()),
   }).index("by_account_period", ["accountId", "periodStart"]),
 
   usageEvents: defineTable({

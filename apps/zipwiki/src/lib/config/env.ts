@@ -112,14 +112,33 @@ export function loadEnvFiles(startDir: string = process.cwd()): string[] {
   return loaded;
 }
 
+/** True when a project env file comments out `KEY=...` so a fallback must not fill it. */
+function envFileCommentsOut(path: string, key: string): boolean {
+  if (!existsSync(path)) return false;
+  for (const raw of readFileSync(path, "utf-8").split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line.startsWith("#")) continue;
+    let body = line.replace(/^#+\s*/, "");
+    if (body.startsWith("export ")) body = body.slice("export ".length).trim();
+    const eq = body.indexOf("=");
+    if (eq <= 0) continue;
+    if (body.slice(0, eq).trim() === key) return true;
+  }
+  return false;
+}
+
 /**
  * Fill `LLAMA_CLOUD_API_KEY` from this repo's deploy env when the CLI has none.
- * Shell, project `.env`, and `~/.zipwiki/.env` win. Other deploy secrets are ignored.
+ * Shell, project `.env`, and `~/.zipwiki/.env` win. A commented-out key in
+ * `.env` or `.env.local` blocks this fallback. Other deploy secrets are ignored.
  * `deploy/.env.prod` is not read.
  */
 export function loadRepoLlamaCloudKey(startDir: string = process.cwd()): boolean {
   if (process.env.LLAMA_CLOUD_API_KEY?.trim()) return true;
   const root = findEnvRoot(startDir);
+  for (const name of ENV_FILENAMES) {
+    if (envFileCommentsOut(join(root, name), "LLAMA_CLOUD_API_KEY")) return false;
+  }
   for (const rel of ["deploy/.env", "deploy/.env.dev"]) {
     const path = join(root, rel);
     if (!existsSync(path)) continue;

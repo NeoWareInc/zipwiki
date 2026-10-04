@@ -126,6 +126,11 @@ export const recordUsage = internalMutation({
     llamaCredits: v.optional(v.number()),
     filename: v.optional(v.string()),
     jobId: v.optional(v.string()),
+    /**
+     * The job used the account's LlamaParse key. Record it apart from hosted
+     * parse and do not debit ZipWiki credits.
+     */
+    userKey: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const {
@@ -142,7 +147,9 @@ export const recordUsage = internalMutation({
       llamaCredits,
       filename,
       jobId,
+      userKey,
     } = args;
+    const ownKey = userKey === true && kind === "parse";
     const safeFilename =
       typeof filename === "string" && filename.trim()
         ? filename.trim().slice(0, 512)
@@ -151,8 +158,9 @@ export const recordUsage = internalMutation({
       typeof jobId === "string" && jobId.trim()
         ? jobId.trim().slice(0, 128)
         : undefined;
-    const creditCost =
-      kind === "parse"
+    const creditCost = ownKey
+      ? 0
+      : kind === "parse"
         ? llamaCredits != null
           ? zipwikiCreditsForLlamaCredits(llamaCredits)
           : CREDIT_COST_PARSE
@@ -161,6 +169,12 @@ export const recordUsage = internalMutation({
             inputTokens,
             outputTokens,
           });
+    const hostedParse = ownKey ? 0 : kind === "parse" ? 1 : 0;
+    const hostedLlama = ownKey ? 0 : kind === "parse" ? (llamaCredits ?? 0) : 0;
+    const hostedParseCredits = ownKey ? 0 : kind === "parse" ? creditCost : 0;
+    const hostedPages = ownKey ? 0 : kind === "parse" ? (pages ?? 0) : 0;
+    const byoCount = ownKey ? 1 : 0;
+    const byoCredits = ownKey ? (llamaCredits ?? 0) : 0;
     const periodStart = startOfMonthMs();
     let period = await ctx.db
       .query("usagePeriods")
@@ -177,13 +191,15 @@ export const recordUsage = internalMutation({
       const id = await ctx.db.insert("usagePeriods", {
         accountId,
         periodStart,
-        parseCount: kind === "parse" ? 1 : 0,
+        parseCount: hostedParse,
         okfCount: kind === "okf" ? 1 : 0,
         liteparseSuccessCount: 0,
         liteparseFailCount: 0,
-        llamaCredits: kind === "parse" ? (llamaCredits ?? 0) : 0,
-        parseCreditsSpent: kind === "parse" ? creditCost : 0,
-        pages: kind === "parse" ? (pages ?? 0) : 0,
+        llamaCredits: hostedLlama,
+        parseCreditsSpent: hostedParseCredits,
+        pages: hostedPages,
+        byoLlamaCount: byoCount,
+        byoLlamaCredits: byoCredits,
         okfInputTokens: okfIn,
         okfOutputTokens: okfOut,
         okfCreditsSpent: okfCredits,
@@ -193,16 +209,13 @@ export const recordUsage = internalMutation({
       period = (await ctx.db.get(id))!;
     } else {
       await ctx.db.patch(period._id, {
-        parseCount: period.parseCount + (kind === "parse" ? 1 : 0),
+        parseCount: period.parseCount + hostedParse,
         okfCount: period.okfCount + (kind === "okf" ? 1 : 0),
-        llamaCredits:
-          (period.llamaCredits ?? 0) +
-          (kind === "parse" ? (llamaCredits ?? 0) : 0),
-        parseCreditsSpent:
-          (period.parseCreditsSpent ?? 0) +
-          (kind === "parse" ? creditCost : 0),
-        pages:
-          (period.pages ?? 0) + (kind === "parse" ? (pages ?? 0) : 0),
+        llamaCredits: (period.llamaCredits ?? 0) + hostedLlama,
+        parseCreditsSpent: (period.parseCreditsSpent ?? 0) + hostedParseCredits,
+        pages: (period.pages ?? 0) + hostedPages,
+        byoLlamaCount: (period.byoLlamaCount ?? 0) + byoCount,
+        byoLlamaCredits: (period.byoLlamaCredits ?? 0) + byoCredits,
         okfInputTokens: (period.okfInputTokens ?? 0) + okfIn,
         okfOutputTokens: (period.okfOutputTokens ?? 0) + okfOut,
         okfCreditsSpent: (period.okfCreditsSpent ?? 0) + okfCredits,
@@ -211,7 +224,7 @@ export const recordUsage = internalMutation({
 
     await ctx.db.insert("usageEvents", {
       accountId,
-      type: kind,
+      type: ownKey ? "llamaparse_byo" : kind,
       engine,
       bytes,
       provider,
@@ -227,10 +240,12 @@ export const recordUsage = internalMutation({
 
     const providerSlug =
       provider ?? (kind === "parse" ? "llamaparse" : "anthropic");
-    const providerAccount = await ctx.db
-      .query("providerAccounts")
-      .withIndex("by_slug", (q) => q.eq("slug", providerSlug))
-      .unique();
+    const providerAccount = ownKey
+      ? null
+      : await ctx.db
+          .query("providerAccounts")
+          .withIndex("by_slug", (q) => q.eq("slug", providerSlug))
+          .unique();
     if (providerAccount) {
       await ctx.db.insert("providerFloatLedger", {
         providerAccountId: providerAccount._id,
@@ -696,6 +711,8 @@ export const myUsage = query({
       parseCreditsSpent: period?.parseCreditsSpent ?? 0,
       parsePages: period?.pages ?? 0,
       llamaCredits: period?.llamaCredits ?? 0,
+      byoLlamaCount: period?.byoLlamaCount ?? 0,
+      byoLlamaCredits: period?.byoLlamaCredits ?? 0,
       okfInputTokens: period?.okfInputTokens ?? 0,
       okfOutputTokens: period?.okfOutputTokens ?? 0,
       okfCreditsSpent: period?.okfCreditsSpent ?? 0,

@@ -9,6 +9,7 @@ import {
   resolveZipwikiApiKey,
   resolveZipwikiApiUrl,
 } from "./api.js";
+import { isLlamaCloudConfigured } from "./load.js";
 
 /**
  * LiteParse telemetry when the CLI is connected to ZipWiki and parse is
@@ -44,9 +45,9 @@ export async function maybeReportLocalLiteParse(input: {
 let warnedUnbilledLlama = false;
 
 /**
- * Debit the signed-in account for a LlamaParse job that ran on this machine.
- * Hosted `/api/parse` already records the job. A bring-your-own Llama key is
- * billed by LlamaParse, not ZipWiki.
+ * Record a LlamaParse job that ran on this machine.
+ * Hosted `/api/parse` already records the job against ZipWiki credits.
+ * A job that used `LLAMA_CLOUD_API_KEY` is listed separately and is not debited.
  */
 export async function maybeReportLlamaParseUsage(input: {
   engine?: string;
@@ -59,7 +60,8 @@ export async function maybeReportLlamaParseUsage(input: {
 }): Promise<void> {
   if (input.engine !== "llamaparse") return;
   if (isRemoteParseMode()) return;
-  if (resolveParseCredentialSource() === "llama") return;
+  if (resolveParseCredentialSource() === "zipwiki") return;
+  if (!isLlamaCloudConfigured()) return;
 
   const url = resolveZipwikiApiUrl();
   const key = resolveZipwikiApiKey();
@@ -67,7 +69,7 @@ export async function maybeReportLlamaParseUsage(input: {
     if (!warnedUnbilledLlama && !input.quiet) {
       warnedUnbilledLlama = true;
       stageLog(
-        "[zipwiki] LlamaParse was not charged to an account. Run `zipwiki login` so each job's Llama credits are deducted.",
+        "[zipwiki] LlamaParse used your API key. ZipWiki credits were not charged. Sign in to list that usage on the dashboard.",
       );
     }
     return;
@@ -80,13 +82,16 @@ export async function maybeReportLlamaParseUsage(input: {
       bytes: input.bytes,
       filename: input.filename,
       jobId: input.jobId,
+      userKey: true,
     });
     if (!input.quiet) {
       const llama =
         input.llamaCredits != null
           ? `${input.llamaCredits} Llama credits`
           : "Llama credits pending";
-      stageLog(`[zipwiki] billed ${llama}`);
+      stageLog(
+        `[zipwiki] recorded ${llama} on your LlamaParse key (ZipWiki credits unchanged)`,
+      );
     }
   } catch (err) {
     if (!input.quiet) {

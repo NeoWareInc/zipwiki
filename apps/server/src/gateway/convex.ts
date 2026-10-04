@@ -117,6 +117,7 @@ export function createConvexGateway(options?: {
         llama_credits: args.usage.llamaCredits,
         filename: args.usage.filename,
         job_id: args.usage.jobId,
+        user_key: args.userKey === true,
       });
       const data = (await res.json().catch(() => ({}))) as RecordResult & {
         error?: string;
