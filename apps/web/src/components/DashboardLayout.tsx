@@ -65,6 +65,24 @@ function UsersIcon() {
   );
 }
 
+function CreateIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden className="shrink-0">
+      <path d="M12 3v12M6 9h12" strokeLinecap="round" />
+      <path d="M5 21h14a2 2 0 0 0 2-2v-3H3v3a2 2 0 0 0 2 2z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function QueryIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden className="shrink-0">
+      <circle cx="11" cy="11" r="6.25" />
+      <path d="M16 16l4.5 4.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function SidebarNav({
   isAdmin,
   pathname,
@@ -93,6 +111,7 @@ function SidebarNav({
         className={() => navClass({ isActive: createActive })}
         onClick={onNavigate}
       >
+        <CreateIcon />
         Create ZipWiki
       </NavLink>
       <NavLink
@@ -100,6 +119,7 @@ function SidebarNav({
         className={() => navClass({ isActive: knowledgeActive })}
         onClick={onNavigate}
       >
+        <QueryIcon />
         Query ZipWiki
       </NavLink>
       {isAdmin && (
@@ -109,7 +129,7 @@ function SidebarNav({
           onClick={onNavigate}
         >
           <UsersIcon />
-          Users
+          Admin Pages
         </NavLink>
       )}
     </nav>

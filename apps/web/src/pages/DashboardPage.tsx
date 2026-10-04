@@ -131,57 +131,47 @@ function KindCard({
   );
 }
 
-function formatBytes(n: number | null): string {
-  if (n == null || !Number.isFinite(n) || n <= 0) return "—";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function eventLabel(type: string, engine?: string | null): string {
-  if (type === "llamaparse_byo") return "LlamaParse (your key)";
-  if (type === "parse") return "Parsing";
-  if (type === "okf") return "OKF Enrichment";
-  if (type === "liteparse") return "LiteParse";
-  if (type === "pack") return "Pack Knowledge Archive";
-  if (type === "query") {
-    const action = engine?.trim();
-    if (action === "open") return "Open Knowledge Archive";
-    if (action === "search") return "Search Knowledge Archive";
-    if (action === "query") return "Query Knowledge Archive";
-    if (action === "list") return "List Knowledge Archive";
-    if (action === "web_open") return "Web open Knowledge Archive";
-    if (action === "web_search") return "Web search Knowledge Archive";
-    return action
-      ? `Query Knowledge Archive · ${action}`
-      : "Query Knowledge Archive";
-  }
-  return type;
-}
-
-function CreditAmount({
-  type,
-  creditCost,
-}: {
+type UsageLogRow = {
+  id: string;
+  createdAt: number;
   type: string;
-  creditCost: number | null;
-}) {
-  const kind = usageVisualKind(type);
-  if (creditCost == null) {
-    return <span className="text-(--muted)">—</span>;
+  engine: string | null;
+  status: string | null;
+  pages: number | null;
+  filename: string | null;
+};
+
+function queryLabel(engine?: string | null): string {
+  const action = engine?.trim();
+  if (action === "open" || action === "web_open") return "Query ZipWiki · open";
+  if (action === "search" || action === "web_search") {
+    return "Query ZipWiki · search";
   }
-  return (
-    <span className="font-medium tabular-nums" style={{ color: usageColor(kind) }}>
-      {creditCost.toLocaleString()}
-    </span>
-  );
+  if (action === "query") return "Query ZipWiki · ask";
+  if (action === "list") return "Query ZipWiki · list";
+  return action ? `Query ZipWiki · ${action}` : "Query ZipWiki";
+}
+
+type ActivityEntry =
+  | { kind: "create"; row: UsageLogRow }
+  | { kind: "query"; row: UsageLogRow };
+
+/** Show Create / Query only; hide parse/OKF/LiteParse debug rows. */
+function groupActivityLog(rows: UsageLogRow[]): ActivityEntry[] {
+  const entries: ActivityEntry[] = [];
+  for (const row of rows) {
+    if (row.type === "pack") entries.push({ kind: "create", row });
+    else if (row.type === "query") entries.push({ kind: "query", row });
+  }
+  return entries;
 }
 
 export default function DashboardPage() {
   const [params] = useSearchParams();
   const me = useQuery(api.profiles.me);
   const usage = useQuery(api.usage.myUsage);
-  const usageLog = useQuery(api.usage.myUsageLog, { limit: 40 });
+  const usageLog = useQuery(api.usage.myUsageLog, { limit: 100 });
+  const activityEntries = usageLog ? groupActivityLog(usageLog) : null;
 
   const unlimited = usage?.creditsUnlimited === true;
   const low = usage?.lowCredits === true;
@@ -201,7 +191,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-3xl font-semibold">Usage</h1>
+        <h1 className="font-display text-3xl font-semibold">Dashboard</h1>
         <p className="mt-1 text-(--muted)">
           Account: <strong>{me?.account.status ?? "—"}</strong>
         </p>
@@ -351,99 +341,66 @@ export default function DashboardPage() {
         <div>
           <h2 className="font-display text-xl font-semibold">Activity log</h2>
           <p className="mt-1 text-sm text-(--muted)">
-            Pack, open/search/query, hosted parse, and OKF enrichment — with
-            pages and ZipWiki credits when billed.
+            Create ZipWiki and Query ZipWiki activity.
           </p>
         </div>
         {usageLog === undefined && (
           <p className="text-sm text-(--muted)">Loading…</p>
         )}
-        {usageLog && usageLog.length === 0 && (
+        {activityEntries && activityEntries.length === 0 && (
           <p className="text-sm text-(--muted)">
-            No activity yet. Pack a Knowledge Archive or open one with the agent
-            to see entries here.
+            No activity yet. Create a ZipWiki or open one with the agent to see
+            entries here.
           </p>
         )}
-        {usageLog && usageLog.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-xl text-left text-sm">
-              <thead>
-                <tr className="border-b border-(--border) text-(--muted)">
-                  <th className="py-2 pr-3 font-medium">When</th>
-                  <th className="py-2 pr-3 font-medium">Type</th>
-                  <th className="py-2 pr-3 font-medium">File / model</th>
-                  <th className="py-2 pr-3 font-medium tabular-nums">
-                    Pages / tokens
-                  </th>
-                  <th className="py-2 font-medium tabular-nums">
-                    ZipWiki credits
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {usageLog.map((row) => {
-                  const kind = usageVisualKind(row.type);
-                  return (
-                    <tr
-                      key={row.id}
-                      className="border-b border-(--border)/60 align-top"
+        {activityEntries && activityEntries.length > 0 && (
+          <ul className="divide-y divide-(--border)/60">
+            {activityEntries.map((entry) => {
+              const { row } = entry;
+              const kind = usageVisualKind(
+                entry.kind === "create" ? "pack" : row.type,
+              );
+              return (
+                <li
+                  key={row.id}
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span
+                      className="font-medium"
+                      style={{ color: usageColor(kind) }}
                     >
-                      <td className="py-2 pr-3 whitespace-nowrap text-(--muted)">
-                        {new Date(row.createdAt).toLocaleString()}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <span
-                          className="font-medium"
-                          style={{ color: usageColor(kind) }}
-                        >
-                          {eventLabel(row.type, row.engine)}
-                        </span>
-                        {row.status && row.status !== "success" ? (
-                          <span className="text-(--muted)">
-                            {" "}
-                            · {row.status}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td
-                        className="py-2 pr-3 max-w-56 truncate"
-                        title={row.filename ?? row.model ?? undefined}
+                      {entry.kind === "create"
+                        ? "Create ZipWiki"
+                        : queryLabel(row.engine)}
+                    </span>
+                    {row.status && row.status !== "success" ? (
+                      <span className="text-(--muted)"> · {row.status}</span>
+                    ) : null}
+                    {row.filename ? (
+                      <span
+                        className="mt-0.5 block truncate font-mono text-(--muted)"
+                        title={row.filename}
                       >
-                        {row.filename ??
-                          row.model ??
-                          (row.bytes != null ? (
-                            <span className="text-(--muted)">
-                              {formatBytes(row.bytes)}
-                            </span>
-                          ) : (
-                            "—"
-                          ))}
-                      </td>
-                      <td className="py-2 pr-3 tabular-nums">
-                        {row.pages != null
-                          ? row.pages.toLocaleString()
-                          : row.inputTokens != null || row.outputTokens != null
-                            ? `${(row.inputTokens ?? 0).toLocaleString()} / ${(row.outputTokens ?? 0).toLocaleString()}`
-                            : "—"}
-                      </td>
-                      <td className="py-2">
-                        {row.type === "llamaparse_byo" ? (
-                          <span className="tabular-nums text-(--muted)">
-                            {(row.llamaCredits ?? 0).toLocaleString()} Llama
-                          </span>
-                        ) : (
-                          <CreditAmount
-                            type={row.type}
-                            creditCost={row.creditCost}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        {row.filename}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="shrink-0 text-right text-(--muted)">
+                    <div className="whitespace-nowrap">
+                      {new Date(row.createdAt).toLocaleString()}
+                    </div>
+                    {entry.kind === "create" && row.pages != null ? (
+                      <div className="mt-0.5 tabular-nums">
+                        {row.pages.toLocaleString()} doc
+                        {row.pages === 1 ? "" : "s"}
+                      </div>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
     </div>
