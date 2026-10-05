@@ -14,6 +14,7 @@ export async function reportLlamaParseUsage(
     filename?: string;
     jobId?: string;
     userKey?: boolean;
+    createId?: string;
   },
 ): Promise<void> {
   const res = await apiFetch(baseUrl, "/api/usage/llamaparse", {
@@ -26,6 +27,7 @@ export async function reportLlamaParseUsage(
       filename: input.filename,
       jobId: input.jobId,
       userKey: input.userKey === true,
+      createId: input.createId,
     }),
   });
   if (!res.ok) {

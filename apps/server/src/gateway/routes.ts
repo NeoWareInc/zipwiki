@@ -140,11 +140,20 @@ export async function registerGateway(
     if (!validated.ok) {
       return reply.code(validated.status).send({ error: validated.error });
     }
+    const createIdRaw = (body as { createId?: unknown }).createId;
+    const createIdAlt = (body as { create_id?: unknown }).create_id;
+    const createId =
+      typeof createIdRaw === "string" && createIdRaw.trim()
+        ? createIdRaw.trim().slice(0, 128)
+        : typeof createIdAlt === "string" && createIdAlt.trim()
+          ? createIdAlt.trim().slice(0, 128)
+          : undefined;
     try {
       await deps.convex.recordLiteparse({
         accountId: validated.accountId,
         success,
         ...(typeof bytes === "number" ? { bytes } : {}),
+        ...(createId ? { createId } : {}),
       });
       return reply.code(200).send({ ok: true });
     } catch (err) {
@@ -162,7 +171,12 @@ export async function registerGateway(
       return reply.code(400).send({ error: "invalid_request" });
     }
     const type = (body as { type?: unknown }).type;
-    if (type !== "pack" && type !== "query") {
+    if (
+      type !== "pack" &&
+      type !== "pack_start" &&
+      type !== "pack_end" &&
+      type !== "query"
+    ) {
       return reply.code(400).send({ error: "invalid_request" });
     }
     const engine = (body as { engine?: unknown }).engine;
@@ -170,6 +184,29 @@ export async function registerGateway(
     const filename = (body as { filename?: unknown }).filename;
     const bytes = (body as { bytes?: unknown }).bytes;
     const pages = (body as { pages?: unknown }).pages;
+    const createIdRaw = (body as { createId?: unknown }).createId;
+    const createIdAlt = (body as { create_id?: unknown }).create_id;
+    const createId =
+      typeof createIdRaw === "string" && createIdRaw.trim()
+        ? createIdRaw.trim().slice(0, 128)
+        : typeof createIdAlt === "string" && createIdAlt.trim()
+          ? createIdAlt.trim().slice(0, 128)
+          : undefined;
+    const creditCost = (body as { creditCost?: unknown }).creditCost;
+    const creditCostAlt = (body as { credit_cost?: unknown }).credit_cost;
+    const llamaCredits = (body as { llamaCredits?: unknown }).llamaCredits;
+    const llamaCreditsAlt = (body as { llama_credits?: unknown }).llama_credits;
+    const inputTokens = (body as { inputTokens?: unknown }).inputTokens;
+    const inputTokensAlt = (body as { input_tokens?: unknown }).input_tokens;
+    const outputTokens = (body as { outputTokens?: unknown }).outputTokens;
+    const outputTokensAlt = (body as { output_tokens?: unknown }).output_tokens;
+    const okfCount = (body as { okfCount?: unknown }).okfCount;
+    const okfCountAlt = (body as { okf_count?: unknown }).okf_count;
+    const parseCount = (body as { parseCount?: unknown }).parseCount;
+    const parseCountAlt = (body as { parse_count?: unknown }).parse_count;
+    const num = (v: unknown) =>
+      typeof v === "number" && Number.isFinite(v) ? v : undefined;
+    const pickNum = (a: unknown, b: unknown) => num(a) ?? num(b);
     let validated;
     try {
       validated = await deps.convex.validateKey(token);
@@ -180,6 +217,12 @@ export async function registerGateway(
       return reply.code(validated.status).send({ error: validated.error });
     }
     try {
+      const creditCostN = pickNum(creditCost, creditCostAlt);
+      const llamaCreditsN = pickNum(llamaCredits, llamaCreditsAlt);
+      const inputTokensN = pickNum(inputTokens, inputTokensAlt);
+      const outputTokensN = pickNum(outputTokens, outputTokensAlt);
+      const okfCountN = pickNum(okfCount, okfCountAlt);
+      const parseCountN = pickNum(parseCount, parseCountAlt);
       await deps.convex.recordActivity({
         accountId: validated.accountId,
         type,
@@ -188,6 +231,13 @@ export async function registerGateway(
         ...(typeof filename === "string" ? { filename } : {}),
         ...(typeof bytes === "number" ? { bytes } : {}),
         ...(typeof pages === "number" ? { pages } : {}),
+        ...(createId ? { createId } : {}),
+        ...(creditCostN != null ? { creditCost: creditCostN } : {}),
+        ...(llamaCreditsN != null ? { llamaCredits: llamaCreditsN } : {}),
+        ...(inputTokensN != null ? { inputTokens: inputTokensN } : {}),
+        ...(outputTokensN != null ? { outputTokens: outputTokensN } : {}),
+        ...(okfCountN != null ? { okfCount: okfCountN } : {}),
+        ...(parseCountN != null ? { parseCount: parseCountN } : {}),
       });
       return reply.code(200).send({ ok: true });
     } catch (err) {
@@ -207,6 +257,10 @@ export async function registerGateway(
     const noOcr = readField(fields, "noOcr") === "true";
     const tier = readField(fields, "tier") || undefined;
     const version = readField(fields, "version") || undefined;
+    const createId =
+      readField(fields, "createId") ||
+      readField(fields, "create_id") ||
+      undefined;
     const stream =
       (req.query as { stream?: string }).stream === "1" ||
       String(req.headers.accept ?? "").includes("application/x-ndjson");
@@ -219,6 +273,7 @@ export async function registerGateway(
         noOcr,
         tier,
         version,
+        ...(createId ? { createId } : {}),
       });
       return reply.code(result.status).send(result.body);
     }
@@ -244,6 +299,7 @@ export async function registerGateway(
         noOcr,
         tier,
         version,
+        ...(createId ? { createId } : {}),
         onProgress: (info) => {
           writeLine({
             event: "progress",
@@ -292,6 +348,14 @@ export async function registerGateway(
     const filename = (body as { filename?: unknown }).filename;
     const jobId = (body as { jobId?: unknown }).jobId;
     const userKey = (body as { userKey?: unknown }).userKey === true;
+    const createIdRaw = (body as { createId?: unknown }).createId;
+    const createIdAlt = (body as { create_id?: unknown }).create_id;
+    const createId =
+      typeof createIdRaw === "string" && createIdRaw.trim()
+        ? createIdRaw.trim().slice(0, 128)
+        : typeof createIdAlt === "string" && createIdAlt.trim()
+          ? createIdAlt.trim().slice(0, 128)
+          : undefined;
     let validated;
     try {
       validated = await deps.convex.validateKey(token, "parse");
@@ -322,6 +386,7 @@ export async function registerGateway(
           ...(typeof jobId === "string" && jobId.trim()
             ? { jobId: jobId.trim().slice(0, 128) }
             : {}),
+          ...(createId ? { createId } : {}),
         },
       });
       return reply.code(200).send({ ok: true, ...recorded });
@@ -340,9 +405,16 @@ export async function registerGateway(
     }
     const raw = body as Record<string, unknown>;
     const model = typeof raw.model === "string" ? raw.model : undefined;
+    const createId =
+      typeof raw.createId === "string" && raw.createId.trim()
+        ? raw.createId.trim().slice(0, 128)
+        : typeof raw.create_id === "string" && raw.create_id.trim()
+          ? raw.create_id.trim().slice(0, 128)
+          : undefined;
     const result = await handleOkf(deps, {
       token,
       model,
+      ...(createId ? { createId } : {}),
       input: {
         primaries: raw.primaries as
           | Array<{ path?: string; documentType?: string }>

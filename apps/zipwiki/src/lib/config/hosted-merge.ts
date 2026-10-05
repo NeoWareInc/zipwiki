@@ -48,6 +48,32 @@ function usageSlice(config: ClientConfig) {
   };
 }
 
+/** Usage deltas between two client-config snapshots (for pack_end totals). */
+export function usageDeltas(
+  current: ClientConfig,
+  previous?: ClientConfig | null,
+): {
+  parseCount: number;
+  okfCount: number;
+  creditCost: number;
+  llamaCredits: number;
+} {
+  if (!previous?.usage || !current.usage) {
+    return { parseCount: 0, okfCount: 0, creditCost: 0, llamaCredits: 0 };
+  }
+  const cur = usageSlice(current);
+  const prev = usageSlice(previous);
+  return {
+    parseCount: Math.max(0, cur.parse - prev.parse),
+    okfCount: Math.max(0, cur.okf - prev.okf),
+    creditCost: Math.max(
+      0,
+      cur.parseCredits - prev.parseCredits + (cur.okfCredits - prev.okfCredits),
+    ),
+    llamaCredits: Math.max(0, cur.byoCredits - prev.byoCredits),
+  };
+}
+
 function ownKeyLine(files: number, llamaCredits: number): string {
   const label = "LlamaParse".padEnd(12);
   const amount =
@@ -135,17 +161,20 @@ export async function refreshAndPrintClientUsage(
   label: string,
   opts?: { quiet?: boolean; previous?: ClientConfig | null },
 ): Promise<ClientConfig | null> {
-  if (opts?.quiet) return null;
   const url = resolveZipwikiApiUrl();
   const key = resolveZipwikiApiKey();
   if (!url || !key) return null;
   try {
     const config = await fetchClientConfig(url, key, { bypassCache: true });
-    printClientUsageSummary(config, label, opts?.previous);
+    if (!opts?.quiet) {
+      printClientUsageSummary(config, label, opts?.previous);
+    }
     return config;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[zipwiki] Could not refresh usage (${msg})`);
+    if (!opts?.quiet) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[zipwiki] Could not refresh usage (${msg})`);
+    }
     return null;
   }
 }

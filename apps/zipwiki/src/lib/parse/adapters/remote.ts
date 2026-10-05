@@ -6,6 +6,7 @@ import {
   resolveZipwikiApiUrl,
   type ZipwikiApiConfig,
 } from "../../config/index.js";
+import { getCreateId } from "../../config/create-session.js";
 import { resolveParseOcrEnabled } from "../parse-header.js";
 import type { DocumentParseResult, ParseRuntimeOptions } from "../types.js";
 
@@ -120,6 +121,10 @@ export class RemoteParseAdapter {
     }
     if (!resolveParseOcrEnabled(cli, project)) {
       form.append("noOcr", "true");
+    }
+    const createId = getCreateId();
+    if (createId) {
+      form.append("createId", createId);
     }
 
     const headers: Record<string, string> = {

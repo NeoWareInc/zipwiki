@@ -1,5 +1,7 @@
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { requireAdmin } from "./lib/admin";
 import { globalCreditsLocked } from "./lib/creditLock";
 import { startOfMonthMs } from "./lib/crypto";
@@ -206,6 +208,272 @@ export const usageOverview = query({
       periodStart: new Date(periodStart).toISOString(),
       accounts: rows,
     };
+  },
+});
+
+const PAGE_SIZE = 100;
+
+const PRIMARY_LOG_TYPES = new Set([
+  "pack_start",
+  "pack_end",
+  "pack",
+  "query",
+]);
+
+function serializeUsageEvent(
+  row: {
+    _id: Id<"usageEvents">;
+    _creationTime: number;
+    accountId: Id<"accounts">;
+    type: string;
+    engine?: string;
+    status?: string;
+    provider?: string;
+    model?: string;
+    pages?: number;
+    bytes?: number;
+    llamaCredits?: number;
+    creditCost?: number;
+    filename?: string;
+    jobId?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+    createId?: string;
+    okfCount?: number;
+    parseCount?: number;
+  },
+  email: string,
+) {
+  const type = row.type === "pack" ? "pack_end" : row.type;
+  return {
+    id: row._id,
+    createdAt: row._creationTime,
+    accountId: row.accountId,
+    email,
+    type,
+    engine: row.engine ?? null,
+    status: row.status ?? null,
+    provider: row.provider ?? null,
+    model: row.model ?? null,
+    pages: row.pages ?? null,
+    bytes: row.bytes ?? null,
+    llamaCredits: row.llamaCredits ?? null,
+    creditCost: row.creditCost ?? null,
+    filename: row.filename ?? null,
+    jobId: row.jobId ?? null,
+    inputTokens: row.inputTokens ?? null,
+    outputTokens: row.outputTokens ?? null,
+    createId: row.createId ?? null,
+    okfCount: row.okfCount ?? null,
+    parseCount: row.parseCount ?? null,
+  };
+}
+
+function serializeStepEvent(
+  row: {
+    _id: Id<"usageStepEvents">;
+    _creationTime: number;
+    accountId: Id<"accounts">;
+    createId: string;
+    type: string;
+    engine?: string;
+    status?: string;
+    provider?: string;
+    model?: string;
+    pages?: number;
+    bytes?: number;
+    llamaCredits?: number;
+    creditCost?: number;
+    filename?: string;
+    jobId?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+  },
+  email: string,
+) {
+  return {
+    id: row._id,
+    createdAt: row._creationTime,
+    accountId: row.accountId,
+    email,
+    createId: row.createId,
+    type: row.type,
+    engine: row.engine ?? null,
+    status: row.status ?? null,
+    provider: row.provider ?? null,
+    model: row.model ?? null,
+    pages: row.pages ?? null,
+    bytes: row.bytes ?? null,
+    llamaCredits: row.llamaCredits ?? null,
+    creditCost: row.creditCost ?? null,
+    filename: row.filename ?? null,
+    jobId: row.jobId ?? null,
+    inputTokens: row.inputTokens ?? null,
+    outputTokens: row.outputTokens ?? null,
+  };
+}
+
+async function emailForAccount(
+  ctx: { db: any },
+  accountId: Id<"accounts">,
+  cache: Map<Id<"accounts">, string>,
+): Promise<string> {
+  const hit = cache.get(accountId);
+  if (hit !== undefined) return hit;
+  const account = await ctx.db.get(accountId);
+  if (!account) {
+    cache.set(accountId, "—");
+    return "—";
+  }
+  const profile = await ctx.db
+    .query("profiles")
+    .withIndex("by_userId", (q: any) => q.eq("userId", account.userId))
+    .unique();
+  const email = profile?.email ?? account.name ?? "—";
+  cache.set(accountId, email);
+  return email;
+}
+
+function buildPrimaryEventsQuery(
+  ctx: { db: any },
+  args: {
+    accountId?: Id<"accounts">;
+    type?: string;
+    status?: string;
+    engine?: string;
+  },
+) {
+  const { accountId, type, status, engine } = args;
+  // Map UI "pack" filter to pack_start|pack_end|pack — scan by account / all.
+  const typeIndexable =
+    type && type !== "pack" && PRIMARY_LOG_TYPES.has(type) ? type : undefined;
+
+  let base;
+  if (accountId && typeIndexable) {
+    base = ctx.db
+      .query("usageEvents")
+      .withIndex("by_accountId_and_type", (q: any) =>
+        q.eq("accountId", accountId).eq("type", typeIndexable),
+      );
+  } else if (accountId) {
+    base = ctx.db
+      .query("usageEvents")
+      .withIndex("by_accountId", (q: any) => q.eq("accountId", accountId));
+  } else if (typeIndexable) {
+    base = ctx.db
+      .query("usageEvents")
+      .withIndex("by_type", (q: any) => q.eq("type", typeIndexable));
+  } else {
+    base = ctx.db.query("usageEvents");
+  }
+
+  let filtered = base.order("desc");
+  if (status) {
+    filtered = filtered.filter((q: any) => q.eq(q.field("status"), status));
+  }
+  if (engine) {
+    filtered = filtered.filter((q: any) => q.eq(q.field("engine"), engine));
+  }
+  return filtered;
+}
+
+/**
+ * Primary activity log: pack_start / pack_end / pack (legacy) / query only.
+ * Step details live in usageStepEvents (see usageStepLog).
+ */
+export const usageEventLog = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    accountId: v.optional(v.id("accounts")),
+    type: v.optional(v.string()),
+    status: v.optional(v.string()),
+    engine: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const type = args.type?.trim() || undefined;
+    const status = args.status?.trim() || undefined;
+    const engine = args.engine?.trim() || undefined;
+    const accountId = args.accountId;
+
+    const filtered = buildPrimaryEventsQuery(ctx, {
+      accountId,
+      type,
+      status,
+      engine,
+    });
+
+    // Oversample when filtering client-side (pack umbrella / primary-only).
+    const numItems = PAGE_SIZE;
+    const result = await filtered.paginate({
+      ...args.paginationOpts,
+      numItems: type === "pack" || !type ? Math.min(250, PAGE_SIZE * 2) : numItems,
+    });
+
+    const emailByAccount = new Map<Id<"accounts">, string>();
+    const page = [];
+    for (const row of result.page) {
+      if (!PRIMARY_LOG_TYPES.has(row.type)) continue;
+      if (type === "query" && row.type !== "query") continue;
+      if (
+        type === "pack" &&
+        row.type !== "pack" &&
+        row.type !== "pack_start" &&
+        row.type !== "pack_end"
+      ) {
+        continue;
+      }
+      if (type === "pack_start" && row.type !== "pack_start") continue;
+      if (
+        type === "pack_end" &&
+        row.type !== "pack_end" &&
+        row.type !== "pack"
+      ) {
+        continue;
+      }
+      const email = await emailForAccount(ctx, row.accountId, emailByAccount);
+      page.push(serializeUsageEvent(row, email));
+    }
+
+    return {
+      ...result,
+      page: page.slice(0, PAGE_SIZE),
+    };
+  },
+});
+
+/**
+ * Step log for one Create ZipWiki session (parse / OKF / LiteParse / BYO).
+ */
+export const usageStepLog = query({
+  args: {
+    createId: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, { createId, paginationOpts }) => {
+    await requireAdmin(ctx);
+    const id = createId.trim().slice(0, 128);
+    if (!id) {
+      return { page: [], isDone: true, continueCursor: "" };
+    }
+
+    const result = await ctx.db
+      .query("usageStepEvents")
+      .withIndex("by_createId", (q: any) => q.eq("createId", id))
+      .order("desc")
+      .paginate({
+        ...paginationOpts,
+        numItems: Math.min(PAGE_SIZE, paginationOpts.numItems ?? PAGE_SIZE),
+      });
+
+    const emailByAccount = new Map<Id<"accounts">, string>();
+    const page = [];
+    for (const row of result.page) {
+      const email = await emailForAccount(ctx, row.accountId, emailByAccount);
+      page.push(serializeStepEvent(row, email));
+    }
+    return { ...result, page };
   },
 });
 

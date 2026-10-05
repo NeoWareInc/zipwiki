@@ -3,6 +3,7 @@ import {
   resolveZipwikiApiUrl,
   type ZipwikiApiConfig,
 } from "../../config/index.js";
+import { getCreateId } from "../../config/create-session.js";
 import { resolveOkfProfile, sampleFor } from "../profiles.js";
 import type { BuildOkfBundleInput, OkfEnrichment } from "../types.js";
 
@@ -45,6 +46,7 @@ export class RemoteOkfAdapter {
       explicit: input.okfProfile,
       fileName: input.primaries[0]?.path,
     });
+    const createId = getCreateId();
     const response = await this.fetchImpl(`${base}/api/okf/enrich`, {
       method: "POST",
       headers,
@@ -56,6 +58,7 @@ export class RemoteOkfAdapter {
         documentType: input.documentType,
         okfProfile: profile,
         ...(input.model?.trim() ? { model: input.model.trim() } : {}),
+        ...(createId ? { createId } : {}),
       }),
     });
 

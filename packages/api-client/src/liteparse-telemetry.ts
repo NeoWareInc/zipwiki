@@ -4,7 +4,7 @@ import { apiFetch } from "./client-config.js";
 export async function reportLiteParseTelemetry(
   baseUrl: string,
   apiKey: string,
-  input: { success: boolean; bytes?: number },
+  input: { success: boolean; bytes?: number; createId?: string },
 ): Promise<void> {
   const res = await apiFetch(baseUrl, "/api/telemetry/liteparse", {
     method: "POST",
@@ -12,6 +12,7 @@ export async function reportLiteParseTelemetry(
     body: JSON.stringify({
       success: input.success,
       bytes: input.bytes,
+      createId: input.createId,
     }),
   });
   if (!res.ok) {

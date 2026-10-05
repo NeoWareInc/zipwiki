@@ -198,21 +198,6 @@ export default function AdminBillingPage() {
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Recent ledger</h2>
-        <ul className="space-y-2 text-sm">
-          {(overview?.recent ?? []).map((row) => (
-            <li key={row.id} className="rounded-md border border-(--border) bg-white px-3 py-2">
-              <span className="font-medium">{row.email || "account"}</span>{" "}
-              {row.kind} {row.credits.toLocaleString()} credits
-              {row.provider ? ` · ${row.provider}` : ""}
-              {row.model ? ` ${row.model}` : ""}
-              {row.pages ? ` · ${row.pages} pages` : ""}
-              <span className="text-(--muted)"> · {row.createdAt}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 }

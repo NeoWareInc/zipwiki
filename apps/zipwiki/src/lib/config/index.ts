@@ -117,8 +117,15 @@ export {
   formatClientUsageSummary,
   printClientUsageSummary,
   refreshAndPrintClientUsage,
+  usageDeltas,
   type HostedClientConfigResult,
 } from "./hosted-merge.js";
+export {
+  getCreateId,
+  newCreateId,
+  runWithCreateId,
+  runWithCreateIdAsync,
+} from "./create-session.js";
 export {
   hasLlamaParseQuota,
   hasZipcodexOkfQuota,

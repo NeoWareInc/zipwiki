@@ -6,7 +6,14 @@ export function usageVisualKind(type: string): UsageVisualKind {
     return "parse";
   }
   if (type === "okf") return "okf";
-  if (type === "query" || type === "pack") return "query";
+  if (
+    type === "query" ||
+    type === "pack" ||
+    type === "pack_start" ||
+    type === "pack_end"
+  ) {
+    return "query";
+  }
   return "other";
 }
 
