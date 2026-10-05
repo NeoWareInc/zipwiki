@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
-import { usageColor, usageVisualKind } from "../lib/usage-colors";
+import { usageInk, usageVisualKind } from "../lib/usage-colors";
 
 export default function AdminAccountPage() {
   const { id } = useParams<{ id: string }>();
@@ -218,18 +218,18 @@ export default function AdminAccountPage() {
               </p>
               <p
                 className="tabular-nums"
-                style={{ color: usageColor("parse") }}
+                style={{ color: usageInk("parse") }}
               >
                 Parsing: {p.parseCount} docs · {p.pages} pages ·{" "}
                 {p.llamaCredits} Llama · {p.parseCreditsSpent} ZipWiki ¢
               </p>
-              <p className="tabular-nums" style={{ color: usageColor("okf") }}>
+              <p className="tabular-nums" style={{ color: usageInk("okf") }}>
                 OKF Enrichment: {p.okfCount} calls · {p.okfInputTokens} in /{" "}
                 {p.okfOutputTokens} out · {p.okfCreditsSpent} ZipWiki ¢
               </p>
               <p
                 className="tabular-nums"
-                style={{ color: usageColor("query") }}
+                style={{ color: usageInk("query") }}
               >
                 Knowledge Archive: {p.packCount} pack · {p.queryCount} query
               </p>
@@ -265,7 +265,7 @@ export default function AdminAccountPage() {
                   </td>
                   <td
                     className="px-4 py-2 font-medium"
-                    style={{ color: usageColor(usageVisualKind(e.type)) }}
+                    style={{ color: usageInk(usageVisualKind(e.type)) }}
                   >
                     {e.type}
                     {e.engine ? ` · ${e.engine}` : ""}
@@ -287,7 +287,7 @@ export default function AdminAccountPage() {
                     style={{
                       color:
                         e.creditCost != null
-                          ? usageColor(usageVisualKind(e.type))
+                          ? usageInk(usageVisualKind(e.type))
                           : undefined,
                     }}
                   >

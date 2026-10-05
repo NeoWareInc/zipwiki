@@ -18,7 +18,8 @@
   --flow-fill: #ffffff;
   --flow-stroke: #1f3a44;
   /* Usage / credit kinds (Dashboard + admin) */
-  --usage-parse: #0f6e6a;
+  --usage-parse: #4ecdc4;
+  --usage-parse-ink: #0f6e6a;
   --usage-okf: #b45309;
   --usage-query: #1f3a44;
 

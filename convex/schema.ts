@@ -106,6 +106,8 @@ export default defineSchema({
     okfInputTokens: v.optional(v.number()),
     okfOutputTokens: v.optional(v.number()),
     okfCreditsSpent: v.optional(v.number()),
+    /** ZipWiki credits debited for portal and CLI asks. MCP and a user's own model key are not included. */
+    queryCreditsSpent: v.optional(v.number()),
     /** Soft pack / query activity counts. */
     packCount: v.optional(v.number()),
     queryCount: v.optional(v.number()),
@@ -134,6 +136,9 @@ export default defineSchema({
     filename: v.optional(v.string()),
     /** LlamaParse job id when known. */
     jobId: v.optional(v.string()),
+    /** Legacy pack summary fields kept so older events still validate. */
+    createId: v.optional(v.string()),
+    okfCount: v.optional(v.number()),
   }).index("by_accountId", ["accountId"]),
 
   /** Master vendor float. The API key itself stays a Fly secret named by `secretEnv`. */

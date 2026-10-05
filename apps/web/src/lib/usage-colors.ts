@@ -10,12 +10,18 @@ export function usageVisualKind(type: string): UsageVisualKind {
   return "other";
 }
 
-/** CSS color for a usage kind (see --usage-* in index.css). */
+/** Fill color for a usage kind (see --usage-* in index.css). */
 export function usageColor(kind: UsageVisualKind): string {
   if (kind === "parse") return "var(--usage-parse)";
   if (kind === "okf") return "var(--usage-okf)";
   if (kind === "query") return "var(--usage-query)";
   return "var(--muted)";
+}
+
+/** Text color. Parsing stays darker so the credit figures stay readable. */
+export function usageInk(kind: UsageVisualKind): string {
+  if (kind === "parse") return "var(--usage-parse-ink)";
+  return usageColor(kind);
 }
 
 export function usageKindLabel(kind: UsageVisualKind): string {

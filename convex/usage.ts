@@ -1,4 +1,10 @@
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+  type QueryCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
@@ -441,6 +447,7 @@ export const recordQueryDebit = internalMutation({
       });
     }
 
+    const charged = account.creditsUnlimited ? 0 : creditCost;
     await ctx.db.insert("usageEvents", {
       accountId: args.accountId,
       type: "query",
@@ -450,9 +457,14 @@ export const recordQueryDebit = internalMutation({
       model: args.model,
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
-      creditCost,
+      creditCost: charged,
       filename: safeFilename,
     });
+    if (charged > 0) {
+      await ctx.db.patch(period._id, {
+        queryCreditsSpent: (period.queryCreditsSpent ?? 0) + charged,
+      });
+    }
 
     const providerAccount = await ctx.db
       .query("providerAccounts")
@@ -686,6 +698,43 @@ export const reportActivity = mutation({
   },
 });
 
+/**
+ * ZipWiki credits charged for portal and CLI asks this period.
+ * Activity rows (MCP, open, search) have no creditCost and stay out.
+ */
+async function billedQueryCredits(
+  ctx: QueryCtx,
+  accountId: Id<"accounts">,
+  periodStart: number,
+): Promise<number> {
+  let total = 0;
+  let cursor: string | null = null;
+  for (let page = 0; page < 30; page += 1) {
+    const result = await ctx.db
+      .query("usageEvents")
+      .withIndex("by_accountId", (q) => q.eq("accountId", accountId))
+      .order("desc")
+      .paginate({ numItems: 100, cursor });
+    let older = false;
+    for (const row of result.page) {
+      if (row._creationTime < periodStart) {
+        older = true;
+        break;
+      }
+      if (
+        row.type === "query" &&
+        typeof row.creditCost === "number" &&
+        row.creditCost > 0
+      ) {
+        total += row.creditCost;
+      }
+    }
+    if (older || result.isDone) break;
+    cursor = result.continueCursor;
+  }
+  return total;
+}
+
 export const myUsage = query({
   args: {},
   handler: async (ctx) => {
@@ -716,6 +765,11 @@ export const myUsage = query({
       okfInputTokens: period?.okfInputTokens ?? 0,
       okfOutputTokens: period?.okfOutputTokens ?? 0,
       okfCreditsSpent: period?.okfCreditsSpent ?? 0,
+      queryCreditsSpent: await billedQueryCredits(
+        ctx,
+        account._id,
+        periodStart,
+      ),
       packCount: period?.packCount ?? 0,
       queryCount: period?.queryCount ?? 0,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,

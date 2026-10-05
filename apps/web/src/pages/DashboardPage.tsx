@@ -4,42 +4,71 @@ import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
 import {
   usageColor,
+  usageInk,
   usageKindLabel,
   usageVisualKind,
   type UsageVisualKind,
 } from "../lib/usage-colors";
 
+/** Share of the used portion, with a small floor so a thin cost stays visible. */
+function segmentWidths(amounts: number[], usedPct: number): number[] {
+  const total = amounts.reduce((sum, n) => sum + Math.max(0, n), 0);
+  if (total <= 0 || usedPct <= 0) return amounts.map(() => 0);
+  const raw = amounts.map((n) => (n > 0 ? (n / total) * usedPct : 0));
+  const minPct = 2;
+  const lifted = raw.map((pct, i) =>
+    amounts[i] > 0 && pct > 0 && pct < minPct ? minPct : pct,
+  );
+  const liftedSum = lifted.reduce((sum, n) => sum + n, 0);
+  if (liftedSum <= usedPct || liftedSum <= 0) return lifted;
+  return lifted.map((pct) => (pct / liftedSum) * usedPct);
+}
+
 function CreditBar({
   parseCredits,
   okfCredits,
+  queryCredits,
   used,
   purchased,
   unlimited,
 }: {
   parseCredits: number;
   okfCredits: number;
+  queryCredits: number;
   used: number;
   purchased: number;
   unlimited: boolean;
 }) {
+  const legend = (
+    <CreditLegend
+      parseCredits={parseCredits}
+      okfCredits={okfCredits}
+      queryCredits={queryCredits}
+    />
+  );
+
   if (unlimited) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex justify-between text-sm">
           <span className="font-medium">ZipWiki credits</span>
           <span className="text-(--muted)">Unlimited</span>
         </div>
-        <div className="flex h-2 overflow-hidden rounded-full bg-(--line)">
+        <div className="flex h-6 overflow-hidden rounded-full bg-(--line)">
           <div
-            className="h-full w-1/2"
+            className="h-full w-1/3"
             style={{ background: usageColor("parse") }}
           />
           <div
-            className="h-full w-1/2"
+            className="h-full w-1/3"
             style={{ background: usageColor("okf") }}
           />
+          <div
+            className="h-full w-1/3"
+            style={{ background: usageColor("query") }}
+          />
         </div>
-        <CreditLegend />
+        {legend}
       </div>
     );
   }
@@ -47,70 +76,90 @@ function CreditBar({
   const remaining = Math.max(0, purchased - used);
   const usedPct =
     purchased <= 0 ? 0 : Math.min(100, (used / purchased) * 100);
-  const known = parseCredits + okfCredits;
-  const parseShare = known > 0 ? parseCredits / known : 0.5;
-  const okfShare = known > 0 ? okfCredits / known : 0.5;
-  const parsePct = usedPct * parseShare;
-  const okfPct = usedPct * okfShare;
+  const [parsePct, okfPct, queryPct] = segmentWidths(
+    [parseCredits, okfCredits, queryCredits],
+    usedPct,
+  );
   const low = remaining <= 500;
+  const segments: Array<{
+    kind: UsageVisualKind;
+    pct: number;
+    credits: number;
+  }> = [
+    { kind: "parse", pct: parsePct ?? 0, credits: parseCredits },
+    { kind: "okf", pct: okfPct ?? 0, credits: okfCredits },
+    { kind: "query", pct: queryPct ?? 0, credits: queryCredits },
+  ];
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm">
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
         <span className="font-medium">ZipWiki credits</span>
         <span className="text-(--muted) tabular-nums">
           {remaining.toLocaleString()} remaining · {used.toLocaleString()} used
           / {purchased.toLocaleString()} purchased
         </span>
       </div>
-      <div className="flex h-2 overflow-hidden rounded-full bg-(--line)">
-        {parsePct > 0 && (
-          <div
-            className="h-full"
-            style={{
-              width: `${parsePct}%`,
-              background: usageColor("parse"),
-            }}
-            title={`${usageKindLabel("parse")}: ${parseCredits.toLocaleString()}`}
-          />
-        )}
-        {okfPct > 0 && (
-          <div
-            className="h-full"
-            style={{
-              width: `${okfPct}%`,
-              background: usageColor("okf"),
-            }}
-            title={`${usageKindLabel("okf")}: ${okfCredits.toLocaleString()}`}
-          />
+      <div className="flex h-6 overflow-hidden rounded-full bg-(--line)">
+        {segments.map(
+          (segment) =>
+            segment.pct > 0 && (
+              <div
+                key={segment.kind}
+                className="h-full"
+                style={{
+                  width: `${segment.pct}%`,
+                  background: usageColor(segment.kind),
+                }}
+                title={`${usageKindLabel(segment.kind)}: ${segment.credits.toLocaleString()}`}
+              />
+            ),
         )}
       </div>
       {low && purchased > 0 && (
         <p className="text-xs text-amber-700">Credits running low</p>
       )}
-      <CreditLegend />
+      {legend}
     </div>
   );
 }
 
-function CreditLegend() {
-  const items: UsageVisualKind[] = ["parse", "okf", "query"];
+function CreditLegend({
+  parseCredits,
+  okfCredits,
+  queryCredits,
+}: {
+  parseCredits: number;
+  okfCredits: number;
+  queryCredits: number;
+}) {
+  const items: Array<{ kind: UsageVisualKind; credits: number }> = [
+    { kind: "parse", credits: parseCredits },
+    { kind: "okf", credits: okfCredits },
+    { kind: "query", credits: queryCredits },
+  ];
   return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-(--muted)">
-      {items.map((kind) => (
-        <li key={kind} className="inline-flex items-center gap-1.5">
-          <span
-            className="inline-block size-2.5 rounded-sm"
-            style={{ background: usageColor(kind) }}
-            aria-hidden
-          />
-          {usageKindLabel(kind)}
-          {kind === "query" ? (
-            <span className="text-(--muted)/80">(not billed)</span>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-2">
+      <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-(--muted)">
+        {items.map((item) => (
+          <li key={item.kind} className="inline-flex items-center gap-2">
+            <span
+              className="inline-block size-3.5 rounded-sm"
+              style={{ background: usageColor(item.kind) }}
+              aria-hidden
+            />
+            <span>{usageKindLabel(item.kind)}</span>
+            <span className="tabular-nums font-medium text-(--ink)">
+              {item.credits.toLocaleString()}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-(--muted)">
+        Portal and CLI asks spend ZipWiki credits. MCP and your own model key
+        stay off this total.
+      </p>
+    </div>
   );
 }
 
@@ -171,7 +220,7 @@ function CreditAmount({
     return <span className="text-(--muted)">—</span>;
   }
   return (
-    <span className="font-medium tabular-nums" style={{ color: usageColor(kind) }}>
+    <span className="font-medium tabular-nums" style={{ color: usageInk(kind) }}>
       {creditCost.toLocaleString()}
     </span>
   );
@@ -195,6 +244,7 @@ export default function DashboardPage() {
   const parsePages = Math.max(usage?.parsePages ?? 0, logParsePages);
   const parseCredits = usage?.parseCreditsSpent ?? 0;
   const okfCredits = usage?.okfCreditsSpent ?? 0;
+  const queryCredits = usage?.queryCreditsSpent ?? 0;
   const ownKeyFiles = usage?.byoLlamaCount ?? 0;
   const ownKeyCredits = usage?.byoLlamaCredits ?? 0;
 
@@ -237,6 +287,7 @@ export default function DashboardPage() {
           <CreditBar
             parseCredits={parseCredits}
             okfCredits={okfCredits}
+            queryCredits={queryCredits}
             used={usage.creditsSpent ?? 0}
             purchased={usage.creditsPurchased ?? 0}
             unlimited={unlimited}
@@ -246,11 +297,11 @@ export default function DashboardPage() {
             <KindCard kind="parse">
               <p
                 className="font-medium"
-                style={{ color: usageColor("parse") }}
+                style={{ color: usageInk("parse") }}
               >
                 {usageKindLabel("parse")}
               </p>
-              <p className="mt-1 tabular-nums" style={{ color: usageColor("parse") }}>
+              <p className="mt-1 tabular-nums" style={{ color: usageInk("parse") }}>
                 {parseCredits.toLocaleString()} ZipWiki credits
               </p>
               <p className="mt-0.5 text-(--muted) tabular-nums">
@@ -259,10 +310,10 @@ export default function DashboardPage() {
               </p>
             </KindCard>
             <KindCard kind="okf">
-              <p className="font-medium" style={{ color: usageColor("okf") }}>
+              <p className="font-medium" style={{ color: usageInk("okf") }}>
                 {usageKindLabel("okf")}
               </p>
-              <p className="mt-1 tabular-nums" style={{ color: usageColor("okf") }}>
+              <p className="mt-1 tabular-nums" style={{ color: usageInk("okf") }}>
                 {okfCredits.toLocaleString()} ZipWiki credits
               </p>
               <p className="mt-0.5 text-(--muted) tabular-nums">
@@ -274,19 +325,23 @@ export default function DashboardPage() {
             <KindCard kind="query">
               <p
                 className="font-medium"
-                style={{ color: usageColor("query") }}
+                style={{ color: usageInk("query") }}
               >
                 {usageKindLabel("query")}
               </p>
               <p
                 className="mt-1 tabular-nums"
-                style={{ color: usageColor("query") }}
+                style={{ color: usageInk("query") }}
               >
-                0 ZipWiki credits
+                {queryCredits.toLocaleString()} ZipWiki credits
               </p>
               <p className="mt-0.5 text-(--muted) tabular-nums">
                 {(usage.queryCount ?? 0).toLocaleString()} open / search /
                 browse · {(usage.packCount ?? 0).toLocaleString()} packs
+              </p>
+              <p className="mt-2 text-xs text-(--muted)">
+                Portal and CLI asks spend ZipWiki credits. MCP and your own
+                model key stay off this total.
               </p>
             </KindCard>
           </div>
@@ -394,7 +449,7 @@ export default function DashboardPage() {
                       <td className="py-2 pr-3">
                         <span
                           className="font-medium"
-                          style={{ color: usageColor(kind) }}
+                          style={{ color: usageInk(kind) }}
                         >
                           {eventLabel(row.type, row.engine)}
                         </span>
@@ -431,6 +486,8 @@ export default function DashboardPage() {
                           <span className="tabular-nums text-(--muted)">
                             {(row.llamaCredits ?? 0).toLocaleString()} Llama
                           </span>
+                        ) : row.type === "query" && row.creditCost == null ? (
+                          <span className="text-(--muted)">not billed</span>
                         ) : (
                           <CreditAmount
                             type={row.type}

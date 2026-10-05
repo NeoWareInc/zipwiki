@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { usageColor, usageKindLabel } from "../lib/usage-colors";
+import { usageColor, usageInk, usageKindLabel } from "../lib/usage-colors";
 
 export default function AdminUsagePage() {
   const data = useQuery(api.admin.usageOverview);
@@ -47,32 +47,32 @@ export default function AdminUsagePage() {
               <th className="px-4 py-3 font-medium tabular-nums">Credits</th>
               <th
                 className="px-4 py-3 font-medium tabular-nums"
-                style={{ color: usageColor("parse") }}
+                style={{ color: usageInk("parse") }}
               >
                 Parsing
               </th>
               <th className="px-4 py-3 font-medium tabular-nums">Llama</th>
               <th
                 className="px-4 py-3 font-medium tabular-nums"
-                style={{ color: usageColor("okf") }}
+                style={{ color: usageInk("okf") }}
               >
                 OKF Enrichment
               </th>
               <th
                 className="px-4 py-3 font-medium tabular-nums"
-                style={{ color: usageColor("okf") }}
+                style={{ color: usageInk("okf") }}
               >
                 OKF ¢
               </th>
               <th
                 className="px-4 py-3 font-medium tabular-nums"
-                style={{ color: usageColor("query") }}
+                style={{ color: usageInk("query") }}
               >
                 Pack
               </th>
               <th
                 className="px-4 py-3 font-medium tabular-nums"
-                style={{ color: usageColor("query") }}
+                style={{ color: usageInk("query") }}
               >
                 Query
               </th>
@@ -105,7 +105,7 @@ export default function AdminUsagePage() {
                 </td>
                 <td
                   className="px-4 py-3 tabular-nums"
-                  style={{ color: usageColor("parse") }}
+                  style={{ color: usageInk("parse") }}
                 >
                   {row.parseCount.toLocaleString()} docs ·{" "}
                   {row.parsePages.toLocaleString()} pg ·{" "}
@@ -116,7 +116,7 @@ export default function AdminUsagePage() {
                 </td>
                 <td
                   className="px-4 py-3 tabular-nums"
-                  style={{ color: usageColor("okf") }}
+                  style={{ color: usageInk("okf") }}
                 >
                   {row.okfInputTokens.toLocaleString()} in /{" "}
                   {row.okfOutputTokens.toLocaleString()} out ·{" "}
@@ -124,19 +124,19 @@ export default function AdminUsagePage() {
                 </td>
                 <td
                   className="px-4 py-3 tabular-nums font-medium"
-                  style={{ color: usageColor("okf") }}
+                  style={{ color: usageInk("okf") }}
                 >
                   {row.okfCreditsSpent.toLocaleString()}
                 </td>
                 <td
                   className="px-4 py-3 tabular-nums"
-                  style={{ color: usageColor("query") }}
+                  style={{ color: usageInk("query") }}
                 >
                   {row.packCount.toLocaleString()}
                 </td>
                 <td
                   className="px-4 py-3 tabular-nums"
-                  style={{ color: usageColor("query") }}
+                  style={{ color: usageInk("query") }}
                 >
                   {row.queryCount.toLocaleString()}
                 </td>
