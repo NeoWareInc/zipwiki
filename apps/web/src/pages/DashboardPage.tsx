@@ -139,6 +139,9 @@ type UsageLogRow = {
   status: string | null;
   pages: number | null;
   filename: string | null;
+  creditCost?: number | null;
+  okfCount?: number | null;
+  parseCount?: number | null;
 };
 
 function queryLabel(engine?: string | null): string {
@@ -153,15 +156,20 @@ function queryLabel(engine?: string | null): string {
 }
 
 type ActivityEntry =
-  | { kind: "create"; row: UsageLogRow }
+  | { kind: "create"; row: UsageLogRow; started?: boolean }
   | { kind: "query"; row: UsageLogRow };
 
-/** Show Create / Query only; hide parse/OKF/LiteParse debug rows. */
+/** Primary log: pack_end (Create), optional pack_start, and Query. */
 function groupActivityLog(rows: UsageLogRow[]): ActivityEntry[] {
   const entries: ActivityEntry[] = [];
   for (const row of rows) {
-    if (row.type === "pack") entries.push({ kind: "create", row });
-    else if (row.type === "query") entries.push({ kind: "query", row });
+    if (row.type === "pack_end" || row.type === "pack") {
+      entries.push({ kind: "create", row });
+    } else if (row.type === "pack_start") {
+      entries.push({ kind: "create", row, started: true });
+    } else if (row.type === "query") {
+      entries.push({ kind: "query", row });
+    }
   }
   return entries;
 }
@@ -358,8 +366,29 @@ export default function DashboardPage() {
             {activityEntries.map((entry) => {
               const { row } = entry;
               const kind = usageVisualKind(
-                entry.kind === "create" ? "pack" : row.type,
+                entry.kind === "create" ? "pack_end" : row.type,
               );
+              const createLabel =
+                entry.kind === "create" && entry.started
+                  ? "Create ZipWiki started"
+                  : "Create ZipWiki";
+              const totals: string[] = [];
+              if (entry.kind === "create" && !entry.started) {
+                if (row.pages != null) {
+                  totals.push(
+                    `${row.pages.toLocaleString()} doc${row.pages === 1 ? "" : "s"}`,
+                  );
+                }
+                if (row.creditCost != null && row.creditCost > 0) {
+                  totals.push(`${row.creditCost.toLocaleString()} credits`);
+                }
+                if (row.okfCount != null && row.okfCount > 0) {
+                  totals.push(`${row.okfCount.toLocaleString()} OKF`);
+                }
+                if (row.parseCount != null && row.parseCount > 0) {
+                  totals.push(`${row.parseCount.toLocaleString()} parse`);
+                }
+              }
               return (
                 <li
                   key={row.id}
@@ -371,7 +400,7 @@ export default function DashboardPage() {
                       style={{ color: usageColor(kind) }}
                     >
                       {entry.kind === "create"
-                        ? "Create ZipWiki"
+                        ? createLabel
                         : queryLabel(row.engine)}
                     </span>
                     {row.status && row.status !== "success" ? (
@@ -390,10 +419,9 @@ export default function DashboardPage() {
                     <div className="whitespace-nowrap">
                       {new Date(row.createdAt).toLocaleString()}
                     </div>
-                    {entry.kind === "create" && row.pages != null ? (
+                    {totals.length > 0 ? (
                       <div className="mt-0.5 tabular-nums">
-                        {row.pages.toLocaleString()} doc
-                        {row.pages === 1 ? "" : "s"}
+                        {totals.join(" · ")}
                       </div>
                     ) : null}
                   </div>

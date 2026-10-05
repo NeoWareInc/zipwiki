@@ -16,12 +16,15 @@ import {
   loadZipwikiOnboarding,
   maybeReportActivity,
   needsCredentialSetup,
+  newCreateId,
   refreshAndPrintClientUsage,
   resolveOmitOriginalDocuments,
   credentialForRemoteOkf,
   isLlamaCloudConfigured,
   resolveOkfCredentialSource,
   resolveParseCredentialSource,
+  runWithCreateIdAsync,
+  usageDeltas,
 } from "../lib/config/index.js";
 import { accountSettingsToConfigInput } from "../lib/config/account-settings-overlay.js";
 import {
@@ -459,6 +462,18 @@ export async function runStage(
       printSessionHeader();
     }
 
+    const createId = newCreateId();
+    if (phase === "all") {
+      await maybeReportActivity({
+        type: "pack_start",
+        action: "pack",
+        status: "success",
+        count: expanded.length,
+        createId,
+        quiet: opts.quiet,
+      });
+    }
+
     const phasesRun: PipelinePhase[] = [];
     let members: StageResult["members"] = [];
     let errors = 0;
@@ -479,6 +494,7 @@ export async function runStage(
     };
 
     try {
+      return await runWithCreateIdAsync(createId, async () => {
       if (phase === "parse") {
         phasesRun.push("parse");
         await runParseOkf("parse");
@@ -621,23 +637,6 @@ export async function runStage(
             }),
           );
         }
-        if (phase === "all") {
-          let archiveBytes: number | undefined;
-          try {
-            archiveBytes = statSync(outputPath).size;
-          } catch {
-            /* ignore */
-          }
-          await maybeReportActivity({
-            type: "pack",
-            action: "pack",
-            status: succeeded > 0 ? "success" : "fail",
-            path: outputPath,
-            bytes: archiveBytes,
-            count: documentCount || succeeded,
-            quiet: opts.quiet,
-          });
-        }
       }
 
       if (!opts.quiet && !outputPath) {
@@ -651,14 +650,56 @@ export async function runStage(
         );
       }
 
-      if (hosted) {
-        await refreshAndPrintClientUsage("done", {
+      const endConfig = hosted
+        ? await refreshAndPrintClientUsage("done", {
+            quiet: opts.quiet,
+            previous: hosted.config,
+          })
+        : null;
+
+      if (phase === "all" && outputPath && !opts.dryRun) {
+        let archiveBytes: number | undefined;
+        try {
+          archiveBytes = statSync(outputPath).size;
+        } catch {
+          /* ignore */
+        }
+        let documentCount = 0;
+        for (const m of members) {
+          if (!m?.abs || !existsSync(m.abs)) continue;
+          try {
+            if (statSync(m.abs).isFile()) documentCount += 1;
+          } catch {
+            /* ignore */
+          }
+        }
+        const snapshot = endConfig ?? hosted?.config ?? null;
+        const deltas = snapshot
+          ? usageDeltas(snapshot, hosted?.config)
+          : {
+              parseCount: 0,
+              okfCount: 0,
+              creditCost: 0,
+              llamaCredits: 0,
+            };
+        await maybeReportActivity({
+          type: "pack_end",
+          action: "pack",
+          status: succeeded > 0 ? "success" : "fail",
+          path: outputPath,
+          bytes: archiveBytes,
+          count: documentCount || succeeded,
+          createId,
+          creditCost: deltas.creditCost || undefined,
+          parseCount: deltas.parseCount || undefined,
+          okfCount: deltas.okfCount || undefined,
+          llamaCredits: deltas.llamaCredits || undefined,
           quiet: opts.quiet,
-          previous: hosted.config,
         });
       }
 
       return { stageDir, outputPath, members, phasesRun, errors };
+      });
     } finally {
       if (ephemeral && !keepStage) {
         try {

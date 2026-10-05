@@ -1,7 +1,7 @@
 import { apiFetch } from "./client-config.js";
 
 export type ActivityTelemetryInput = {
-  type: "pack" | "query";
+  type: "pack_start" | "pack_end" | "pack" | "query";
   /** Subtype for query: open | search | query | list | … */
   engine?: string;
   status?: string;
@@ -9,6 +9,15 @@ export type ActivityTelemetryInput = {
   bytes?: number;
   /** Pack: document count. Query: hit count when known. */
   pages?: number;
+  /** Create ZipWiki session id (links start/end + step log). */
+  createId?: string;
+  /** End Create totals (authoritative; not summed from steps). */
+  creditCost?: number;
+  llamaCredits?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  okfCount?: number;
+  parseCount?: number;
 };
 
 /** Report pack / query activity; does not debit credits. */
@@ -27,6 +36,13 @@ export async function reportActivityTelemetry(
       filename: input.filename,
       bytes: input.bytes,
       pages: input.pages,
+      createId: input.createId,
+      creditCost: input.creditCost,
+      llamaCredits: input.llamaCredits,
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
+      okfCount: input.okfCount,
+      parseCount: input.parseCount,
     }),
   });
   if (!res.ok) {

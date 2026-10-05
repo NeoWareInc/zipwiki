@@ -115,9 +115,13 @@ export default defineSchema({
     byoLlamaCredits: v.optional(v.number()),
   }).index("by_account_period", ["accountId", "periodStart"]),
 
+  /**
+   * Primary activity log: pack_start / pack_end / pack (legacy end) / query.
+   * Parse/OKF/LiteParse steps live in usageStepEvents.
+   */
   usageEvents: defineTable({
     accountId: v.id("accounts"),
-    type: v.string(), // parse | okf | liteparse | pack | query
+    type: v.string(), // pack_start | pack_end | pack | query
     engine: v.optional(v.string()),
     bytes: v.optional(v.number()),
     status: v.optional(v.string()),
@@ -126,15 +130,51 @@ export default defineSchema({
     pages: v.optional(v.number()),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
-    /** LlamaParse credits billed for this job (`job.usage.credits`). */
+    /** LlamaParse credits (aggregate on pack_end). */
     llamaCredits: v.optional(v.number()),
-    /** ZipWiki credits debited for this event. */
+    /** ZipWiki credits (aggregate on pack_end / debit on query). */
     creditCost: v.optional(v.number()),
     /** Original filename / package path when known. */
     filename: v.optional(v.string()),
-    /** LlamaParse job id when known. */
+    /** LlamaParse job id, or unused for pack sessions. */
     jobId: v.optional(v.string()),
-  }).index("by_accountId", ["accountId"]),
+    /** Links pack_start / pack_end and usageStepEvents. */
+    createId: v.optional(v.string()),
+    /** pack_end: hosted OKF call count for this create. */
+    okfCount: v.optional(v.number()),
+    /** pack_end: hosted parse document count for this create. */
+    parseCount: v.optional(v.number()),
+  })
+    .index("by_accountId", ["accountId"])
+    .index("by_type", ["type"])
+    .index("by_accountId_and_type", ["accountId", "type"])
+    .index("by_accountId_and_createId", ["accountId", "createId"])
+    .index("by_createId", ["createId"]),
+
+  /**
+   * Step detail log for multistep ops (Create ZipWiki). Never shown in the
+   * primary log; loaded by createId when details are requested.
+   */
+  usageStepEvents: defineTable({
+    accountId: v.id("accounts"),
+    /** Session id from pack_start; "orphan" when createId was not supplied. */
+    createId: v.string(),
+    type: v.string(), // parse | okf | liteparse | llamaparse_byo
+    engine: v.optional(v.string()),
+    bytes: v.optional(v.number()),
+    status: v.optional(v.string()),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    pages: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    llamaCredits: v.optional(v.number()),
+    creditCost: v.optional(v.number()),
+    filename: v.optional(v.string()),
+    jobId: v.optional(v.string()),
+  })
+    .index("by_createId", ["createId"])
+    .index("by_accountId_and_createId", ["accountId", "createId"]),
 
   /** Master vendor float. The API key itself stays a Fly secret named by `secretEnv`. */
   providerAccounts: defineTable({

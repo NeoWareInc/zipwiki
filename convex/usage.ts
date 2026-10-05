@@ -15,6 +15,7 @@ import {
   shouldStartAutoReload,
 } from "./lib/credits";
 import { creditsLockedFor } from "./lib/creditLock";
+import { requireAdmin } from "./lib/admin";
 import type { Id } from "./_generated/dataModel";
 
 export const getOrCreatePeriod = internalMutation({
@@ -131,6 +132,8 @@ export const recordUsage = internalMutation({
      * parse and do not debit ZipWiki credits.
      */
     userKey: v.optional(v.boolean()),
+    /** Create ZipWiki session id; links this step to pack_start / pack_end. */
+    createId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const {
@@ -148,6 +151,7 @@ export const recordUsage = internalMutation({
       filename,
       jobId,
       userKey,
+      createId,
     } = args;
     const ownKey = userKey === true && kind === "parse";
     const safeFilename =
@@ -222,8 +226,13 @@ export const recordUsage = internalMutation({
       });
     }
 
-    await ctx.db.insert("usageEvents", {
+    const safeCreateId =
+      typeof createId === "string" && createId.trim()
+        ? createId.trim().slice(0, 128)
+        : "orphan";
+    await ctx.db.insert("usageStepEvents", {
       accountId,
+      createId: safeCreateId,
       type: ownKey ? "llamaparse_byo" : kind,
       engine,
       bytes,
@@ -540,8 +549,9 @@ export const recordLiteparse = internalMutation({
     accountId: v.id("accounts"),
     success: v.boolean(),
     bytes: v.optional(v.number()),
+    createId: v.optional(v.string()),
   },
-  handler: async (ctx, { accountId, success, bytes }) => {
+  handler: async (ctx, { accountId, success, bytes, createId }) => {
     const periodStart = startOfMonthMs();
     let period = await ctx.db
       .query("usagePeriods")
@@ -567,8 +577,13 @@ export const recordLiteparse = internalMutation({
       });
     }
 
-    await ctx.db.insert("usageEvents", {
+    const safeCreateId =
+      typeof createId === "string" && createId.trim()
+        ? createId.trim().slice(0, 128)
+        : "orphan";
+    await ctx.db.insert("usageStepEvents", {
       accountId,
+      createId: safeCreateId,
       type: "liteparse",
       status: success ? "success" : "fail",
       bytes,
@@ -576,26 +591,45 @@ export const recordLiteparse = internalMutation({
   },
 });
 
+const activityTypeValidator = v.union(
+  v.literal("pack_start"),
+  v.literal("pack_end"),
+  v.literal("pack"),
+  v.literal("query"),
+);
+
+/** Normalize legacy `pack` → `pack_end`. */
+function normalizeActivityType(
+  type: "pack_start" | "pack_end" | "pack" | "query",
+): "pack_start" | "pack_end" | "query" {
+  if (type === "pack") return "pack_end";
+  return type;
+}
+
 /**
- * Soft activity log for pack / open / search / query (no credit debit).
- * `engine` holds the action subtype for query events (open|search|query|…).
- */
-/**
- * Soft activity log for pack / open / search / query (no credit debit).
+ * Soft activity log for pack start/end / query (no credit debit).
  * `engine` holds the action subtype for query events (open|search|query|…).
  */
 async function insertActivity(
   ctx: { db: any },
   args: {
     accountId: Id<"accounts">;
-    type: "pack" | "query";
+    type: "pack_start" | "pack_end" | "pack" | "query";
     engine?: string;
     status?: string;
     filename?: string;
     bytes?: number;
     pages?: number;
+    createId?: string;
+    creditCost?: number;
+    llamaCredits?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    okfCount?: number;
+    parseCount?: number;
   },
 ): Promise<void> {
+  const type = normalizeActivityType(args.type);
   const safeFilename =
     typeof args.filename === "string" && args.filename.trim()
       ? args.filename.trim().slice(0, 512)
@@ -604,15 +638,31 @@ async function insertActivity(
     typeof args.engine === "string" && args.engine.trim()
       ? args.engine.trim().slice(0, 64)
       : undefined;
+  const safeCreateId =
+    typeof args.createId === "string" && args.createId.trim()
+      ? args.createId.trim().slice(0, 128)
+      : undefined;
+
   await ctx.db.insert("usageEvents", {
     accountId: args.accountId,
-    type: args.type,
+    type,
     engine: safeEngine,
     status: args.status ?? "success",
     filename: safeFilename,
     bytes: args.bytes,
     pages: args.pages,
+    createId: safeCreateId,
+    creditCost: args.creditCost,
+    llamaCredits: args.llamaCredits,
+    inputTokens: args.inputTokens,
+    outputTokens: args.outputTokens,
+    okfCount: args.okfCount,
+    parseCount: args.parseCount,
   });
+
+  const bumpsPack = type === "pack_end";
+  const bumpsQuery = type === "query";
+  if (!bumpsPack && !bumpsQuery) return;
 
   const periodStart = startOfMonthMs();
   let period = await ctx.db
@@ -629,26 +679,37 @@ async function insertActivity(
       okfCount: 0,
       liteparseSuccessCount: 0,
       liteparseFailCount: 0,
-      packCount: args.type === "pack" ? 1 : 0,
-      queryCount: args.type === "query" ? 1 : 0,
+      packCount: bumpsPack ? 1 : 0,
+      queryCount: bumpsQuery ? 1 : 0,
     });
   } else {
     await ctx.db.patch(period._id, {
-      packCount: (period.packCount ?? 0) + (args.type === "pack" ? 1 : 0),
-      queryCount: (period.queryCount ?? 0) + (args.type === "query" ? 1 : 0),
+      packCount: (period.packCount ?? 0) + (bumpsPack ? 1 : 0),
+      queryCount: (period.queryCount ?? 0) + (bumpsQuery ? 1 : 0),
     });
   }
 }
 
+const activityArgs = {
+  type: activityTypeValidator,
+  engine: v.optional(v.string()),
+  status: v.optional(v.string()),
+  filename: v.optional(v.string()),
+  bytes: v.optional(v.number()),
+  pages: v.optional(v.number()),
+  createId: v.optional(v.string()),
+  creditCost: v.optional(v.number()),
+  llamaCredits: v.optional(v.number()),
+  inputTokens: v.optional(v.number()),
+  outputTokens: v.optional(v.number()),
+  okfCount: v.optional(v.number()),
+  parseCount: v.optional(v.number()),
+};
+
 export const recordActivity = internalMutation({
   args: {
     accountId: v.id("accounts"),
-    type: v.union(v.literal("pack"), v.literal("query")),
-    engine: v.optional(v.string()),
-    status: v.optional(v.string()),
-    filename: v.optional(v.string()),
-    bytes: v.optional(v.number()),
-    pages: v.optional(v.number()),
+    ...activityArgs,
   },
   handler: async (ctx, args) => {
     await insertActivity(ctx, args);
@@ -657,14 +718,7 @@ export const recordActivity = internalMutation({
 
 /** Authenticated portal: report pack/query activity from the website. */
 export const reportActivity = mutation({
-  args: {
-    type: v.union(v.literal("pack"), v.literal("query")),
-    engine: v.optional(v.string()),
-    status: v.optional(v.string()),
-    filename: v.optional(v.string()),
-    bytes: v.optional(v.number()),
-    pages: v.optional(v.number()),
-  },
+  args: activityArgs,
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
@@ -675,14 +729,62 @@ export const reportActivity = mutation({
     if (!account) throw new Error("No account");
     await insertActivity(ctx, {
       accountId: account._id,
-      type: args.type,
-      engine: args.engine,
-      status: args.status,
-      filename: args.filename,
-      bytes: args.bytes,
-      pages: args.pages,
+      ...args,
     });
     return { ok: true as const };
+  },
+});
+
+const PRIMARY_LOG_TYPES = new Set([
+  "pack_start",
+  "pack_end",
+  "pack",
+  "query",
+]);
+
+async function wipeAllActivityLogs(ctx: { db: any }): Promise<{
+  ok: true;
+  eventsDeleted: number;
+  stepsDeleted: number;
+}> {
+  let events = 0;
+  let steps = 0;
+  for (;;) {
+    const batch = await ctx.db.query("usageEvents").take(200);
+    if (batch.length === 0) break;
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+      events += 1;
+    }
+  }
+  for (;;) {
+    const batch = await ctx.db.query("usageStepEvents").take(200);
+    if (batch.length === 0) break;
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+      steps += 1;
+    }
+  }
+  return { ok: true as const, eventsDeleted: events, stepsDeleted: steps };
+}
+
+/**
+ * Wipe primary + step activity logs (not creditLedger / usagePeriods).
+ * Admin-only; destructive.
+ */
+export const wipeActivityLogs = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await wipeAllActivityLogs(ctx);
+  },
+});
+
+/** Deploy / ops one-shot wipe (no auth; run via `npx convex run`). */
+export const wipeActivityLogsInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    return await wipeAllActivityLogs(ctx);
   },
 });
 
@@ -743,7 +845,7 @@ export const myUsage = query({
   },
 });
 
-/** Recent usage events for the signed-in account (portal activity log). */
+/** Recent primary activity for the signed-in account (portal activity log). */
 export const myUsageLog = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }) => {
@@ -755,28 +857,35 @@ export const myUsageLog = query({
       .unique();
     if (!account) return null;
     const take = Math.min(100, Math.max(1, Math.floor(limit ?? 40)));
+    // Scan a bit extra so filtering to primary types still fills the page.
     const rows = await ctx.db
       .query("usageEvents")
       .withIndex("by_accountId", (q) => q.eq("accountId", account._id))
       .order("desc")
-      .take(take);
-    return rows.map((row) => ({
-      id: row._id,
-      createdAt: row._creationTime,
-      type: row.type,
-      engine: row.engine ?? null,
-      status: row.status ?? null,
-      provider: row.provider ?? null,
-      pages: row.pages ?? null,
-      bytes: row.bytes ?? null,
-      llamaCredits: row.llamaCredits ?? null,
-      creditCost: row.creditCost ?? null,
-      filename: row.filename ?? null,
-      jobId: row.jobId ?? null,
-      model: row.model ?? null,
-      inputTokens: row.inputTokens ?? null,
-      outputTokens: row.outputTokens ?? null,
-    }));
+      .take(Math.min(300, take * 3));
+    return rows
+      .filter((row) => PRIMARY_LOG_TYPES.has(row.type))
+      .slice(0, take)
+      .map((row) => ({
+        id: row._id,
+        createdAt: row._creationTime,
+        type: row.type === "pack" ? "pack_end" : row.type,
+        engine: row.engine ?? null,
+        status: row.status ?? null,
+        provider: row.provider ?? null,
+        pages: row.pages ?? null,
+        bytes: row.bytes ?? null,
+        llamaCredits: row.llamaCredits ?? null,
+        creditCost: row.creditCost ?? null,
+        filename: row.filename ?? null,
+        jobId: row.jobId ?? null,
+        model: row.model ?? null,
+        inputTokens: row.inputTokens ?? null,
+        outputTokens: row.outputTokens ?? null,
+        createId: row.createId ?? null,
+        okfCount: row.okfCount ?? null,
+        parseCount: row.parseCount ?? null,
+      }));
   },
 });
 

@@ -38,6 +38,7 @@ export async function handleParse(
     noOcr?: boolean;
     tier?: string;
     version?: string;
+    createId?: string;
     onProgress?: (info: LlamaParseProgress) => void;
   },
 ): Promise<GatewayResponse> {
@@ -116,6 +117,7 @@ export async function handleParse(
         ...(parsed.llamaCredits != null
           ? { llamaCredits: parsed.llamaCredits }
           : {}),
+        ...(args.createId ? { createId: args.createId } : {}),
       },
     });
   } catch (err) {
@@ -139,7 +141,12 @@ export async function handleParse(
 
 export async function handleOkf(
   deps: GatewayDeps,
-  args: { token: string; input: OkfRequest; model?: string },
+  args: {
+    token: string;
+    input: OkfRequest;
+    model?: string;
+    createId?: string;
+  },
 ): Promise<GatewayResponse> {
   const env = deps.env ?? process.env;
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -189,6 +196,7 @@ export async function handleOkf(
         engine: "anthropic",
         inputTokens: completion.inputTokens,
         outputTokens: completion.outputTokens,
+        ...(args.createId ? { createId: args.createId } : {}),
       },
     });
   } catch (err) {

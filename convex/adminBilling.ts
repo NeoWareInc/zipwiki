@@ -43,7 +43,6 @@ export const overview = query({
     await requireAdmin(ctx);
     const providers = await ctx.db.query("providerAccounts").collect();
     const accounts = await ctx.db.query("accounts").collect();
-    const ledger = await ctx.db.query("creditLedger").order("desc").take(40);
 
     const providerRows = [];
     for (const provider of providers) {
@@ -98,31 +97,7 @@ export const overview = query({
       });
     }
 
-    const recent = [];
-    for (const row of ledger) {
-      const account = accounts.find((item) => item._id === row.accountId);
-      const profile = account
-        ? await ctx.db
-            .query("profiles")
-            .withIndex("by_userId", (q) => q.eq("userId", account.userId))
-            .unique()
-        : null;
-      recent.push({
-        id: row._id,
-        email: profile?.email ?? "",
-        kind: row.kind,
-        credits: row.credits,
-        usdCents: row.usdCents ?? null,
-        provider: row.provider ?? null,
-        model: row.model ?? null,
-        pages: row.pages ?? null,
-        inputTokens: row.inputTokens ?? null,
-        outputTokens: row.outputTokens ?? null,
-        createdAt: new Date(row._creationTime).toISOString(),
-      });
-    }
-
-    return { providers: providerRows, accounts: accountRows, recent };
+    return { providers: providerRows, accounts: accountRows };
   },
 });
 

@@ -348,6 +348,7 @@ http.route({
         filename?: string;
         job_id?: string;
         user_key?: boolean;
+        create_id?: string;
       };
       if (!body.account_id || !body.kind) {
         return json({ error: "invalid_request" }, 400);
@@ -367,6 +368,7 @@ http.route({
         filename: body.filename,
         jobId: body.job_id,
         userKey: body.user_key === true,
+        createId: body.create_id,
       });
       return json({ ok: true, ...result });
     } catch {
@@ -386,6 +388,7 @@ http.route({
         account_id: string;
         success: boolean;
         bytes?: number;
+        create_id?: string;
       };
       if (!body.account_id || typeof body.success !== "boolean") {
         return json({ error: "invalid_request" }, 400);
@@ -394,6 +397,7 @@ http.route({
         accountId: body.account_id as never,
         success: body.success,
         bytes: body.bytes,
+        createId: body.create_id,
       });
       return json({ ok: true });
     } catch {
@@ -430,27 +434,61 @@ http.route({
       filename?: string;
       bytes?: number;
       pages?: number;
+      create_id?: string;
+      createId?: string;
+      credit_cost?: number;
+      creditCost?: number;
+      llama_credits?: number;
+      llamaCredits?: number;
+      input_tokens?: number;
+      inputTokens?: number;
+      output_tokens?: number;
+      outputTokens?: number;
+      okf_count?: number;
+      okfCount?: number;
+      parse_count?: number;
+      parseCount?: number;
     };
     try {
       body = (await req.json()) as typeof body;
     } catch {
       return json({ error: "invalid_request" }, 400);
     }
-    if (body.type !== "pack" && body.type !== "query") {
+    const allowed = new Set(["pack_start", "pack_end", "pack", "query"]);
+    if (typeof body.type !== "string" || !allowed.has(body.type)) {
       return json({ error: "invalid_request" }, 400);
     }
+    const pickStr = (a?: string, b?: string) =>
+      typeof a === "string" && a.trim()
+        ? a.trim()
+        : typeof b === "string" && b.trim()
+          ? b.trim()
+          : undefined;
+    const pickNum = (a?: number, b?: number) =>
+      typeof a === "number" && Number.isFinite(a)
+        ? a
+        : typeof b === "number" && Number.isFinite(b)
+          ? b
+          : undefined;
 
     await ctx.runMutation(internal.apiKeys.touchLastUsed, {
       apiKeyId: keyCtx.apiKeyId,
     });
     await ctx.runMutation(internal.usage.recordActivity, {
       accountId: keyCtx.accountId,
-      type: body.type,
+      type: body.type as "pack_start" | "pack_end" | "pack" | "query",
       engine: body.engine,
       status: body.status,
       filename: body.filename,
       bytes: body.bytes,
       pages: body.pages,
+      createId: pickStr(body.createId, body.create_id),
+      creditCost: pickNum(body.creditCost, body.credit_cost),
+      llamaCredits: pickNum(body.llamaCredits, body.llama_credits),
+      inputTokens: pickNum(body.inputTokens, body.input_tokens),
+      outputTokens: pickNum(body.outputTokens, body.output_tokens),
+      okfCount: pickNum(body.okfCount, body.okf_count),
+      parseCount: pickNum(body.parseCount, body.parse_count),
     });
     return json({ ok: true });
   }),
@@ -532,17 +570,22 @@ http.route({
     try {
       const body = (await req.json()) as {
         account_id: string;
-        type: "pack" | "query";
+        type: "pack_start" | "pack_end" | "pack" | "query";
         engine?: string;
         status?: string;
         filename?: string;
         bytes?: number;
         pages?: number;
+        create_id?: string;
+        credit_cost?: number;
+        llama_credits?: number;
+        input_tokens?: number;
+        output_tokens?: number;
+        okf_count?: number;
+        parse_count?: number;
       };
-      if (
-        !body.account_id ||
-        (body.type !== "pack" && body.type !== "query")
-      ) {
+      const allowed = new Set(["pack_start", "pack_end", "pack", "query"]);
+      if (!body.account_id || !allowed.has(body.type)) {
         return json({ error: "invalid_request" }, 400);
       }
       await ctx.runMutation(internal.usage.recordActivity, {
@@ -553,6 +596,13 @@ http.route({
         filename: body.filename,
         bytes: body.bytes,
         pages: body.pages,
+        createId: body.create_id,
+        creditCost: body.credit_cost,
+        llamaCredits: body.llama_credits,
+        inputTokens: body.input_tokens,
+        outputTokens: body.output_tokens,
+        okfCount: body.okf_count,
+        parseCount: body.parse_count,
       });
       return json({ ok: true });
     } catch {

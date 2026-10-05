@@ -9,6 +9,7 @@ import {
   resolveZipwikiApiKey,
   resolveZipwikiApiUrl,
 } from "./api.js";
+import { getCreateId } from "./create-session.js";
 import { isLlamaCloudConfigured } from "./load.js";
 
 /**
@@ -33,6 +34,7 @@ export async function maybeReportLocalLiteParse(input: {
     await reportLiteParseTelemetry(url, key, {
       success: input.success,
       bytes: input.bytes,
+      createId: getCreateId(),
     });
   } catch (err) {
     if (!input.quiet) {
@@ -83,6 +85,7 @@ export async function maybeReportLlamaParseUsage(input: {
       filename: input.filename,
       jobId: input.jobId,
       userKey: true,
+      createId: getCreateId(),
     });
     if (!input.quiet) {
       const llama =

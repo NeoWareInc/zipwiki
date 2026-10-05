@@ -118,6 +118,7 @@ export function createConvexGateway(options?: {
         filename: args.usage.filename,
         job_id: args.usage.jobId,
         user_key: args.userKey === true,
+        create_id: args.usage.createId,
       });
       const data = (await res.json().catch(() => ({}))) as RecordResult & {
         error?: string;
@@ -183,11 +184,13 @@ export function createConvexGateway(options?: {
       accountId: string;
       success: boolean;
       bytes?: number;
+      createId?: string;
     }): Promise<void> {
       const res = await post("/internal/record-liteparse", {
         account_id: args.accountId,
         success: args.success,
         bytes: args.bytes,
+        create_id: args.createId,
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -197,12 +200,19 @@ export function createConvexGateway(options?: {
 
     async recordActivity(args: {
       accountId: string;
-      type: "pack" | "query";
+      type: "pack_start" | "pack_end" | "pack" | "query";
       engine?: string;
       status?: string;
       filename?: string;
       bytes?: number;
       pages?: number;
+      createId?: string;
+      creditCost?: number;
+      llamaCredits?: number;
+      inputTokens?: number;
+      outputTokens?: number;
+      okfCount?: number;
+      parseCount?: number;
     }): Promise<void> {
       const res = await post("/internal/record-activity", {
         account_id: args.accountId,
@@ -212,6 +222,13 @@ export function createConvexGateway(options?: {
         filename: args.filename,
         bytes: args.bytes,
         pages: args.pages,
+        create_id: args.createId,
+        credit_cost: args.creditCost,
+        llama_credits: args.llamaCredits,
+        input_tokens: args.inputTokens,
+        output_tokens: args.outputTokens,
+        okf_count: args.okfCount,
+        parse_count: args.parseCount,
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };

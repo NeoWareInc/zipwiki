@@ -6,9 +6,10 @@ import {
   resolveZipwikiApiUrl,
   zipwikiDeviceAuthUrl,
 } from "./api.js";
+import { getCreateId } from "./create-session.js";
 
 export type ActivityReportInput = {
-  type: "pack" | "query";
+  type: "pack_start" | "pack_end" | "pack" | "query";
   /** Query subtype: open | search | query | list | … */
   action?: string;
   status?: "success" | "fail" | string;
@@ -17,6 +18,13 @@ export type ActivityReportInput = {
   bytes?: number;
   /** Pack: documents. Query: hits when known. */
   count?: number;
+  createId?: string;
+  creditCost?: number;
+  llamaCredits?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  okfCount?: number;
+  parseCount?: number;
   quiet?: boolean;
 };
 
@@ -31,6 +39,7 @@ export async function maybeReportActivity(
   const key = resolveZipwikiApiKey();
   if (!url || !key) return;
 
+  const createId = input.createId ?? getCreateId();
   const payload = {
     type: input.type,
     engine: input.action,
@@ -38,6 +47,13 @@ export async function maybeReportActivity(
     filename: input.path ? basename(input.path) : undefined,
     bytes: input.bytes,
     pages: input.count,
+    createId,
+    creditCost: input.creditCost,
+    llamaCredits: input.llamaCredits,
+    inputTokens: input.inputTokens,
+    outputTokens: input.outputTokens,
+    okfCount: input.okfCount,
+    parseCount: input.parseCount,
   };
 
   const target = resolveZipwikiApiTarget(url) ?? "dev";

@@ -12,6 +12,8 @@ export type UsageMeta = {
   llamaCredits?: number;
   filename?: string;
   jobId?: string;
+  /** Create ZipWiki session id for step log. */
+  createId?: string;
 };
 
 export type ValidateResult =
@@ -38,6 +40,8 @@ export type AccountSettingsPayload = {
   setupUrl: string | null;
 };
 
+export type ActivityType = "pack_start" | "pack_end" | "pack" | "query";
+
 export interface ConvexGateway {
   validateKey(token: string, kind?: UsageKind): Promise<ValidateResult>;
   recordUsage(args: {
@@ -59,15 +63,23 @@ export interface ConvexGateway {
     accountId: string;
     success: boolean;
     bytes?: number;
+    createId?: string;
   }): Promise<void>;
   recordActivity(args: {
     accountId: string;
-    type: "pack" | "query";
+    type: ActivityType;
     engine?: string;
     status?: string;
     filename?: string;
     bytes?: number;
     pages?: number;
+    createId?: string;
+    creditCost?: number;
+    llamaCredits?: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    okfCount?: number;
+    parseCount?: number;
   }): Promise<void>;
   queryBilling(token: string): Promise<
     | { ok: false; status: number; error: string }
