@@ -592,6 +592,152 @@ describe("POST /api/query/answer", () => {
     assert.equal(result.status, 503);
     assert.equal((result.body as { error: string }).error, "anthropic_not_configured");
   });
+
+  it("retries with a forced tool when the model only narrates a search", async () => {
+    let calls = 0;
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async (_url, init) => {
+        calls += 1;
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          tool_choice?: { type?: string };
+        };
+        if (calls === 1) {
+          assert.equal(body.tool_choice?.type, "auto");
+          return json({
+            model: "claude-haiku-4-5",
+            content: [
+              { type: "text", text: "Let me search more broadly:" },
+            ],
+            usage: { input_tokens: 10, output_tokens: 6 },
+          });
+        }
+        assert.equal(body.tool_choice?.type, "any");
+        return json({
+          model: "claude-haiku-4-5",
+          content: [
+            {
+              type: "tool_use",
+              id: "tool_search",
+              name: "search_zipwiki",
+              input: { phrase: "termination" },
+            },
+          ],
+          usage: { input_tokens: 12, output_tokens: 8 },
+        });
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "Find the termination section",
+        excerpts: [
+          {
+            path: "wiki/okf/waterlin.md",
+            kind: "okf",
+            text: "Waterlin Stewardship District in Osceola County.",
+            documents: ["wiki/parsed/waterlin.pdf.md"],
+          },
+        ],
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(calls, 2);
+    const body = res.json() as {
+      status: string;
+      search: { phrase: string } | null;
+      answer: string;
+    };
+    assert.equal(body.status, "search");
+    assert.equal(body.search?.phrase, "termination");
+    assert.equal(body.answer, "");
+    await app.close();
+  });
+
+  it("rejects a finish-turn search narration and asks again for a real answer", async () => {
+    let calls = 0;
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls === 1) {
+          return json({
+            model: "claude-haiku-4-5",
+            content: [
+              {
+                type: "text",
+                text: "Let me try a different search within the Waterlin document:",
+              },
+            ],
+            usage: { input_tokens: 20, output_tokens: 10 },
+          });
+        }
+        return json({
+          model: "claude-haiku-4-5",
+          content: [
+            {
+              type: "text",
+              text: "The package's excerpts do not include a termination section for the Waterlin Stewardship District.",
+            },
+          ],
+          usage: { input_tokens: 24, output_tokens: 18 },
+        });
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "Find the termination section",
+        finish: true,
+        excerpts: [
+          {
+            path: "wiki/okf/waterlin.md",
+            kind: "okf",
+            text: "Waterlin Stewardship District in Osceola County.",
+          },
+        ],
+        transcript: JSON.stringify([
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "tool_use",
+                id: "tool_1",
+                name: "search_zipwiki",
+                input: { phrase: "termination" },
+              },
+            ],
+          },
+          {
+            role: "user",
+            results: [
+              {
+                id: "tool_1",
+                path: "search",
+                text: 'No stored text contains "termination".',
+              },
+            ],
+          },
+        ]),
+      },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(calls, 2);
+    const body = res.json() as { status: string; answer: string };
+    assert.equal(body.status, "answer");
+    assert.match(body.answer, /do not include a termination section/i);
+    await app.close();
+  });
 });
 
 describe("OKF profile prompt", () => {

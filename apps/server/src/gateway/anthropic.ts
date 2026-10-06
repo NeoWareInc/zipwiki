@@ -345,18 +345,26 @@ function queryPrompt(question: string, excerpts: QueryExcerpt[], finish: boolean
     })
     .join("\n\n");
   const follow = finish
-    ? "No further searches or reads are available. Answer from the excerpts and any documents already read. Include the parsed path and the original document link if one was returned."
+    ? [
+        "No further searches, reads, or origin lookups are available.",
+        "Answer now from the excerpts and any search/read results already in this conversation.",
+        "If a prior origin_zipwiki result returned a URL, include it. Do not invent a URL and do not say you will search or read.",
+        "If the package does not contain the answer, say so clearly in one or two sentences.",
+      ].join(" ")
     : [
         "The excerpts are concept cards, passages from cited text, and gaps.",
         "A gap means no extract was stored when the package was created. Say that the package does not contain that document's text. Do not invent it and do not ask to read a PDF, Office, or image file.",
-        "Call one tool, then wait for its result. search_zipwiki finds an exact phrase and reports the character offset of each hit. read_zipwiki reads 12000 characters of one wiki/parsed path, one wiki/okf path, or a stored .txt or .md primary, starting at offset. The result begins with offset, next, and total. If the line you need is not in the window and next is less than total, call read_zipwiki again with offset set to next. When a search hit includes an offset, pass that offset so the read starts at the phrase. origin_zipwiki returns only the original file's link. It does not download the file.",
+        "When you need more text, call one tool immediately with no preamble. Do not say that you will search or read; call the tool instead.",
+        "search_zipwiki finds a phrase (or nearby words) and reports the character offset of each hit. Prefer a short distinctive phrase such as a section heading (for example Termination).",
+        "read_zipwiki reads 12000 characters of one wiki/parsed path, one wiki/okf path, or a stored .txt or .md primary, starting at offset. The result begins with offset, next, and total. If the line you need is not in the window and next is less than total, call read_zipwiki again with offset set to next. When a search hit includes an offset, pass that offset so the read starts at the phrase.",
+        "origin_zipwiki returns only the original file's link. It does not download the file.",
+        "When you use a passage, name its full parsed path in bold. Before your final answer, call origin_zipwiki with that parsed path and include the returned URL. Do not invent the URL.",
       ].join(" ");
   return [
     "Answer the question using the open ZipWiki package.",
     follow,
     "Do not use outside knowledge and do not invent amounts, dates, or names.",
     "If the package does not contain the answer, say that it does not.",
-    "When you use a passage, name its full parsed path in bold, not only the concept card. Before you answer, call origin_zipwiki with that parsed path and include the returned URL as the link to the original document. Do not invent the URL.",
     "",
     `Question: ${question}`,
     "",
@@ -369,42 +377,56 @@ function toolResultContent(result: QueryToolResult): string {
   return (result.text ?? "").slice(0, MAX_PARSE_CHARS + 256);
 }
 
-/**
- * One model turn. A `read`, `search`, or `origin` result asks the caller to
- * run that command on the open archive and send the text back. The Anthropic
- * key stays on this API.
- */
-export async function invokeQueryTurn(
-  input: {
-    question: string;
-    excerpts: QueryExcerpt[];
-    transcript?: QueryTranscriptTurn[];
-    finish?: boolean;
+/** Narration that usually means the model meant to call a tool but didn't. */
+export function looksLikeToolPreamble(text: string): boolean {
+  const t = text.trim();
+  if (!t) return true;
+  if (
+    /^(let me|i('ll| will)|i am going to|i'm going to|searching|looking|reading|checking|trying|one moment)\b/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /\b(let me|i('ll| will)|try (a |another |a different )?search|search (more|again|within|for)|looking for|reading (the|more))\b/i.test(
+      t,
+    ) &&
+    t.length < 500
+  ) {
+    return true;
+  }
+  if (t.length < 280 && /[:…]\s*$/.test(t)) return true;
+  return false;
+}
+
+const FINISH_NUDGE =
+  "Stop searching. Tools are no longer available. Give a complete answer now from the package text already provided, or say clearly that the package does not contain the information.";
+
+type AnthropicContentBlock = {
+  type?: string;
+  text?: string;
+  id?: string;
+  name?: string;
+  input?: unknown;
+};
+
+type AnthropicMessageBody = {
+  model?: string;
+  content?: AnthropicContentBlock[];
+  usage?: { input_tokens?: number; output_tokens?: number };
+};
+
+async function postQueryMessages(
+  args: {
+    model: string;
+    messages: Array<{ role: "user" | "assistant"; content: unknown }>;
+    finish: boolean;
+    toolChoice?: "auto" | "any";
   },
   apiKey: string,
   fetchImpl: typeof fetch,
-  model?: string | null,
-): Promise<QueryTurn> {
-  const resolved = resolveHostedOkfModel(model);
-  const finish = input.finish === true;
-  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [
-    { role: "user", content: queryPrompt(input.question, input.excerpts, finish) },
-  ];
-  for (const turn of input.transcript ?? []) {
-    if (turn.role === "assistant") {
-      messages.push({ role: "assistant", content: turn.content });
-      continue;
-    }
-    messages.push({
-      role: "user",
-      content: turn.results.map((result) => ({
-        type: "tool_result",
-        tool_use_id: result.id,
-        content: toolResultContent(result),
-        is_error: Boolean(result.error?.trim()),
-      })),
-    });
-  }
+): Promise<AnthropicMessageBody> {
   const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -413,30 +435,33 @@ export async function invokeQueryTurn(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: resolved,
+      model: args.model,
       max_tokens: 1024,
-      ...(finish ? {} : { tools: QUERY_TOOLS }),
-      messages,
+      ...(args.finish
+        ? {}
+        : {
+            tools: QUERY_TOOLS,
+            tool_choice: { type: args.toolChoice ?? "auto" },
+          }),
+      messages: args.messages,
     }),
   });
   if (!res.ok) throw new Error(`Anthropic failed (${res.status})`);
-  const body = (await res.json()) as {
-    model?: string;
-    content?: Array<{
-      type?: string;
-      text?: string;
-      id?: string;
-      name?: string;
-      input?: unknown;
-    }>;
-    usage?: { input_tokens?: number; output_tokens?: number };
-  };
-  const content = body.content ?? [];
-  const usage = {
-    model: body.model ?? resolved,
-    inputTokens: body.usage?.input_tokens,
-    outputTokens: body.usage?.output_tokens,
-  };
+  return (await res.json()) as AnthropicMessageBody;
+}
+
+function parseQueryTool(
+  content: AnthropicContentBlock[],
+  finish: boolean,
+): {
+  tool:
+    | { name: "read_zipwiki"; id: string; path: string; offset: number }
+    | { name: "search_zipwiki"; id: string; phrase: string }
+    | { name: "origin_zipwiki"; id: string; path: string }
+    | null;
+  assistant: unknown[];
+  answerText: string;
+} {
   const assistant: unknown[] = [];
   let tool:
     | { name: "read_zipwiki"; id: string; path: string; offset: number }
@@ -487,6 +512,92 @@ export async function invokeQueryTurn(
       input: { path, offset },
     });
   }
+  const answerText = content
+    .filter((block) => block.type === "text" && block.text)
+    .map((block) => block.text)
+    .join("\n")
+    .trim();
+  return { tool, assistant, answerText };
+}
+
+/**
+ * One model turn. A `read`, `search`, or `origin` result asks the caller to
+ * run that command on the open archive and send the text back. The Anthropic
+ * key stays on this API.
+ */
+export async function invokeQueryTurn(
+  input: {
+    question: string;
+    excerpts: QueryExcerpt[];
+    transcript?: QueryTranscriptTurn[];
+    finish?: boolean;
+  },
+  apiKey: string,
+  fetchImpl: typeof fetch,
+  model?: string | null,
+): Promise<QueryTurn> {
+  const resolved = resolveHostedOkfModel(model);
+  const finish = input.finish === true;
+  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [
+    { role: "user", content: queryPrompt(input.question, input.excerpts, finish) },
+  ];
+  for (const turn of input.transcript ?? []) {
+    if (turn.role === "assistant") {
+      messages.push({ role: "assistant", content: turn.content });
+      continue;
+    }
+    messages.push({
+      role: "user",
+      content: turn.results.map((result) => ({
+        type: "tool_result",
+        tool_use_id: result.id,
+        content: toolResultContent(result),
+        is_error: Boolean(result.error?.trim()),
+      })),
+    });
+  }
+
+  let body = await postQueryMessages(
+    { model: resolved, messages, finish, toolChoice: "auto" },
+    apiKey,
+    fetchImpl,
+  );
+  let content = body.content ?? [];
+  let parsed = parseQueryTool(content, finish);
+
+  // Models often narrate "Let me search…" without a tool call. Force one tool.
+  if (!finish && !parsed.tool && looksLikeToolPreamble(parsed.answerText)) {
+    body = await postQueryMessages(
+      { model: resolved, messages, finish, toolChoice: "any" },
+      apiKey,
+      fetchImpl,
+    );
+    content = body.content ?? [];
+    parsed = parseQueryTool(content, finish);
+  }
+
+  // Last turn: refuse incomplete "I'll search…" answers and force a real reply.
+  if (finish && looksLikeToolPreamble(parsed.answerText)) {
+    body = await postQueryMessages(
+      {
+        model: resolved,
+        messages: [...messages, { role: "user", content: FINISH_NUDGE }],
+        finish: true,
+      },
+      apiKey,
+      fetchImpl,
+    );
+    content = body.content ?? [];
+    parsed = parseQueryTool(content, true);
+  }
+
+  const usage = {
+    model: body.model ?? resolved,
+    inputTokens: body.usage?.input_tokens,
+    outputTokens: body.usage?.output_tokens,
+  };
+  const { tool, assistant, answerText: answer } = parsed;
+
   if (tool?.name === "search_zipwiki") {
     return {
       status: "search",
@@ -520,12 +631,14 @@ export async function invokeQueryTurn(
       ...usage,
     };
   }
-  const answer = content
-    .filter((block) => block.type === "text" && block.text)
-    .map((block) => block.text)
-    .join("\n")
-    .trim();
-  if (!answer) throw new Error("Claude returned an empty answer");
+
+  // Never surface a tool preamble as the billed answer.
+  if (!finish && !tool && looksLikeToolPreamble(answer)) {
+    throw new Error("Claude narrated a search without calling a tool");
+  }
+  if (!answer || looksLikeToolPreamble(answer)) {
+    throw new Error("Claude returned an incomplete answer");
+  }
   return {
     status: "answer",
     answer,

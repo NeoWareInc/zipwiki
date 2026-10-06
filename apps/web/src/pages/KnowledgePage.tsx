@@ -509,8 +509,9 @@ export default function KnowledgePage() {
         sources = rememberSource(sources, passage.path);
       }
       setAskSources(sources);
-      if (found.excerpts.length === 0) return;
-      const pendingPassages = [...found.passages];
+      if (found.excerpts.length === 0 && found.passages.length === 0) return;
+      // Deep parsed windows first so section hits (e.g. Termination) are not
+      // buried behind OKF intro cards that only cover early sections.
       const excerpts: Array<{
         path: string;
         title?: string;
@@ -518,35 +519,22 @@ export default function KnowledgePage() {
         text: string;
         documents?: string[];
       }> = [];
+      for (const passage of found.passages) {
+        if (excerpts.length >= 9) break;
+        excerpts.push({
+          path: passage.path,
+          kind: "parsed",
+          text: passage.text,
+        });
+      }
       for (const excerpt of found.excerpts) {
+        if (excerpts.length >= 9) break;
         excerpts.push({
           path: excerpt.path,
           title: excerpt.title,
           kind: excerpt.kind,
           text: excerpt.text,
           ...(excerpt.documents?.length ? { documents: excerpt.documents } : {}),
-        });
-        const cited = new Set(excerpt.documents ?? []);
-        for (let i = 0; i < pendingPassages.length && excerpts.length < 9; ) {
-          const passage = pendingPassages[i]!;
-          if (passage.path !== excerpt.path && !cited.has(passage.path)) {
-            i += 1;
-            continue;
-          }
-          pendingPassages.splice(i, 1);
-          excerpts.push({
-            path: passage.path,
-            kind: "parsed",
-            text: passage.text,
-          });
-        }
-      }
-      for (const passage of pendingPassages) {
-        if (excerpts.length >= 9) break;
-        excerpts.push({
-          path: passage.path,
-          kind: "parsed",
-          text: passage.text,
         });
       }
       for (const gap of found.gaps) {
@@ -670,8 +658,16 @@ export default function KnowledgePage() {
           ];
           continue;
         }
+        const answerText = (result.answer ?? "").trim();
+        // Safety net: never show "Let me search…" as the final answer.
+        if (
+          /^(let me|i('ll| will)|trying)\b/i.test(answerText) ||
+          (answerText.length < 280 && /[:…]\s*$/.test(answerText))
+        ) {
+          throw new Error("incomplete answer");
+        }
         setAnswer({
-          text: result.answer ?? "",
+          text: answerText,
           reads: followReads,
           creditsCharged: charged,
           creditsRemaining: remaining,
@@ -689,6 +685,10 @@ export default function KnowledgePage() {
         setAskError("Credits are required to ask a question.");
       } else if (/anthropic_not_configured/.test(message)) {
         setAskError("Hosted answers are not configured on this deployment.");
+      } else if (/incomplete answer|without calling a tool/i.test(message)) {
+        setAskError(
+          "The answer stopped mid-search. Try asking again with a shorter phrase from the document (for example “termination”).",
+        );
       } else {
         setAskError(message);
       }

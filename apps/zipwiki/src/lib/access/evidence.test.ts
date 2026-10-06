@@ -12,6 +12,9 @@ import {
   formatFollowWindow,
   readFollow,
   searchPhrase,
+  bestPassageOffset,
+  passageAround,
+  tokenMatchIndex,
 } from "./evidence.js";
 
 const dir = mkdtempSync(join(tmpdir(), "zipwiki-evidence-"));
@@ -179,5 +182,43 @@ describe("local query evidence", () => {
     assert.equal(secret.includes("SECRET-UNPARSED"), false);
     const parsed = readFollow(pkg, "wiki/parsed/deed.pdf.md");
     assert.ok("text" in parsed && parsed.text.includes("oak street parcel"));
+  });
+
+  it("centers passages on rare section terms, not frequent branding", () => {
+    const act = [
+      "Waterlin Stewardship District of Osceola County.",
+      "The stewardship of the Waterlin Stewardship District continues.",
+      "Legislative findings for the Waterlin Stewardship District.",
+      "See also: termination (table of contents).",
+      "A".repeat(8_000),
+      "26) TERMINATION, CONTRACTION, OR EXPANSION OF DISTRICT.",
+      "The district shall remain in existence until terminated by the Legislature.",
+    ].join("\n");
+    const tokens = [
+      "waterlin",
+      "stewardship",
+      "district",
+      "osceola",
+      "legislation",
+      "termination",
+    ];
+    const offset = bestPassageOffset(act, tokens);
+    assert.ok(offset > 1000, `expected deep offset, got ${offset}`);
+    assert.match(act.slice(offset, offset + 40), /TERMINATION/i);
+    assert.doesNotMatch(act.slice(offset, offset + 80), /table of contents/i);
+    const window = passageAround(act, tokens, 800);
+    assert.ok(window);
+    assert.match(window!.text, /TERMINATION/i);
+    assert.match(window!.text, /remain in existence/i);
+
+    const hyphenated = [
+      "Waterlin Stewardship District findings.",
+      "B".repeat(6_000),
+      "26) TERMINA-\nTION of the district.",
+      "The district terminates when repealed by the Legislature.",
+    ].join("\n");
+    const hyphenAt = tokenMatchIndex(hyphenated, "termination");
+    assert.ok(hyphenAt > 1000, `expected hyphenated match, got ${hyphenAt}`);
+    assert.match(hyphenated.slice(hyphenAt, hyphenAt + 20), /TERMINA/i);
   });
 });

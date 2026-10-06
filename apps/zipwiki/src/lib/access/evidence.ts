@@ -15,6 +15,8 @@ import { readEntries } from "./open.js";
 import { searchPackage, type EvidenceGap, type EvidencePassage, type SearchHit, type SearchResult, type SearchScope } from "./search.js";
 
 export const PASSAGE_CHARS = 4_000;
+/** Larger window when seeding a section/clause hit. */
+export const DEEP_PASSAGE_CHARS = 8_000;
 export const NO_EXTRACT_REASON =
   "No extracted text was stored for this file at pack time.";
 
@@ -44,24 +46,104 @@ export function queryReadKind(path: string): QueryReadKind {
   return "reject";
 }
 
-export function passageAround(
-  text: string,
-  tokens: string[],
-  maxChars = PASSAGE_CHARS,
-): { text: string; truncated: boolean } | null {
+/** Section / clause vocabulary — prefer these over branding terms that appear early. */
+const SECTION_HINT =
+  /^(termination|dissolution|contraction|expansion|section|article|subsection|definitions|findings|intent|purpose|powers|boundaries|merger|repeal|amendment)$/i;
+
+/** Case-insensitive match; tolerates PDF soft hyphens and hyphenated wraps. */
+export function tokenMatchIndex(text: string, token: string): number {
+  const needle = token.toLowerCase();
+  if (needle.length < 2) return -1;
   const lower = text.toLowerCase();
-  let idx = -1;
-  for (const token of tokens) {
-    const at = lower.indexOf(token);
-    if (at >= 0 && (idx < 0 || at < idx)) idx = at;
+  const direct = lower.indexOf(needle);
+  if (direct >= 0) return direct;
+  const flex = needle
+    .split("")
+    .map((ch) => (/[a-z0-9]/.test(ch) ? `${ch}[\\u00ad\\-]?\\s*` : escapeRegExp(ch)))
+    .join("")
+    .replace(/\\s\*$/, "");
+  const match = new RegExp(flex, "i").exec(text);
+  return match ? match.index : -1;
+}
+
+/** Last match — section headings often appear in a TOC before the real clause. */
+export function tokenMatchLastIndex(text: string, token: string): number {
+  let last = -1;
+  let from = 0;
+  while (from < text.length) {
+    const slice = text.slice(from);
+    const at = tokenMatchIndex(slice, token);
+    if (at < 0) break;
+    last = from + at;
+    from = last + Math.max(1, token.length);
   }
-  if (idx < 0) return null;
+  return last;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function countTokenMatches(text: string, token: string, cap = 40): number {
+  let count = 0;
+  let from = 0;
+  while (count < cap) {
+    const slice = text.slice(from);
+    const at = tokenMatchIndex(slice, token);
+    if (at < 0) break;
+    count += 1;
+    from += at + Math.max(1, token.length);
+  }
+  return count;
+}
+
+/**
+ * Prefer rare / section-like tokens (e.g. termination) over frequent branding
+ * terms (e.g. stewardship) that dominate the start of legislation.
+ */
+export function bestPassageOffset(text: string, tokens: string[]): number {
+  const candidates = tokens.filter((token) => token.length >= 3);
+  let bestAt = -1;
+  let bestScore = -1;
+  for (const token of candidates) {
+    const section = SECTION_HINT.test(token);
+    const at = section
+      ? tokenMatchLastIndex(text, token)
+      : tokenMatchIndex(text, token);
+    if (at < 0) continue;
+    const count = countTokenMatches(text, token);
+    const sectionBonus = section ? 24 : 0;
+    const rarityBonus = count === 1 ? 10 : count <= 3 ? 4 : count <= 8 ? 1 : 0;
+    const score = sectionBonus + rarityBonus + token.length / Math.max(1, count);
+    if (score > bestScore) {
+      bestScore = score;
+      bestAt = at;
+    }
+  }
+  return bestAt;
+}
+
+export function sliceAroundOffset(
+  text: string,
+  idx: number,
+  maxChars: number,
+): { text: string; truncated: boolean } {
   const start = Math.max(0, idx - Math.floor(maxChars / 3));
   let slice = text.slice(start, start + maxChars);
   const truncated = start > 0 || start + maxChars < text.length;
   if (start > 0) slice = `…${slice}`;
   if (start + maxChars < text.length) slice = `${slice}…`;
   return { text: slice, truncated };
+}
+
+export function passageAround(
+  text: string,
+  tokens: string[],
+  maxChars = PASSAGE_CHARS,
+): { text: string; truncated: boolean } | null {
+  const idx = bestPassageOffset(text, tokens);
+  if (idx < 0) return null;
+  return sliceAroundOffset(text, idx, maxChars);
 }
 
 function readMember(zipPath: string, name: string): string | null {
@@ -201,13 +283,44 @@ function windowAround(text: string, at: number, phraseLength: number): string {
 }
 
 /**
+ * Exact phrase first; if missing, find a window that contains all significant
+ * tokens (helps section headings buried deep in legislation).
+ */
+export function findPhraseOffset(text: string, phrase: string): number {
+  const needle = phrase.trim().replace(/\s+/g, " ");
+  if (needle.length < 2) return -1;
+  const exact = tokenMatchIndex(text, needle);
+  if (exact >= 0) return exact;
+  const tokens = needle
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+  if (tokens.length === 0) return -1;
+  if (tokens.length === 1) return tokenMatchIndex(text, tokens[0]!);
+  const primary = [...tokens].sort((a, b) => b.length - a.length)[0]!;
+  let from = 0;
+  while (from < text.length) {
+    const slice = text.slice(from);
+    const at = tokenMatchIndex(slice, primary);
+    if (at < 0) return -1;
+    const abs = from + at;
+    const windowStart = Math.max(0, abs - 400);
+    const windowEnd = Math.min(text.length, abs + primary.length + 400);
+    const window = text.slice(windowStart, windowEnd);
+    if (tokens.every((token) => tokenMatchIndex(window, token) >= 0)) return abs;
+    from = abs + Math.max(1, primary.length);
+  }
+  return -1;
+}
+
+/**
  * Exact phrase scan of concept cards, parsed markdown, and stored text
  * primaries. Unparsed PDF, Office, and image bytes are not opened.
  */
 export function searchPhrase(packagePath: string, phrase: string): PhraseHit[] {
   const needle = phrase.trim().replace(/\s+/g, " ");
   if (needle.length < 2) return [];
-  const lowerNeedle = needle.toLowerCase();
   return useZipHandle(packagePath, () => {
     const hits: PhraseHit[] = [];
     for (const entry of listZipEntries(packagePath)) {
@@ -216,7 +329,7 @@ export function searchPhrase(packagePath: string, phrase: string): PhraseHit[] {
       if (queryReadKind(name) !== "text") continue;
       const text = readMember(packagePath, name);
       if (!text) continue;
-      const at = text.toLowerCase().indexOf(lowerNeedle);
+      const at = findPhraseOffset(text, needle);
       if (at < 0) continue;
       hits.push({
         path: name,
@@ -231,7 +344,10 @@ export function searchPhrase(packagePath: string, phrase: string): PhraseHit[] {
 
 export function formatPhraseHits(phrase: string, hits: PhraseHit[]): string {
   if (hits.length === 0) {
-    return `No stored text contains "${phrase}".`;
+    return (
+      `No stored text contains "${phrase}". ` +
+      "Try a shorter exact phrase from the document (for example a section heading)."
+    );
   }
   return hits
     .map(
