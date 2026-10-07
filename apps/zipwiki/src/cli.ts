@@ -253,6 +253,10 @@ function withPipelineFlags(cmd: Command): Command {
       "Store each file's Google Drive URL (Drive for desktop file id) as the original",
     )
     .option(
+      "--origin-record <where>",
+      "Where to store origin URI, size, and date: manifest (default) | cd | both",
+    )
+    .option(
       "--sha256",
       "Write Extra Field 0x014E (SHA-256 of each zip member). Default: CRC-32 only",
     )
@@ -796,7 +800,11 @@ program
   )
   .option("--origin-pattern <re>", "Filename regex for Extra Field 0x014F")
   .option("--origin-url-template <tpl>", "URI template for Extra Field 0x014F")
-  .option("--origin-file", "Store file: URI as Extra Field 0x014F on each parse")
+  .option("--origin-file", "Store file: URI as the original locator")
+  .option(
+    "--origin-record <where>",
+    "Where to store origin URI, size, and date: manifest (default) | cd | both",
+  )
   .option(
     "--sha256",
     "Write Extra Field 0x014E on new members (SHA-256). Default: CRC-32 only",
@@ -843,6 +851,7 @@ program
       originPattern: opts.originPattern,
       originUrlTemplate: opts.originUrlTemplate,
       originFile: opts.originFile === true,
+      originRecord: opts.originRecord,
       sha256Extra: opts.sha256 === true,
       originSha256: opts.originSha256 === true,
       quiet: opts.quiet === true,

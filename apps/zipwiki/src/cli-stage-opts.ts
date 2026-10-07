@@ -1,3 +1,4 @@
+import { parseOriginRecord } from "./lib/archive/origin-extra.js";
 import { parseOkfProfileFlag } from "./lib/okf/profiles.js";
 import { resolveRepoPath } from "./lib/parse/index.js";
 import type { PipelinePhase, StageOptions } from "./pipeline/types.js";
@@ -107,6 +108,7 @@ export function stageOptionsFromCli(
     originUrlTemplate: opts.originUrlTemplate as string | undefined,
     originFile: opts.originFile === true,
     originDrive: opts.originDrive === true,
+    originRecord: parseOriginRecord(opts.originRecord),
     sha256Extra: opts.sha256 === true,
     originSha256: opts.originSha256 === true,
     dryRun: opts.dryRun === true,

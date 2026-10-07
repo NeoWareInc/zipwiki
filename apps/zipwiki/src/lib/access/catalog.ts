@@ -188,7 +188,9 @@ function buildCatalogLoaded(path: string): CatalogResult {
       type = String(slot.manifest.documentType);
     }
     const originUri =
-      (slot.parsedPath && originUriByParsed.get(slot.parsedPath)) || null;
+      slot.manifest?.origin?.uri ||
+      (slot.parsedPath && originUriByParsed.get(slot.parsedPath)) ||
+      null;
     const hasOriginal = slot.sourceIncluded && slot.hasPrimaryEntry;
     rows.push({
       primary,

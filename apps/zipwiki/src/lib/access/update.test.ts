@@ -204,8 +204,22 @@ describe("updatePackage", () => {
       (e) => e.name === "wiki/parsed/report.pdf.md",
     )!;
     assert.equal(parsed.originCrc32, originCrc32Hex(originCrc32Of(v2)));
-    assert.equal(parsed.originSize, v2.length);
-    assert.equal(parsed.originMtime, unixTimeSeconds(new Date(t2 * 1000)));
+    assert.equal(parsed.originUri, undefined);
+    const manifest = JSON.parse(
+      loadCopyableArchive(out)
+        .entries.find((e) => e.name === "META-INF/manifest.json")!
+        .data.toString("utf8"),
+    ) as {
+      ai?: {
+        primaries?: Array<{
+          path?: string;
+          origin?: { size?: number; mtime?: number };
+        }>;
+      };
+    };
+    const primary = manifest.ai?.primaries?.find((p) => p.path === "report.pdf");
+    assert.equal(primary?.origin?.size, v2.length);
+    assert.equal(primary?.origin?.mtime, unixTimeSeconds(new Date(t2 * 1000)));
     const md = loadCopyableArchive(out).entries.find(
       (e) => e.name === parsedPathFor("report.pdf"),
     )!;
@@ -507,7 +521,14 @@ describe("enrichOkf preserves origins", () => {
     const before = listZipEntries(out).find(
       (e) => e.name === "wiki/parsed/deed.pdf.md",
     )!;
-    assert.equal(before.originUri, uri);
+    assert.equal(before.originCrc32 !== undefined, true);
+    assert.equal(before.originUri, undefined);
+    const manifestBefore = JSON.parse(
+      loadCopyableArchive(out)
+        .entries.find((e) => e.name === "META-INF/manifest.json")!
+        .data.toString("utf8"),
+    ) as { ai?: { primaries?: Array<{ origin?: { uri?: string } }> } };
+    assert.equal(manifestBefore.ai?.primaries?.[0]?.origin?.uri, uri);
     const bufBefore = readFileSync(out);
     const compressedBefore = readCompressedPayload(bufBefore, before);
 
@@ -526,8 +547,19 @@ describe("enrichOkf preserves origins", () => {
     const after = listZipEntries(out).find(
       (e) => e.name === "wiki/parsed/deed.pdf.md",
     )!;
-    assert.equal(after.originUri, uri);
     assert.equal(after.originCrc32, before.originCrc32);
+    const manifestAfter = JSON.parse(
+      loadCopyableArchive(out)
+        .entries.find((e) => e.name === "META-INF/manifest.json")!
+        .data.toString("utf8"),
+    ) as {
+      ai?: {
+        okf?: { source?: string };
+        primaries?: Array<{ origin?: { uri?: string }; okfSource?: string }>;
+      };
+    };
+    assert.equal(manifestAfter.ai?.primaries?.[0]?.origin?.uri, uri);
+    assert.equal(manifestAfter.ai?.okf?.source, "mcp");
     assert.equal(after.method, before.method);
     assert.deepEqual(
       readCompressedPayload(readFileSync(out), after),

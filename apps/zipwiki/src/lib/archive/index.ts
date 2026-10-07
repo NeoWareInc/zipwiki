@@ -98,6 +98,8 @@ export type {
   NeoZipAi,
   NeoZipAiOkf,
   NeoZipAiParser,
+  NeoZipParserUse,
+  OkfAiSource,
   NeoZipAiPrimary,
   NeoZipManifest,
   NeoZipOcrConfidence,
@@ -115,6 +117,7 @@ export {
   assignContentPaths,
   relativeContentPath,
   buildNeoZipManifest,
+  normalizeParserRecords,
   classifyEntry,
   findOrphanParses,
   isOmittableDocumentSource,
@@ -219,7 +222,12 @@ export {
   sha256Hex,
   verifyUncompressedPayload,
 } from "./integrity.js";
-export type { OriginApiFields, OriginLocator } from "./origin-extra.js";
+export type {
+  ManifestOrigin,
+  OriginApiFields,
+  OriginLocator,
+  OriginRecordMode,
+} from "./origin-extra.js";
 export {
   EF_NZIP_ORIGIN,
   ORIGIN_EXTRA_VERSION,
@@ -231,6 +239,8 @@ export {
   originCrc32Hex,
   originCrc32Of,
   originLocatorFromOriginal,
+  parseOriginRecord,
+  splitOriginRecord,
   originLocatorPresent,
   originMtimeIso,
   originSha256Of,

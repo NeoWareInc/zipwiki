@@ -181,15 +181,41 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
       okf.present = true;
       okf.root = okf.root ?? okfRoot.replace(/\/$/, "");
       okf.index = okf.index ?? indexPath;
+      const notable =
+        okfProfile && okfProfile !== "generic" && okfProfile !== "auto"
+          ? okfProfile
+          : undefined;
+      const packageSource = okf.source;
+      const perFileSource =
+        packageSource === "zipwiki" || packageSource === "user";
+      if (!perFileSource) okf.source = "mcp";
+      if (notable) {
+        const profiles = Array.isArray(okf.profiles)
+          ? okf.profiles.filter(
+              (profile): profile is string =>
+                typeof profile === "string" &&
+                profile !== "generic" &&
+                profile !== "auto",
+            )
+          : [];
+        if (!profiles.includes(notable)) profiles.push(notable);
+        okf.profiles = profiles;
+      }
       ai.okf = okf;
-      if (okfProfile && Array.isArray(ai.primaries)) {
+      if (Array.isArray(ai.primaries)) {
         for (const row of ai.primaries) {
           if (!row || typeof row !== "object") continue;
-          const primary = row as { path?: string; okfProfile?: string };
-          if (!targetPath || primary.path === targetPath) {
-            primary.okfProfile = okfProfile;
-            if (targetPath) break;
-          }
+          const primary = row as {
+            path?: string;
+            okfProfile?: string;
+            okfSource?: string;
+          };
+          if (targetPath && primary.path !== targetPath) continue;
+          if (notable) primary.okfProfile = notable;
+          else delete primary.okfProfile;
+          if (perFileSource) primary.okfSource = "mcp";
+          else delete primary.okfSource;
+          if (targetPath) break;
         }
       }
       man.ai = ai;

@@ -384,6 +384,7 @@ export async function pack(args: {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  originRecord?: "manifest" | "cd" | "both";
   sha256Extra?: boolean;
   originSha256?: boolean;
   okfProfile?: "auto" | "book" | "legislation" | "invoice";
@@ -419,6 +420,7 @@ export async function pack(args: {
       originPattern: args.originPattern,
       originUrlTemplate: args.originUrlTemplate,
       originFile: args.originFile,
+      originRecord: args.originRecord,
       sha256Extra: args.sha256Extra,
       originSha256: args.originSha256,
       okfProfile: args.okfProfile,
@@ -492,6 +494,7 @@ export async function update(args: {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  originRecord?: "manifest" | "cd" | "both";
   sha256Extra?: boolean;
   originSha256?: boolean;
   okfProfile?: "auto" | "book" | "legislation" | "invoice";
@@ -534,6 +537,7 @@ export async function update(args: {
       originPattern: args.originPattern,
       originUrlTemplate: args.originUrlTemplate,
       originFile: args.originFile,
+      originRecord: args.originRecord,
       sha256Extra: args.sha256Extra,
       originSha256: args.originSha256,
       okfProfile: args.okfProfile,

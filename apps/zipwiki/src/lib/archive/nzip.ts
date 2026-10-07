@@ -33,6 +33,9 @@ import {
   makeOriginExtra,
   originLocatorFromOriginal,
   originLocatorPresent,
+  splitOriginRecord,
+  type ManifestOrigin,
+  type OriginRecordMode,
   type OriginLocator,
 } from "./origin-extra.js";
 export const PACKAGE_SPEC_VERSION = "0.2.0" as const;
@@ -49,11 +52,23 @@ export type AiRootName = "wiki" | "codex" | "ai" | "context";
 
 export type EntryClass = "meta" | "ai" | "primary";
 
+export type OkfAiSource = "zipwiki" | "user" | "mcp";
+
 export type NeoZipAiOkf = {
   present: boolean;
   root?: string;
   index?: string;
   version?: string;
+  /** Model that wrote the concepts. Omitted for the filename fallback. */
+  source?: OkfAiSource;
+  /** Templates actually used (`book`, `legislation`, `invoice`). Omitted when every file stayed generic. */
+  profiles?: string[];
+};
+
+export type NeoZipParserUse = {
+  engine?: string;
+  tier?: string;
+  credential?: "zipwiki" | "user";
 };
 
 /** Compact per-page complexity / layout signals (LiteParse `includeComplexity`). */
@@ -99,6 +114,10 @@ export type NeoZipOcrConfidence = {
 export type NeoZipAiParser = {
   engine?: string;
   engineVersion?: string;
+  /** LlamaParse tier. Omitted for LiteParse. */
+  tier?: string;
+  /** `zipwiki` credits or the machine Llama key. Omitted for LiteParse. */
+  credential?: "zipwiki" | "user";
   notes?: string;
   /** True when complexity was collected during pack. */
   includeComplexity?: boolean;
@@ -127,6 +146,15 @@ export type NeoZipAiPrimary = {
    * or `generic`). Chosen once at pack so a later `okf_enrich` reuses it.
    */
   okfProfile?: string;
+  /** Set when this file's model source differs from `ai.okf.source`. */
+  okfSource?: OkfAiSource;
+  /** Set when this file's parser differs from `ai.parser`. */
+  parser?: NeoZipParserUse;
+  /**
+   * Original locator, size, and date. Omitted when the original is in the
+   * ZIP and no URI was resolved. May also be carried on Extra Field 0x014F.
+   */
+  origin?: ManifestOrigin;
   /** True when `{ai.root}/parsed/{path}.md` is present in this package. */
   hasParsed: boolean;
   /**
@@ -141,6 +169,8 @@ export type NeoZipAi = {
   parsedDir?: string;
   primaryCount?: number;
   parsedCount?: number;
+  /** Sum of original file sizes, in bytes, measured at pack time. */
+  originalBytes?: number;
   assetEntryCount?: number;
   digest?: string;
   okf?: NeoZipAiOkf;
@@ -219,6 +249,10 @@ export type CollectionMemberInput = {
   documentType?: string;
   /** OKF profile stored on `ai.primaries[].okfProfile`. */
   okfProfile?: string;
+  /** Parser used for this file. Uniform values are lifted onto `ai.parser`. */
+  parser?: NeoZipParserUse;
+  /** OKF model source. Uniform values are lifted onto `ai.okf.source`. */
+  okfSource?: OkfAiSource;
   /**
    * Whole-document markdown under `{ai.root}/parsed/{P}.md`.
    * Omit or leave undefined when extract failed — no parse entry is written
@@ -290,6 +324,12 @@ export type CollectionWriteInput = {
    * parse member (instead of CRC-32). Default: CRC-32 only.
    */
   originSha256?: boolean;
+  /**
+   * Where origin URI, size, and mtime are written. Default `manifest`.
+   * CRC-32 (or origin SHA-256) stays on Extra Field 0x014F when the original
+   * is omitted.
+   */
+  originRecord?: OriginRecordMode;
   /**
    * Compute Merkle v1 over non-META-INF members. Default: skip (only needed
    * when binding TOKEN.NZIP / TIMESTAMP.NZIP).
@@ -650,6 +690,8 @@ export type BuildNeoZipManifestInput = {
   /** Override `ai.parsedCount` (defaults to primaries with `hasParsed`). */
   parsedCount?: number;
   assetEntryCount?: number;
+  /** Sum of original file sizes. Omitted when the writer did not measure them. */
+  originalBytes?: number;
 };
 
 function resolveOkfBlock(
@@ -677,6 +719,19 @@ export function buildNeoZipManifest(
     input.parsedCount ?? primaries.filter((p) => p.hasParsed).length;
   const aiOkf = resolveOkfBlock(input.okf, aiRoot);
   const digest = input.digest?.trim() || undefined;
+  const recordedParser = normalizeParserRecords(primaries);
+  const profiles = okfProfilesUsed(primaries);
+  if (aiOkf && profiles) aiOkf.profiles = profiles;
+  const packageOkfSource = liftOkfSource(primaries);
+  if (aiOkf && packageOkfSource) aiOkf.source = packageOkfSource;
+  const parserRecord: NeoZipAiParser = {
+    ...input.parser,
+    ...(recordedParser ?? {}),
+  };
+  if (recordedParser?.engine === "mixed") {
+    delete parserRecord.tier;
+    delete parserRecord.credential;
+  }
 
   return {
     format: "neozip",
@@ -688,14 +743,81 @@ export function buildNeoZipManifest(
       parsedDir,
       primaryCount: primaries.length,
       parsedCount,
+      ...(input.originalBytes !== undefined
+        ? { originalBytes: input.originalBytes }
+        : {}),
       ...(input.assetEntryCount !== undefined
         ? { assetEntryCount: input.assetEntryCount }
         : {}),
       ...(digest ? { digest } : {}),
       ...(aiOkf ? { okf: aiOkf } : {}),
-      parser: buildAiParser(input.parserEngine, input.parser),
+      parser: buildAiParser(input.parserEngine, parserRecord),
       ...(primaries.length > 0 ? { primaries } : {}),
     },
+  };
+}
+
+function notableOkfProfile(profile?: string): string | undefined {
+  if (!profile || profile === "generic" || profile === "auto") return undefined;
+  return profile;
+}
+
+function okfProfilesUsed(primaries: NeoZipAiPrimary[]): string[] | undefined {
+  const found = new Set<string>();
+  for (const primary of primaries) {
+    const profile = notableOkfProfile(primary.okfProfile);
+    if (profile) found.add(profile);
+    if (primary.okfProfile && !profile) delete primary.okfProfile;
+  }
+  return found.size > 0 ? [...found] : undefined;
+}
+
+function liftOkfSource(primaries: NeoZipAiPrimary[]): OkfAiSource | undefined {
+  if (primaries.length === 0 || primaries.some((primary) => !primary.okfSource)) {
+    return undefined;
+  }
+  const unique = [...new Set(primaries.map((primary) => primary.okfSource!))];
+  if (unique.length !== 1) return undefined;
+  const source = unique[0]!;
+  for (const primary of primaries) delete primary.okfSource;
+  return source;
+}
+
+/** Lift a uniform parser onto `ai.parser`. Mixed engines stay on each primary. */
+export function normalizeParserRecords(
+  primaries: NeoZipAiPrimary[],
+): NeoZipParserUse | undefined {
+  const uses = primaries.filter((primary) => primary.parser?.engine);
+  if (uses.length === 0) return undefined;
+  const engines = new Set(uses.map((primary) => primary.parser!.engine));
+  if (engines.size > 1) {
+    return { engine: "mixed" };
+  }
+  if (uses.length < primaries.length) return undefined;
+  const engine = uses[0]!.parser!.engine;
+  const tiers = new Set(
+    uses.map((primary) => primary.parser?.tier).filter((tier) => tier),
+  );
+  const credentials = new Set(
+    uses
+      .map((primary) => primary.parser?.credential)
+      .filter((credential) => credential),
+  );
+  const tier = tiers.size === 1 ? [...tiers][0] : undefined;
+  const credential = credentials.size === 1 ? [...credentials][0] : undefined;
+  for (const primary of primaries) {
+    const parser = primary.parser;
+    if (!parser?.engine) continue;
+    const sameTier = !parser.tier || parser.tier === tier;
+    const sameCredential = !parser.credential || parser.credential === credential;
+    if (parser.engine === engine && sameTier && sameCredential) {
+      delete primary.parser;
+    }
+  }
+  return {
+    engine,
+    ...(tier ? { tier } : {}),
+    ...(credential ? { credential } : {}),
   };
 }
 
@@ -797,6 +919,10 @@ export function writeNzipCollectionBundle(
       mimeType: m.mimeType,
       documentType: m.documentType,
       okfProfile: m.okfProfile,
+      parser: m.parser,
+      okfSource: m.okfSource,
+      manifestOrigin: undefined as ManifestOrigin | undefined,
+      extraOrigin: undefined as OriginLocator | undefined,
       structuredMarkdown,
       hasParsed,
       sourceIncluded: !omitOriginal,
@@ -822,25 +948,32 @@ export function writeNzipCollectionBundle(
   const includedPrimaries = byPath.filter((m) => m.sourceIncluded);
   const omittedPrimaries = byPath.filter((m) => !m.sourceIncluded);
 
+  for (const m of byPath) {
+    const located = originLocatorFromOriginal({
+      data: m.data,
+      mtime: m.mtime,
+      uri: m.originUri,
+      includeSha256: input.originSha256 === true,
+    });
+    const split = splitOriginRecord({
+      locator: located,
+      record: input.originRecord,
+      sourceIncluded: m.sourceIncluded,
+      originSha256: input.originSha256 === true,
+    });
+    m.manifestOrigin = split.manifest;
+    m.extraOrigin = split.extra;
+  }
+
   const wikiEntries: ZipEntry[] = [
-    ...parsedMembers.map((m) => {
-      const origin = originLocatorFromOriginal({
-        data: m.data,
-        mtime: m.mtime,
-        uri: m.originUri,
-        includeSha256: input.originSha256 === true,
-      });
-      const writeOrigin =
-        Boolean(m.originUri) ||
-        !m.sourceIncluded ||
-        input.originSha256 === true;
-      return {
-        name: parsedPathFor(m.path, aiRoot),
-        data: Buffer.from(m.structuredMarkdown!, "utf-8"),
-        ...(input.parsedMtimeFromOriginal ? { mtime: m.mtime } : {}),
-        ...(writeOrigin && originLocatorPresent(origin) ? { origin } : {}),
-      };
-    }),
+    ...parsedMembers.map((m) => ({
+      name: parsedPathFor(m.path, aiRoot),
+      data: Buffer.from(m.structuredMarkdown!, "utf-8"),
+      ...(input.parsedMtimeFromOriginal ? { mtime: m.mtime } : {}),
+      ...(m.extraOrigin && originLocatorPresent(m.extraOrigin)
+        ? { origin: m.extraOrigin }
+        : {}),
+    })),
     ...parsedMembers.flatMap((m) =>
       m.assets.map((asset) => ({
         name: parsedAssetPath(m.path, asset.name, aiRoot),
@@ -872,6 +1005,9 @@ export function writeNzipCollectionBundle(
     ...(m.mimeType ? { mimeType: m.mimeType } : {}),
     ...(m.documentType ? { documentType: m.documentType } : {}),
     ...(m.okfProfile ? { okfProfile: m.okfProfile } : {}),
+    ...(m.parser ? { parser: m.parser } : {}),
+    ...(m.okfSource ? { okfSource: m.okfSource } : {}),
+    ...(m.manifestOrigin ? { origin: m.manifestOrigin } : {}),
     hasParsed: m.hasParsed,
     ...(m.sourceIncluded ? {} : { sourceIncluded: false }),
   }));
@@ -887,6 +1023,7 @@ export function writeNzipCollectionBundle(
     okf: aiOkf,
     parserEngine: input.parserEngine,
     parser: input.parser,
+    originalBytes: byPath.reduce((sum, member) => sum + member.data.length, 0),
     ...(assetEntryCount > 0 ? { assetEntryCount } : {}),
     profiles:
       input.sha256Extra === true
@@ -927,6 +1064,11 @@ export function writeNzipCollectionBundle(
         name: m.path,
         data: m.data,
         mtime: m.mtime,
+        ...(!m.hasParsed &&
+        m.extraOrigin &&
+        originLocatorPresent(m.extraOrigin)
+          ? { origin: m.extraOrigin }
+          : {}),
       })),
     ];
 

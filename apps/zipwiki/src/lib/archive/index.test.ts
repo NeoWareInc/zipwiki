@@ -24,7 +24,6 @@ import {
   makeOriginExtra,
   originCrc32Hex,
   originCrc32Of,
-  originMtimeIso,
   originSha256Of,
   unixTimeSeconds,
   parentHash,
@@ -766,18 +765,24 @@ describe("multi-primary package", () => {
     assert.ok(parsed);
     const mtime = unixTimeSeconds(statSync(pdf).mtime);
     const originExtra = makeOriginExtra({
-      uri,
       crc32: originCrc32Of(pdfBytes),
-      size: pdfBytes.length,
-      mtime,
     });
-    // Extra Field 0x014F only (CRC-32 default; no 0x014E).
+    // Default record is the manifest. 0x014F keeps CRC-32 so fetch can verify.
     assert.equal(parsed!.extraFieldLength, originExtra.length);
-    assert.equal(parsed!.originUri, uri);
+    assert.equal(parsed!.originUri, undefined);
     assert.equal(parsed!.originCrc32, originCrc32Hex(originCrc32Of(pdfBytes)));
-    assert.equal(parsed!.originSize, pdfBytes.length);
-    assert.equal(parsed!.originMtime, mtime);
-    assert.equal(parsed!.originMtimeUtc, originMtimeIso(mtime));
+    assert.equal(parsed!.originSize, undefined);
+    assert.equal(parsed!.originMtime, undefined);
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    const primary = manifest.ai.primaries.find(
+      (p: { path: string }) => p.path === "Ch_2025-001.pdf",
+    );
+    assert.equal(primary.origin.uri, uri);
+    assert.equal(primary.origin.size, pdfBytes.length);
+    assert.equal(primary.origin.mtime, mtime);
+    assert.equal(manifest.ai.originalBytes, pdfBytes.length);
     assert.ok(!listing.some((e) => e.name === "Ch_2025-001.pdf"));
   });
 
@@ -807,8 +812,15 @@ describe("multi-primary package", () => {
     assert.ok(parsed);
     assert.equal(parsed!.originUri, undefined);
     assert.equal(parsed!.originCrc32, originCrc32Hex(originCrc32Of(pdfBytes)));
-    assert.equal(parsed!.originSize, pdfBytes.length);
-    assert.equal(parsed!.originMtime, unixTimeSeconds(statSync(pdf).mtime));
+    assert.equal(parsed!.originSize, undefined);
+    assert.equal(parsed!.originMtime, undefined);
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    const primary = manifest.ai.primaries[0];
+    assert.equal(primary.origin.uri, undefined);
+    assert.equal(primary.origin.size, pdfBytes.length);
+    assert.equal(primary.origin.mtime, unixTimeSeconds(statSync(pdf).mtime));
   });
 
   it("writes Extra Field 0x014E when sha256Extra is requested", () => {
@@ -860,12 +872,203 @@ describe("multi-primary package", () => {
     assert.ok(parsed);
     assert.equal(parsed!.originSha256, originSha256Of(pdfBytes).toString("hex"));
     assert.equal(parsed!.originCrc32, undefined);
+    assert.equal(parsed!.originSize, undefined);
     const originExtra = makeOriginExtra({
-      size: pdfBytes.length,
-      mtime: parsed!.originMtime,
       sha256: originSha256Of(pdfBytes),
     });
     assert.equal(parsed!.extraFieldLength, originExtra.length);
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.equal(manifest.ai.primaries[0].origin.size, pdfBytes.length);
+    assert.equal(typeof manifest.ai.primaries[0].origin.mtime, "number");
+  });
+
+  it("records LlamaParse tier and user credential instead of liteparse", () => {
+    const dir = mkdtempSync(join(tmpdir(), "nzip-parser-"));
+    const pdf = join(dir, "brief.pdf");
+    writeFileSync(pdf, "%PDF-brief\n");
+    const out = join(dir, "brief.nzip");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        {
+          originalPath: pdf,
+          originalName: "brief.pdf",
+          structuredMarkdown: "# brief\n",
+          parser: {
+            engine: "llamaparse",
+            tier: "agentic",
+            credential: "user",
+          },
+        },
+      ],
+    });
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.equal(manifest.ai.parser.engine, "llamaparse");
+    assert.equal(manifest.ai.parser.tier, "agentic");
+    assert.equal(manifest.ai.parser.credential, "user");
+    assert.equal(manifest.ai.primaries[0].parser, undefined);
+  });
+
+  it("keeps mixed engines on each primary and omits a single tier", () => {
+    const dir = mkdtempSync(join(tmpdir(), "nzip-mixed-"));
+    const a = join(dir, "a.txt");
+    const b = join(dir, "b.txt");
+    writeFileSync(a, "a\n");
+    writeFileSync(b, "b\n");
+    const out = join(dir, "mixed.nzip");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        {
+          originalPath: a,
+          originalName: "a.txt",
+          structuredMarkdown: "# a\n",
+          parser: { engine: "liteparse" },
+        },
+        {
+          originalPath: b,
+          originalName: "b.txt",
+          structuredMarkdown: "# b\n",
+          parser: {
+            engine: "llamaparse",
+            tier: "fast",
+            credential: "zipwiki",
+          },
+        },
+      ],
+    });
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.equal(manifest.ai.parser.engine, "mixed");
+    assert.equal(manifest.ai.parser.tier, undefined);
+    assert.equal(manifest.ai.parser.credential, undefined);
+    const engines = manifest.ai.primaries.map(
+      (p: { parser?: { engine?: string } }) => p.parser?.engine,
+    );
+    assert.deepEqual(engines.sort(), ["liteparse", "llamaparse"]);
+  });
+
+  it("lists legislation and book profiles and omits generic", () => {
+    const dir = mkdtempSync(join(tmpdir(), "nzip-profiles-"));
+    const law = join(dir, "act.pdf");
+    const book = join(dir, "tale.epub");
+    const note = join(dir, "note.txt");
+    writeFileSync(law, "%PDF-act\n");
+    writeFileSync(book, "epub");
+    writeFileSync(note, "note\n");
+    const out = join(dir, "profiles.nzip");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        {
+          originalPath: law,
+          originalName: "act.pdf",
+          structuredMarkdown: "# act\n",
+          okfProfile: "legislation",
+          okfSource: "zipwiki",
+        },
+        {
+          originalPath: book,
+          originalName: "tale.epub",
+          structuredMarkdown: "# tale\n",
+          okfProfile: "book",
+          okfSource: "zipwiki",
+        },
+        {
+          originalPath: note,
+          originalName: "note.txt",
+          structuredMarkdown: "# note\n",
+          okfProfile: "generic",
+          okfSource: "zipwiki",
+        },
+      ],
+      okf: {
+        files: [
+          { name: "act.md", data: "---\ntitle: Act\n---\n" },
+          { name: "tale.md", data: "---\ntitle: Tale\n---\n" },
+          { name: "note.md", data: "---\ntitle: Note\n---\n" },
+        ],
+      },
+    });
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.deepEqual(manifest.ai.okf.profiles, ["legislation", "book"]);
+    assert.equal(manifest.ai.okf.source, "zipwiki");
+    const profiles = manifest.ai.primaries.map(
+      (p: { okfProfile?: string }) => p.okfProfile,
+    );
+    assert.deepEqual(profiles.filter(Boolean).sort(), ["book", "legislation"]);
+    assert.equal(
+      manifest.ai.primaries.some(
+        (p: { okfProfile?: string }) => p.okfProfile === "generic",
+      ),
+      false,
+    );
+  });
+
+  it("omits origin when the original is in the ZIP and has no locator", () => {
+    const dir = mkdtempSync(join(tmpdir(), "nzip-no-origin-"));
+    const note = join(dir, "note.txt");
+    writeFileSync(note, "hello\n");
+    const out = join(dir, "note.nzip");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        {
+          originalPath: note,
+          originalName: "note.txt",
+          structuredMarkdown: "# note\n",
+        },
+      ],
+    });
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.equal(manifest.ai.primaries[0].origin, undefined);
+    assert.equal(manifest.ai.originalBytes, Buffer.byteLength("hello\n"));
+    const parsed = listZipEntries(out).find(
+      (e) => e.name === "wiki/parsed/note.txt.md",
+    );
+    assert.equal(parsed?.originUri, undefined);
+    assert.equal(parsed?.originCrc32, undefined);
+  });
+
+  it("origin-record cd leaves the URL on Extra Field 0x014F only", () => {
+    const dir = mkdtempSync(join(tmpdir(), "nzip-origin-cd-"));
+    const pdf = join(dir, "act.pdf");
+    const pdfBytes = Buffer.from("%PDF-act\n");
+    writeFileSync(pdf, pdfBytes);
+    const out = join(dir, "act.nzip");
+    const uri = "https://example.com/act.pdf";
+    writeNzipCollectionBundle({
+      outputPath: out,
+      omitOriginalDocuments: true,
+      originRecord: "cd",
+      members: [
+        {
+          originalPath: pdf,
+          originalName: "act.pdf",
+          structuredMarkdown: "# act\n",
+          originUri: uri,
+        },
+      ],
+    });
+    const parsed = listZipEntries(out).find(
+      (e) => e.name === "wiki/parsed/act.pdf.md",
+    );
+    assert.equal(parsed?.originUri, uri);
+    assert.equal(parsed?.originSize, pdfBytes.length);
+    const manifest = JSON.parse(
+      readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.equal(manifest.ai.primaries[0].origin, undefined);
+    assert.equal(manifest.ai.originalBytes, pdfBytes.length);
   });
 
   it("stamps original ZIP dates from source mtime; parsed dates follow the flag", () => {

@@ -35,6 +35,18 @@ export const ORIGIN_TAG = {
   SHA256: 0x05,
 } as const;
 
+/** Where origin URI, size, and mtime are stored. CRC stays on 0x014F when the original is omitted. */
+export type OriginRecordMode = "manifest" | "cd" | "both";
+
+export function parseOriginRecord(value: unknown): OriginRecordMode | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const v = String(value).trim().toLowerCase();
+  if (v === "manifest" || v === "cd" || v === "both") return v;
+  throw new Error(
+    `Unknown origin record "${value}". Use manifest, cd, or both.`,
+  );
+}
+
 export type OriginLocator = {
   /** Absolute RFC 3986 URI (`https:` / `http:` / `file:`). */
   uri?: string;
@@ -137,6 +149,53 @@ export function pickOriginApiFields(
     ...(src.originMtime !== undefined ? { originMtime: src.originMtime } : {}),
     ...(src.originMtimeUtc ? { originMtimeUtc: src.originMtimeUtc } : {}),
     ...(src.originSha256 ? { originSha256: src.originSha256 } : {}),
+  };
+}
+
+export type ManifestOrigin = {
+  uri?: string;
+  size?: number;
+  mtime?: number;
+};
+
+/**
+ * Split a pack-time locator between the manifest and Extra Field 0x014F.
+ * `manifest` (the default) keeps URI, size, and mtime in the manifest.
+ * CRC-32 or origin SHA-256 stays on the extra field when the original is
+ * omitted or SHA-256 was requested.
+ */
+export function splitOriginRecord(input: {
+  locator: OriginLocator;
+  record?: OriginRecordMode;
+  sourceIncluded: boolean;
+  originSha256?: boolean;
+}): { manifest?: ManifestOrigin; extra?: OriginLocator } {
+  const record = input.record ?? "manifest";
+  const loc = input.locator;
+  const hasLocator = typeof loc.uri === "string" && loc.uri.length > 0;
+  const omitted = !input.sourceIncluded;
+  const manifest: ManifestOrigin = {};
+  if (record !== "cd" && (hasLocator || omitted)) {
+    if (hasLocator) manifest.uri = loc.uri;
+    if (loc.size !== undefined) manifest.size = loc.size;
+    if (loc.mtime !== undefined) manifest.mtime = loc.mtime;
+  }
+  const keepStats = record === "cd" || record === "both";
+  const extra: OriginLocator = {};
+  if (keepStats && hasLocator) extra.uri = loc.uri;
+  if (keepStats && loc.size !== undefined) extra.size = loc.size;
+  if (keepStats && loc.mtime !== undefined) extra.mtime = loc.mtime;
+  // CRC (or origin SHA-256) stays on 0x014F when the original is omitted or a
+  // URI was resolved, so `origin --fetch` can still check the download.
+  if (omitted || hasLocator || input.originSha256 === true) {
+    if (loc.sha256 !== undefined) extra.sha256 = loc.sha256;
+    else if (loc.crc32 !== undefined) extra.crc32 = loc.crc32;
+  }
+  return {
+    ...(manifest.uri || manifest.size !== undefined || manifest.mtime !== undefined
+      ? { manifest }
+      : {}),
+    ...(originLocatorPresent(extra) ? { extra } : {}),
   };
 }
 

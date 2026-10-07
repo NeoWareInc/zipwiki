@@ -9,12 +9,16 @@ import { fileURLToPath } from "node:url";
 import {
   BUNDLE_PATHS,
   listZipEntries,
+  loadPackageInventory,
   originCrc32FromApi,
   originCrc32Hex,
   originCrc32Of,
+  originMtimeIso,
   pickOriginApiFields,
   useZipHandle,
+  type ManifestOrigin,
   type OriginApiFields,
+  type PackageInventory,
   type ZipListEntry,
 } from "../archive/index.js";
 import { extractEntries, defaultExtractRoot } from "./extract.js";
@@ -135,6 +139,80 @@ export function originFromEntries(
   return byBasename ? summaryFromEntry(byBasename, aiRoot) : null;
 }
 
+/** Manifest URI, size, and date win. Extra Field 0x014F fills CRC and SHA-256. */
+export function mergeOriginApiFields(
+  extra: OriginApiFields,
+  manifest?: ManifestOrigin | null,
+): OriginApiFields {
+  if (!manifest) return extra;
+  return {
+    ...extra,
+    ...(manifest.uri ? { originUri: manifest.uri } : {}),
+    ...(manifest.size !== undefined ? { originSize: manifest.size } : {}),
+    ...(manifest.mtime !== undefined
+      ? {
+          originMtime: manifest.mtime,
+          originMtimeUtc: originMtimeIso(manifest.mtime),
+        }
+      : {}),
+  };
+}
+
+function primaryForSelector(
+  inventory: PackageInventory,
+  selector: string,
+): string | null {
+  const n = normalizeEntryName(selector);
+  if (inventory.primaries.has(n)) return n;
+  const fromParsed = primaryPathFromParsed(n, inventory.aiRoot);
+  if (fromParsed && inventory.primaries.has(fromParsed)) return fromParsed;
+  const stem = n.replace(/\.md$/i, "").split("/").pop() ?? n;
+  for (const key of inventory.primaries.keys()) {
+    if (key === stem || key.endsWith(`/${stem}`)) return key;
+  }
+  return null;
+}
+
+function manifestOriginPresent(origin?: ManifestOrigin): boolean {
+  if (!origin) return false;
+  return (
+    Boolean(origin.uri) ||
+    origin.size !== undefined ||
+    origin.mtime !== undefined
+  );
+}
+
+/** Manifest origin first, then Extra Field 0x014F for older packages. */
+export function originSummaryInPackage(
+  zipPath: string,
+  selector: string,
+): OriginSummary | null {
+  const inventory = loadPackageInventory(zipPath);
+  const extra = originFromEntries(
+    listZipEntries(zipPath),
+    selector,
+    inventory.aiRoot,
+  );
+  const primaryPath =
+    extra?.primaryPath ?? primaryForSelector(inventory, selector);
+  if (!primaryPath) return extra;
+  const slot = inventory.primaries.get(primaryPath);
+  const manifestOrigin = slot?.manifest?.origin;
+  if (!extra && !manifestOriginPresent(manifestOrigin)) return null;
+  const parsedPath =
+    extra?.parsedPath ??
+    slot?.parsedPath ??
+    `${inventory.aiRoot.replace(/\/+$/, "")}/parsed/${primaryPath}.md`;
+  return {
+    parsedPath,
+    primaryPath,
+    ...mergeOriginApiFields(
+      extra ? pickOriginApiFields(extra) : {},
+      manifestOrigin,
+    ),
+  };
+}
+
 export function lookupOrigin(args: {
   package?: string;
   path?: string;
@@ -148,10 +226,10 @@ export function lookupOrigin(args: {
     );
   }
   return useZipHandle(zipPath, () => {
-    const found = originFromEntries(listZipEntries(zipPath), selector);
+    const found = originSummaryInPackage(zipPath, selector);
     if (!found) {
       throw new AccessError(
-        `No Extra Field 0x014F origin on parse for: ${selector}`,
+        `No origin on the manifest or Extra Field 0x014F for: ${selector}`,
         "not_found",
       );
     }
@@ -451,18 +529,15 @@ export async function extractWithOrigin(args: {
   });
   const origins: OriginFetchResult[] = [];
   if (args.fetchOrigin === true) {
-    const listed = useZipHandle(zipPath, () => listZipEntries(zipPath));
-    const parsedExtracted = extracted.extracted.filter((f) =>
-      listed.some((e) => e.name === f.entry && entryHasOrigin(e) && e.originUri),
-    );
     const originRoot = join(extracted.dest, "originals");
-    for (const f of parsedExtracted) {
-      const loc = originFromEntries(listed, f.entry);
+    for (const f of extracted.extracted) {
+      const loc = originSummaryInPackage(zipPath, f.entry);
+      if (!loc?.originUri) continue;
       origins.push(
         await fetchOrigin({
           package: zipPath,
           path: f.entry,
-          dest: loc ? join(originRoot, loc.primaryPath) : originRoot,
+          dest: join(originRoot, loc.primaryPath),
           overwrite: args.overwrite,
           maxBytes: args.maxBytes,
         }),

@@ -302,6 +302,12 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe("Store file: URI on each parse via Extra Field 0x014F"),
+        originRecord: z
+          .enum(["manifest", "cd", "both"])
+          .optional()
+          .describe(
+            "Where to store origin URI, size, and date. manifest (default) keeps them in META-INF/manifest.json. cd uses Extra Field 0x014F. both writes both copies. CRC-32 stays on 0x014F when the original is omitted or a URI is recorded.",
+          ),
         sha256Extra: z
           .boolean()
           .optional()
@@ -376,6 +382,12 @@ export function registerTools(server: McpServer): void {
         originPattern: z.string().optional(),
         originUrlTemplate: z.string().optional(),
         originFile: z.boolean().optional(),
+        originRecord: z
+          .enum(["manifest", "cd", "both"])
+          .optional()
+          .describe(
+            "Where to store origin URI, size, and date: manifest (default), cd, or both",
+          ),
         sha256Extra: z
           .boolean()
           .optional()

@@ -26,7 +26,6 @@ import {
   serializeNeoZipManifest,
   writeZipBuffer,
   type CompressOptions,
-  type NeoZipAi,
   type NeoZipAiPrimary,
   type NeoZipManifest,
   type ZipArchiveEntry,
@@ -44,8 +43,10 @@ import {
   type PackageInventory,
 } from "../archive/inventory.js";
 import {
+  buildNeoZipManifest,
   originLocatorFromOriginal,
   originLocatorPresent,
+  splitOriginRecord,
   cliOriginOverlay,
   resolveOriginUri,
 } from "../archive/index.js";
@@ -56,7 +57,7 @@ import {
   splitFrontmatter,
 } from "../okf/frontmatter.js";
 import { syncOkfArchive } from "../okf/bundle.js";
-import { parseOneFile, okfOneFile } from "../../pipeline/phases.js";
+import { parseOneFile, okfOneFile, parserUseForEngine } from "../../pipeline/phases.js";
 import {
   loadZipwikiConfig,
   resolveOmitOriginalDocuments,
@@ -102,6 +103,7 @@ export type UpdatePackageInput = {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  originRecord?: StageOptions["originRecord"];
   /** Write Extra Field 0x014E on newly compressed members. */
   sha256Extra?: boolean;
   /** Include SHA-256 of original bytes in Extra Field 0x014F (instead of CRC-32). */
@@ -302,6 +304,7 @@ async function ingestFile(input: {
   const okfProfile = profileForUpdate(opts.okfProfile, input.storedOkfProfile, zipPath);
   let markdown: string;
   let documentType: DocumentType;
+  let parseEngine: string | undefined;
   let assets: Array<{ name: string; data: Buffer }> = [];
   if (input.hooks?.parse) {
     const hooked = await input.hooks.parse(abs, opts, project);
@@ -311,6 +314,7 @@ async function ingestFile(input: {
     const parsed = await parseOneFile(abs, opts, project);
     markdown = parsed.markdown;
     documentType = parsed.member.documentType;
+    parseEngine = parsed.member.parseEngine;
     assets = parsed.member.assets ?? [];
   }
   const data = readFileSync(abs);
@@ -342,10 +346,14 @@ async function ingestFile(input: {
     name: parsedZip,
     data: Buffer.from(markdown, "utf8"),
   };
-  const writeOrigin =
-    Boolean(originUri) || omit || input.originSha256 === true;
-  if (writeOrigin && originLocatorPresent(origin)) {
-    parseEntry.origin = origin;
+  const split = splitOriginRecord({
+    locator: origin,
+    record: opts.originRecord,
+    sourceIncluded: !omit,
+    originSha256: input.originSha256 === true,
+  });
+  if (split.extra && originLocatorPresent(split.extra)) {
+    parseEntry.origin = split.extra;
   }
   entries.push(parseEntry);
   for (const asset of assets) {
@@ -362,6 +370,7 @@ async function ingestFile(input: {
 
   const okfPath = `${inventory.okfRoot}${conceptFileNameFor(zipPath)}`;
   let okfMode: "ai" | "fallback" | "skipped" = "skipped";
+  let okfSource: NeoZipAiPrimary["okfSource"];
   const stemOwners = [...inventory.primaries.values()]
     .filter((s) => s.okfPath === okfPath)
     .map((s) => s.path);
@@ -392,6 +401,7 @@ async function ingestFile(input: {
         okfProfile,
       });
       okfMode = okf.mode;
+      okfSource = okf.source;
       entries.push({
         name: okfPath,
         data: readFileSync(okf.path),
@@ -405,15 +415,58 @@ async function ingestFile(input: {
     }
   }
 
+  const recorded = parserUseForEngine(parseEngine, opts, project);
+  const packageParser = inventory.manifest?.ai?.parser;
+  const sameParser =
+    packageParser?.engine === recorded.engine &&
+    packageParser?.tier === recorded.tier &&
+    packageParser?.credential === recorded.credential;
+  const notableProfile =
+    okfProfile && okfProfile !== "generic" ? okfProfile : undefined;
   const primary: NeoZipAiPrimary = {
     path: zipPath,
     mimeType: guessMime(abs),
     documentType,
-    okfProfile,
+    ...(notableProfile ? { okfProfile: notableProfile } : {}),
+    ...(sameParser ? {} : { parser: recorded }),
+    ...(okfSource ? { okfSource } : {}),
+    ...(split.manifest ? { origin: split.manifest } : {}),
     hasParsed: true,
     ...(omit ? { sourceIncluded: false } : {}),
   };
   return { zipPath, entries, primary, okfMode };
+}
+
+function measuredOriginalBytes(
+  primaries: NeoZipAiPrimary[],
+  map: Map<string, ZipArchiveEntry>,
+  inventory: PackageInventory,
+): number | undefined {
+  let sum = 0;
+  let measured = false;
+  for (const primary of primaries) {
+    if (primary.origin?.size !== undefined) {
+      sum += primary.origin.size;
+      measured = true;
+      continue;
+    }
+    if (primary.sourceIncluded !== false) {
+      const entry = map.get(primary.path);
+      if (entry) {
+        sum += entry.data.length;
+        measured = true;
+      }
+      continue;
+    }
+    const parsed = map.get(
+      parsedPathFor(primary.path, inventory.aiRoot, inventory.parsedDir),
+    );
+    if (parsed?.origin?.size !== undefined) {
+      sum += parsed.origin.size;
+      measured = true;
+    }
+  }
+  return measured ? sum : undefined;
 }
 
 function patchManifest(
@@ -436,15 +489,7 @@ function patchManifest(
   const assetEntryCount = [...map.keys()].filter((n) =>
     n.includes(".assets/"),
   ).length;
-  const ai: NeoZipAi = {
-    ...(man.ai ?? { root: inventory.aiRoot }),
-    root: inventory.aiRoot,
-    parsedDir: inventory.parsedDir,
-    primaryCount: primaries.length,
-    parsedCount: primaries.filter((p) => p.hasParsed).length,
-    assetEntryCount,
-    primaries,
-  };
+  const previous = man.ai ?? { root: inventory.aiRoot };
   const okfNames = [...map.keys()].filter(
     (n) =>
       n.startsWith(inventory.okfRoot) &&
@@ -453,17 +498,35 @@ function patchManifest(
       !n.endsWith("/log.md"),
   );
   const hasIndex = map.has(`${inventory.okfRoot}index.md`);
+  let okf = previous.okf;
   if (okfNames.length > 0 || hasIndex) {
-    ai.okf = {
-      ...(typeof ai.okf === "object" && ai.okf ? ai.okf : {}),
+    okf = {
+      ...(typeof okf === "object" && okf ? okf : {}),
       present: true,
       root: inventory.okfRoot,
       index: `${inventory.okfRoot}index.md`,
     };
-  } else if (ai.okf && typeof ai.okf === "object") {
-    ai.okf = { ...ai.okf, present: false };
+  } else if (okf && typeof okf === "object") {
+    okf = { ...okf, present: false };
   }
-  man.ai = ai;
+  const originalBytes = measuredOriginalBytes(primaries, map, inventory);
+  const built = buildNeoZipManifest({
+    createdAt: man.createdAt,
+    profiles: man.profiles,
+    aiRoot: inventory.aiRoot,
+    parsedDir: inventory.parsedDir,
+    digest: previous.digest,
+    primaries,
+    ...(okf?.present ? { okf } : {}),
+    parser: previous.parser,
+    assetEntryCount,
+    ...(originalBytes !== undefined ? { originalBytes } : {}),
+  });
+  man.ai = {
+    ...previous,
+    ...built.ai,
+    ...(okf && !okf.present ? { okf } : {}),
+  };
   map.set(BUNDLE_PATHS.manifest, {
     name: BUNDLE_PATHS.manifest,
     data: Buffer.from(serializeNeoZipManifest(man), "utf8"),
@@ -557,6 +620,7 @@ export async function updatePackage(
     originPattern: input.originPattern,
     originUrlTemplate: input.originUrlTemplate,
     originFile: input.originFile,
+    originRecord: input.originRecord,
     sha256Extra: input.sha256Extra,
     originSha256: input.originSha256,
     okfProfile: parseOkfProfileFlag(input.okfProfile),

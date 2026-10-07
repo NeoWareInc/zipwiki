@@ -7,6 +7,7 @@ import { after, describe, it } from "node:test";
 import { originCrc32Hex, originCrc32Of, writeNzipCollectionBundle } from "../archive/index.js";
 import { AccessError } from "./resolve.js";
 import {
+  buildCatalog,
   extractWithOrigin,
   fetchOrigin,
   lookupOrigin,
@@ -35,6 +36,11 @@ describe("origin lookup and fetch", () => {
 
   after(() => {
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("catalog prefers the manifest origin URI", () => {
+    const row = buildCatalog(out).rows.find((r) => r.primary === "lease.txt");
+    assert.equal(row?.originUri, uri);
   });
 
   it("lookupOrigin finds 0x014F by parsed path, primary, or name", () => {

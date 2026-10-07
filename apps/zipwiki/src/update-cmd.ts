@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { parseOriginRecord } from "./lib/archive/origin-extra.js";
 import { fail, resolveRepoPath } from "./lib/parse/index.js";
 import {
   parseUpdateSpecs,
@@ -28,6 +29,7 @@ export type UpdateCommandOptions = {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  originRecord?: string;
   sha256Extra?: boolean;
   originSha256?: boolean;
   quiet?: boolean;
@@ -92,6 +94,7 @@ export async function runUpdateCommand(
       originPattern: opts.originPattern,
       originUrlTemplate: opts.originUrlTemplate,
       originFile: opts.originFile,
+      originRecord: parseOriginRecord(opts.originRecord),
       sha256Extra: opts.sha256Extra,
       originSha256: opts.originSha256,
       quiet: opts.quiet,

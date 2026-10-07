@@ -21,7 +21,8 @@ import {
 import { buildCatalog, type CatalogResult } from "./catalog.js";
 import {
   entryHasOrigin,
-  originFromEntries,
+  mergeOriginApiFields,
+  originSummaryInPackage,
   primaryPathFromParsed,
   type OriginSummary,
 } from "./origin.js";
@@ -117,23 +118,39 @@ function openPackageLoaded(path: string): OpenResult {
     string,
     ReturnType<typeof pickOriginApiFields> & { parsedPath: string }
   >();
-  const origins: OpenResult["origins"] = [];
   for (const e of entries) {
     if (!entryHasOrigin(e)) continue;
     const primaryPath = primaryPathFromParsed(e.name, aiRoot);
     if (!primaryPath) continue;
     const fields = pickOriginApiFields(e);
-    const row = {
-      parsedPath: e.name,
-      primaryPath,
-      ...fields,
-    };
-    origins.push(row);
     originByPrimary.set(primaryPath, {
       ...fields,
-      parsedPath: row.parsedPath,
+      parsedPath: e.name,
     });
   }
+  for (const p of primariesRaw) {
+    if (!p || typeof p !== "object") continue;
+    const rec = p as {
+      path?: string;
+      origin?: { uri?: string; size?: number; mtime?: number };
+    };
+    if (typeof rec.path !== "string" || !rec.origin) continue;
+    const existing = originByPrimary.get(rec.path);
+    const fields = mergeOriginApiFields(existing ?? {}, rec.origin);
+    originByPrimary.set(rec.path, {
+      ...fields,
+      parsedPath:
+        existing?.parsedPath ??
+        `${aiRoot.replace(/\/+$/, "")}/parsed/${rec.path}.md`,
+    });
+  }
+  const origins: OpenResult["origins"] = [...originByPrimary.entries()].map(
+    ([primaryPath, fields]) => ({
+      parsedPath: fields.parsedPath,
+      primaryPath,
+      ...pickOriginApiFields(fields),
+    }),
+  );
 
   const primaries = primariesRaw.map((p) => {
     if (!p || typeof p !== "object") return {};
@@ -394,7 +411,7 @@ function readParsedLoaded(
   }
   entry = normalizeEntryName(entry);
   const clipped = clipUtf8(readVerified(zipPath, entry), maxBytes, offset);
-  const origin = originFromEntries(listZipEntries(zipPath), entry);
+  const origin = originSummaryInPackage(zipPath, entry);
   return {
     package: zipPath,
     path: entry,
@@ -444,7 +461,7 @@ function readEntryLoaded(
     args.asBinary === true ||
     (binaryish && !lower.endsWith(".md") && !lower.endsWith(".json"));
   const result = clipForAgent(zipPath, entry, buf, maxBytes, offset, preferBinary);
-  const origin = originFromEntries(listZipEntries(zipPath), entry);
+  const origin = originSummaryInPackage(zipPath, entry);
   return origin ? { ...result, origin } : result;
 }
 

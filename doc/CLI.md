@@ -34,7 +34,8 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 | `--omit-original` | Store parse + Extra Field `0x014F` locator instead of the original document bytes |
 | `--compression zstd\|deflate\|store` | ZIP method (default zstd) |
 | `--sha256` | Extra Field `0x014E` on members |
-| `--origin-url-template` | Fill `0x014F` URI from filename captures |
+| `--origin-url-template` | Fill the origin URI from filename captures |
+| `--origin-record manifest\|cd\|both` | Where URI, size, and date are stored. Default `manifest` (compressed in `META-INF/manifest.json`). `cd` keeps them on Extra Field `0x014F`. `both` writes both. CRC-32 stays on `0x014F` when the original is omitted or a URI is recorded |
 
 `zipwiki update` rewrites an archive (`--add` / `--update` / `--del`). Unchanged
 members are copied compressed. `--okf-profile` on an add or update stores the

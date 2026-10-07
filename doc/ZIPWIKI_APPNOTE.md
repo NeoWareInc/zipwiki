@@ -311,10 +311,18 @@ when the manifest summarizes them.
 2. **Position:** **SHOULD** be the first local-file entry and first
    central-directory entry (APPNOTE §4.1.11 / §4.7.2).
 3. **Encoding:** UTF-8 JSON.
-4. **Compression:** **RECOMMENDED** Store (0).
+4. **Compression:** the package method (Zstd by default). Do not force Store.
+   Origin text in this file then compresses with the rest of the manifest.
 5. **Encryption** of the manifest is **DISCOURAGED** when discovery matters.
 6. Unknown keys **MUST NOT** cause rejection. Writers **SHOULD** preserve
-   unknown keys on round-trip when practical.
+unknown keys on round-trip when practical.
+
+A missing key means that option was not used. Writers **MUST NOT** emit
+`null`, `""`, or `false` for an unused option. The one exception is
+`sourceIncluded: false`, which means the original bytes were left out of
+the ZIP. Absence of `sourceIncluded` means the primary is in the ZIP.
+Catalog exports use a fixed column list and may show blanks; the manifest
+itself stays sparse.
 
 ---
 
@@ -330,6 +338,7 @@ when the manifest summarizes them.
 | `parsedDir` | string | RECOMMENDED | Relative parse directory under root; default `"parsed"` |
 | `primaryCount` | number | RECOMMENDED | Count of primary content entries (including omitted originals listed in `primaries[]`) |
 | `parsedCount` | number | RECOMMENDED | Count of files under `R/parsed/**` that end in `.md` and are not under `.assets/` |
+| `originalBytes` | number | OPTIONAL | Sum of original file sizes, in bytes, measured at pack time |
 | `assetEntryCount` | number | OPTIONAL | Count of zip entries under any `R/parsed/**/**.assets/` |
 | `digest` | string | OPTIONAL | Package-level one-line summary |
 | `okf` | object | OPTIONAL | OKF availability (§5.2) |
@@ -353,6 +362,10 @@ Do **not** duplicate data already authoritative elsewhere:
 | `path` | string | Zip entry name after collision rewrite (e.g. `report.pdf` or `content/2/report.pdf`) |
 | `mimeType` | string | OPTIONAL |
 | `documentType` | string | OPTIONAL ZipWiki category / OKF type hint (`Financial_Report`, `Legal_Contract`, `Receipt_Scan`, `Technical_Doc`, `Generic`, …) |
+| `okfProfile` | string | OPTIONAL. `book`, `legislation`, or `invoice` when that template was used. Omit `generic` |
+| `okfSource` | string | OPTIONAL. `zipwiki`, `user`, or `mcp` when this file’s OKF source differs from `ai.okf.source` |
+| `parser` | object | OPTIONAL. `{ engine, tier?, credential? }` when this file’s parser differs from `ai.parser` |
+| `origin` | object | OPTIONAL. `{ uri?, size?, mtime? }` for the original. `mtime` is Unix seconds UTC. Omit when the original is in the ZIP and no URI was resolved |
 | `hasParsed` | boolean | `true` when `{ai.root}/parsed/{path}.md` is present |
 | `sourceIncluded` | boolean | OPTIONAL. When `false`, primary bytes were intentionally omitted from the ZIP. Omit the field or set `true` when the primary entry is present. Readers **MUST NOT** treat CD absence of `path` as an orphan-parse failure when this is `false`. |
 
@@ -454,6 +467,8 @@ With defaults `root = "wiki"` and `parsedDir = "parsed"`:
 | `root` | string | Zip prefix, normally `"{ai.root}/okf/"` e.g. `"wiki/okf/"` |
 | `index` | string | Bundle root markdown with `okf_version`, e.g. `"wiki/okf/index.md"` |
 | `version` | string | OKF language version (e.g. `"0.2"`) |
+| `source` | string | OPTIONAL. `zipwiki` (hosted credits), `user` (the machine’s model key), or `mcp` (the agent supplied the concept). Omit when OKF was the filename fallback |
+| `profiles` | string[] | OPTIONAL. Templates actually used (`book`, `legislation`, `invoice`). Omit when every file stayed generic |
 
 If omitted or `present` is false, tools **MUST NOT** expect OKF.
 
@@ -465,8 +480,10 @@ no OKF members exist, writers **MUST** omit `ai.okf` or set
 
 | Field | Type | Description |
 | :---- | :---- | :---- |
-| `engine` | string | e.g. `"liteparse"`, `"llamaparse"` |
+| `engine` | string | `"liteparse"`, `"llamaparse"`, or `"mixed"` when one pack used both |
 | `engineVersion` | string | Optional (installed `@llamaindex/liteparse` / `@llamaindex/llama-cloud` version) |
+| `tier` | string | OPTIONAL LlamaParse tier (`fast`, `cost_effective`, `agentic`, `agentic_plus`, and the other API tiers). Omit for LiteParse and for `mixed` |
+| `credential` | string | OPTIONAL. `zipwiki` or `user`. Omit for LiteParse. `user` only when the machine Llama key was loaded |
 | `notes` | string | Optional free text |
 | `includeComplexity` | boolean | OPTIONAL — `true` when pack collected per-page complexity |
 | `complexity` | object | OPTIONAL — rollup of LiteParse complexity / layout risk (§5.3.1) |
@@ -679,9 +696,21 @@ Included primaries always use the source file date.
 
 ZipWiki **MAY** record where the original bytes of primary `P` live when they
 are not (or might not be) in the ZIP, plus whatever original size / date / CRC
-/ SHA-256 the writer actually observed. The carrier is Extra Field **`0x014F`**
-(`HDR_ID.NEO_ORIGIN`) on the **parsed** member `{R}/parsed/{P}.md`, not on a
-missing primary (there is no CD record when `sourceIncluded: false`).
+/ SHA-256 the writer actually observed.
+
+**Default placement** is `ai.primaries[].origin` in this manifest (`uri`,
+`size`, `mtime`). `--origin-record cd` keeps URI, size, and mtime on Extra
+Field **`0x014F`** only. `--origin-record both` writes both copies. The
+default is `manifest` whenever an origin exists.
+
+CRC-32 (or origin SHA-256 when `--origin-sha256` is set) stays on Extra Field
+`0x014F` on the **parsed** member `{R}/parsed/{P}.md` whenever the original
+is omitted or a URI was resolved, so `origin --fetch` can check the download.
+That field is not the place for URI, size, and mtime when the record mode is
+`manifest`. There is no CD record for a missing primary (`sourceIncluded: false`).
+
+Readers take URI, size, and date from the manifest first, then from `0x014F`
+for older archives.
 
 Normative wire layout is NeoZip [NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md)
 §7.1.1. This section is the ZipWiki producer/consumer profile.
@@ -728,7 +757,7 @@ skipped. Readers **MUST** skip the field when the version byte is not `0x01`.
 
 | Field | Rule |
 | :---- | :---- |
-| Placement | On `{R}/parsed/{P}.md` when **any** original attribute is known. ZipWiki **SHOULD** write the field when a URI is known, or when the primary is omitted (`sourceIncluded: false`) and crc/size/mtime were observed from the source file |
+| Placement | On `{R}/parsed/{P}.md` when a URI, CRC-32, or origin SHA-256 is known and the record mode keeps that value on the extra field. URI, size, and mtime go to the manifest unless `--origin-record` is `cd` or `both` |
 | Concatenation | After `0x014E` when both are present. `0x014F` alone is valid (ZipWiki default) |
 | Parse ZIP date | DOS mtime on the parse member is **not** the original’s mtime. Original time belongs in tag `0x04` |
 
@@ -976,7 +1005,7 @@ sources
   → optional omit-original for omittable types
   → optional OKF (hosted, BYO, or skip)
   → build META-INF/manifest.json (ai registry)
-  → ZIP: manifest (Store) → wiki tree → included primaries
+  → ZIP: manifest (package compression) → wiki tree → included primaries
   → ZIP CRC-32 on every member (APPNOTE local + central headers)
   → Extra Field 0x014E on members only when requested (`--sha256`)
   → Extra Field 0x014F on parsed members when any original attribute is known
@@ -985,7 +1014,7 @@ sources
 ```
 
 Compression (NeoZip §9.1): **Zstd method 93** default; Store / Deflate for
-Info-ZIP interop (`--legacy`). Manifest **SHOULD** stay Store (0).
+Info-ZIP interop (`--legacy`). The manifest uses that same method.
 
 Default ZipWiki profiles in the manifest: `["zipwiki"]`. Add `"integrity"`
 when Extra Field `0x014E` is written.

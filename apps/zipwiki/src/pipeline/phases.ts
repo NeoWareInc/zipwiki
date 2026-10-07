@@ -20,11 +20,16 @@ import {
   resolveOriginUri,
   type DocumentType,
   type NeoZipAiParser,
+  type NeoZipParserUse,
+  type OkfAiSource,
 } from "../lib/archive/index.js";
 import {
+  isLlamaCloudConfigured,
+  isRemoteParseMode,
   maybeReportLlamaParseUsage,
   maybeReportLocalLiteParse,
   resolveOmitOriginalDocuments,
+  resolveParseCredentialSource,
   type ResolvedZipwikiConfig,
 } from "../lib/config/index.js";
 import {
@@ -189,6 +194,7 @@ export async function parseOneFile(
       originalName,
       documentType: forcedCategory ?? classification.documentType,
       okfProfile: profileFor(opts, originalName),
+      parseEngine: parsed.engine,
       structuredMarkdown: markdown,
       ...(assets ? { assets } : {}),
     },
@@ -254,7 +260,13 @@ export async function okfOneFile(input: {
   /** Hash original bytes for OKF `contentSha256` (only when --sha256 / --origin-sha256). */
   includeSha256?: boolean;
   okfProfile?: OkfProfile;
-}): Promise<{ path: string; mode: "ai" | "fallback"; aiError?: string; ms: number }> {
+}): Promise<{
+  path: string;
+  mode: "ai" | "fallback";
+  source?: OkfAiSource;
+  aiError?: string;
+  ms: number;
+}> {
   const { okfDir } = ensureStageDirs(input.stageDir);
   const conceptName = conceptFileNameFor(input.originalName);
   const outFile = join(okfDir, conceptName);
@@ -312,7 +324,13 @@ export async function okfOneFile(input: {
     result.files.find((f) => f.name === conceptName) ?? result.files[0];
   if (!concept) throw new Error("buildOkfDocument returned no files");
   writeFileSync(outFile, concept.data, "utf-8");
-  return { path: outFile, mode: result.mode, aiError: result.aiError, ms };
+  return {
+    path: outFile,
+    mode: result.mode,
+    source: result.source,
+    aiError: result.aiError,
+    ms,
+  };
 }
 
 /** Overlapping parse → OKF for all files into stageDir. */
@@ -398,7 +416,7 @@ export async function runParseAndOkfPhase(input: {
             `[stage] okf done ${loaded.originalName} (${notes.join(", ")})`,
           );
         }
-        return written.path;
+        return { path: written.path, source: written.source };
       },
       onOkfError: (item, _i, err) => {
         const msg = err instanceof Error ? err.message : String(err);
@@ -419,11 +437,12 @@ export async function runParseAndOkfPhase(input: {
             text: p.value.markdown,
           }).documentType,
           okfProfile: profileFor(opts, p.value.originalName),
+          ...(o.value.source ? { okfSource: o.value.source } : {}),
           structuredMarkdown: p.value.parseFailed
             ? undefined
             : p.value.markdown,
           parsePath: p.value.parseFile,
-          okfPath: o.value,
+          okfPath: o.value.path,
           parseFailed: p.value.parseFailed,
         });
       } else {
@@ -589,7 +608,7 @@ export async function runParseAndOkfPhase(input: {
           `[stage] okf done ${parsed.member.originalName} (${notes.join(", ")})`,
         );
       }
-      return written.path;
+      return { path: written.path, source: written.source };
     },
     onOkfError: (item, _i, err) => {
       const msg = err instanceof Error ? err.message : String(err);
@@ -608,7 +627,8 @@ export async function runParseAndOkfPhase(input: {
           ? undefined
           : p.value.member.structuredMarkdown ?? p.value.markdown,
         parsePath: p.value.parsePath,
-        okfPath: o?.value,
+        okfPath: o?.value?.path,
+        ...(o?.value?.source ? { okfSource: o.value.source } : {}),
         parseFailed: p.value.parseFailed,
         // Soft parse errors are tracked separately; OKF failure is hard.
         error: o?.error,
@@ -663,6 +683,27 @@ export async function runManifestPhaseForFiles(input: {
     quiet: input.opts.quiet,
     parserEngine: input.opts.parser,
   });
+}
+
+/** Engine, LlamaParse tier, and credential actually used for one file. */
+export function parserUseForEngine(
+  engine: string | undefined,
+  opts: StageOptions,
+  project: ResolvedZipwikiConfig,
+): NeoZipParserUse {
+  const selected = engine ?? opts.parser ?? project.parser.engine ?? "liteparse";
+  if (selected !== "llamaparse") return { engine: selected };
+  const remote = isRemoteParseMode({ remoteParse: opts.remoteParse });
+  const user =
+    !remote &&
+    resolveParseCredentialSource() !== "zipwiki" &&
+    isLlamaCloudConfigured();
+  const tier = opts.llamaTier?.trim() || project.parser.llamaparse?.tier;
+  return {
+    engine: "llamaparse",
+    ...(tier ? { tier } : {}),
+    credential: user ? "user" : "zipwiki",
+  };
 }
 
 export function runCompressPhase(input: {
@@ -750,6 +791,8 @@ export function runCompressPhase(input: {
           : {}),
         ...(m.assets?.length ? { assets: m.assets } : {}),
         ...(originUri ? { originUri } : {}),
+        parser: parserUseForEngine(m.parseEngine, input.opts, input.project),
+        ...(m.okfSource ? { okfSource: m.okfSource } : {}),
       };
     }),
     ...(okfFiles.length > 0 ? { okf: { files: okfFiles } } : {}),
@@ -758,6 +801,7 @@ export function runCompressPhase(input: {
     storeSuffixes:
       input.opts.storeSuffixes ?? input.project.pack.storeSuffixes,
     parser: input.parser,
+    originRecord: input.opts.originRecord,
     parsedMtimeFromOriginal: input.opts.parsedMtimeFromOriginal === true,
     sha256Extra: input.opts.sha256Extra === true,
     originSha256: input.opts.originSha256 === true,

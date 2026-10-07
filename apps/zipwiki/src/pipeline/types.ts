@@ -1,6 +1,6 @@
 import type { ParseEngineId, ParserMode } from "../lib/config/index.js";
 import type { CliParseOptions } from "../lib/parse/index.js";
-import type { DocumentType } from "../lib/archive/index.js";
+import type { DocumentType, OkfAiSource, OriginRecordMode } from "../lib/archive/index.js";
 import type { OkfProfile, OkfProfileFlag } from "../lib/okf/profiles.js";
 
 export type PipelinePhase =
@@ -18,6 +18,10 @@ export type StageMember = {
   documentType: DocumentType;
   /** Resolved OKF profile stored on the manifest primary. */
   okfProfile?: OkfProfile;
+  /** Engine that produced this file's parse, when known. */
+  parseEngine?: ParseEngineId;
+  /** Model source for this file's OKF, when an AI wrote it. */
+  okfSource?: OkfAiSource;
   structuredMarkdown?: string;
   /** Figure files written beside the parse as `{name}.assets/`. */
   assets?: Array<{ name: string; data: Buffer }>;
@@ -101,6 +105,8 @@ export type StageOptions = CliParseOptions & {
    * (instead of CRC-32).
    */
   originSha256?: boolean;
+  /** Where origin URI, size, and mtime are stored. Default: manifest. */
+  originRecord?: OriginRecordMode;
   dryRun?: boolean;
   /**
    * Skip the proceed / change settings / abort prompt.
