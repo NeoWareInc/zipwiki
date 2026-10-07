@@ -5,8 +5,12 @@ import { readZipEntryPayload, type ZipListEntry } from "../lib/nzip";
 
 type LoadState =
   | { kind: "loading" }
-  | { kind: "ready"; frontmatter: string | null; html: string }
+  | { kind: "ready"; frontmatter: string | null; html: string; plain?: string }
   | { kind: "error"; message: string };
+
+function isJsonPath(path: string): boolean {
+  return path.replace(/\\/g, "/").toLowerCase().endsWith(".json");
+}
 
 export function MarkdownViewDialog({
   archive,
@@ -29,6 +33,18 @@ export function MarkdownViewDialog({
       try {
         const data = await readZipEntryPayload(archive, entry);
         const text = new TextDecoder("utf-8").decode(data);
+        if (isJsonPath(entry.name)) {
+          let plain = text;
+          try {
+            plain = JSON.stringify(JSON.parse(text), null, 2);
+          } catch {
+            // Keep raw text when the entry is not valid JSON.
+          }
+          if (!cancelled) {
+            setState({ kind: "ready", frontmatter: null, html: "", plain });
+          }
+          return;
+        }
         const { frontmatter, body } = splitFrontmatter(text);
         const parsed = marked.parse(body, { async: false });
         if (typeof parsed !== "string") {
@@ -115,18 +131,24 @@ export function MarkdownViewDialog({
             </p>
           ) : null}
           {state.kind === "ready" ? (
-            <>
-              {state.frontmatter != null ? (
-                <pre className="mb-4 overflow-x-auto rounded-lg bg-(--paper) p-3 font-mono text-xs whitespace-pre-wrap text-(--ink)">
-                  {state.frontmatter}
-                </pre>
-              ) : null}
-              <div
-                className="markdown-view"
-                onClick={onMarkdownClick}
-                dangerouslySetInnerHTML={{ __html: state.html }}
-              />
-            </>
+            state.plain != null ? (
+              <pre className="overflow-x-auto rounded-lg bg-(--paper) p-3 font-mono text-xs whitespace-pre-wrap text-(--ink)">
+                {state.plain}
+              </pre>
+            ) : (
+              <>
+                {state.frontmatter != null ? (
+                  <pre className="mb-4 overflow-x-auto rounded-lg bg-(--paper) p-3 font-mono text-xs whitespace-pre-wrap text-(--ink)">
+                    {state.frontmatter}
+                  </pre>
+                ) : null}
+                <div
+                  className="markdown-view"
+                  onClick={onMarkdownClick}
+                  dangerouslySetInnerHTML={{ __html: state.html }}
+                />
+              </>
+            )
           ) : null}
         </div>
       </div>

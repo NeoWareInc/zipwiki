@@ -41,6 +41,12 @@ function isMarkdownPath(path: string): boolean {
   return path.replace(/\\/g, "/").toLowerCase().endsWith(".md");
 }
 
+/** Markdown and the package manifest — openable in the extraction viewer. */
+function isViewablePackagePath(path: string): boolean {
+  const name = path.replace(/\\/g, "/").toLowerCase();
+  return name.endsWith(".md") || name === "meta-inf/manifest.json";
+}
+
 type AnswerPiece = { kind: "text"; text: string } | { kind: "path"; path: string };
 
 /** Turn archive paths in an answer into pieces, including **path** and `path`. */
@@ -1436,7 +1442,7 @@ function SectionBody({
             {summary.entries.map((e) => (
               <tr key={e.name} className="border-b border-(--border) last:border-0">
                 <td className="max-w-md truncate px-3 py-1.5 font-mono">
-                  {isMarkdownPath(e.name) ? (
+                  {isViewablePackagePath(e.name) ? (
                     <PackageFileLink path={e.name} onOpen={() => onView(e.name)} />
                   ) : (
                     e.name
