@@ -21,6 +21,7 @@ import {
   shouldStartAutoReload,
 } from "./lib/credits";
 import { creditsLockedFor } from "./lib/creditLock";
+import { activityEventFields, type ActivityInput } from "./lib/activityEvent";
 import type { Id } from "./_generated/dataModel";
 
 export const getOrCreatePeriod = internalMutation({
@@ -595,38 +596,11 @@ export const recordLiteparse = internalMutation({
  */
 async function insertActivity(
   ctx: { db: any },
-  args: {
-    accountId: Id<"accounts">;
-    type: "pack" | "pack_start" | "pack_end" | "query";
-    engine?: string;
-    status?: string;
-    filename?: string;
-    bytes?: number;
-    pages?: number;
-    createId?: string;
-  },
+  args: ActivityInput & { accountId: Id<"accounts"> },
 ): Promise<void> {
-  const safeFilename =
-    typeof args.filename === "string" && args.filename.trim()
-      ? args.filename.trim().slice(0, 512)
-      : undefined;
-  const safeEngine =
-    typeof args.engine === "string" && args.engine.trim()
-      ? args.engine.trim().slice(0, 64)
-      : undefined;
-  const safeCreateId =
-    typeof args.createId === "string" && args.createId.trim()
-      ? args.createId.trim().slice(0, 128)
-      : undefined;
   await ctx.db.insert("usageEvents", {
     accountId: args.accountId,
-    type: args.type,
-    engine: safeEngine,
-    status: args.status ?? "success",
-    filename: safeFilename,
-    bytes: args.bytes,
-    pages: args.pages,
-    ...(safeCreateId ? { createId: safeCreateId } : {}),
+    ...activityEventFields(args),
   });
 
   const bumpPack = args.type === "pack" || args.type === "pack_end";
@@ -693,6 +667,11 @@ export const recordActivity = internalMutation({
       bytes: args.bytes,
       pages: args.pages,
       createId: args.createId,
+      creditCost: args.creditCost,
+      llamaCredits: args.llamaCredits,
+      inputTokens: args.inputTokens,
+      outputTokens: args.outputTokens,
+      okfCount: args.okfCount,
     });
   },
 });

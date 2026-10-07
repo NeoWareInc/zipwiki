@@ -3,6 +3,7 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { auth } from "./auth";
 import { canonicalPublicApiUrl } from "./publicApiUrl";
+import { omitUndefined } from "./lib/activityEvent";
 
 const http = httpRouter();
 
@@ -472,22 +473,30 @@ http.route({
     await ctx.runMutation(internal.apiKeys.touchLastUsed, {
       apiKeyId: keyCtx.apiKeyId,
     });
-    await ctx.runMutation(internal.usage.recordActivity, {
-      accountId: keyCtx.accountId,
-      type: body.type as "pack_start" | "pack_end" | "pack" | "query",
-      engine: body.engine,
-      status: body.status,
-      filename: body.filename,
-      bytes: body.bytes,
-      pages: body.pages,
-      createId: pickStr(body.createId, body.create_id),
-      creditCost: pickNum(body.creditCost, body.credit_cost),
-      llamaCredits: pickNum(body.llamaCredits, body.llama_credits),
-      inputTokens: pickNum(body.inputTokens, body.input_tokens),
-      outputTokens: pickNum(body.outputTokens, body.output_tokens),
-      okfCount: pickNum(body.okfCount, body.okf_count),
-      parseCount: pickNum(body.parseCount, body.parse_count),
-    });
+    try {
+      await ctx.runMutation(
+        internal.usage.recordActivity,
+        omitUndefined({
+          accountId: keyCtx.accountId,
+          type: body.type as "pack_start" | "pack_end" | "pack" | "query",
+          engine: body.engine,
+          status: body.status,
+          filename: body.filename,
+          bytes: body.bytes,
+          pages: body.pages,
+          createId: pickStr(body.createId, body.create_id),
+          creditCost: pickNum(body.creditCost, body.credit_cost),
+          llamaCredits: pickNum(body.llamaCredits, body.llama_credits),
+          inputTokens: pickNum(body.inputTokens, body.input_tokens),
+          outputTokens: pickNum(body.outputTokens, body.output_tokens),
+          okfCount: pickNum(body.okfCount, body.okf_count),
+          parseCount: pickNum(body.parseCount, body.parse_count),
+        }),
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "activity_record_failed";
+      return json({ error: message }, 500);
+    }
     return json({ ok: true });
   }),
 });
@@ -586,25 +595,29 @@ http.route({
       if (!body.account_id || !allowed.has(body.type)) {
         return json({ error: "invalid_request" }, 400);
       }
-      await ctx.runMutation(internal.usage.recordActivity, {
-        accountId: body.account_id as never,
-        type: body.type,
-        engine: body.engine,
-        status: body.status,
-        filename: body.filename,
-        bytes: body.bytes,
-        pages: body.pages,
-        createId: body.create_id,
-        creditCost: body.credit_cost,
-        llamaCredits: body.llama_credits,
-        inputTokens: body.input_tokens,
-        outputTokens: body.output_tokens,
-        okfCount: body.okf_count,
-        parseCount: body.parse_count,
-      });
+      await ctx.runMutation(
+        internal.usage.recordActivity,
+        omitUndefined({
+          accountId: body.account_id as never,
+          type: body.type,
+          engine: body.engine,
+          status: body.status,
+          filename: body.filename,
+          bytes: body.bytes,
+          pages: body.pages,
+          createId: body.create_id,
+          creditCost: body.credit_cost,
+          llamaCredits: body.llama_credits,
+          inputTokens: body.input_tokens,
+          outputTokens: body.output_tokens,
+          okfCount: body.okf_count,
+          parseCount: body.parse_count,
+        }),
+      );
       return json({ ok: true });
-    } catch {
-      return json({ error: "invalid_request" }, 400);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "activity_record_failed";
+      return json({ error: message }, 500);
     }
   }),
 });

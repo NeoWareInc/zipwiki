@@ -20,6 +20,7 @@ import type * as clientConfig from "../clientConfig.js";
 import type * as deviceAuth from "../deviceAuth.js";
 import type * as deviceAuthHttp from "../deviceAuthHttp.js";
 import type * as http from "../http.js";
+import type * as lib_activityEvent from "../lib/activityEvent.js";
 import type * as lib_admin from "../lib/admin.js";
 import type * as lib_adminEmails from "../lib/adminEmails.js";
 import type * as lib_creditLock from "../lib/creditLock.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   deviceAuth: typeof deviceAuth;
   deviceAuthHttp: typeof deviceAuthHttp;
   http: typeof http;
+  "lib/activityEvent": typeof lib_activityEvent;
   "lib/admin": typeof lib_admin;
   "lib/adminEmails": typeof lib_adminEmails;
   "lib/creditLock": typeof lib_creditLock;
