@@ -249,7 +249,9 @@ export default function AdminAccountPage() {
               <tr className="border-b border-(--border) text-(--muted)">
                 <th className="px-4 py-2 font-medium">When</th>
                 <th className="px-4 py-2 font-medium">Type</th>
+                <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">File / model</th>
+                <th className="px-4 py-2 font-medium">Ask id</th>
                 <th className="px-4 py-2 font-medium tabular-nums">Pages / tok</th>
                 <th className="px-4 py-2 font-medium tabular-nums">Credits</th>
               </tr>
@@ -270,8 +272,22 @@ export default function AdminAccountPage() {
                     {e.type}
                     {e.engine ? ` · ${e.engine}` : ""}
                   </td>
-                  <td className="px-4 py-2 max-w-48 truncate">
+                  <td className="px-4 py-2">
+                    <span
+                      className={
+                        e.status === "fail"
+                          ? "font-medium text-red-700"
+                          : "text-(--muted)"
+                      }
+                    >
+                      {e.status ?? "—"}
+                    </span>
+                  </td>
+                  <td className="max-w-48 truncate px-4 py-2">
                     {e.filename ?? e.model ?? "—"}
+                  </td>
+                  <td className="max-w-28 truncate px-4 py-2 font-mono text-xs">
+                    {e.createId ?? "—"}
                   </td>
                   <td className="px-4 py-2 tabular-nums">
                     {e.pages != null
@@ -298,7 +314,7 @@ export default function AdminAccountPage() {
               {data.events.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={7}
                     className="px-4 py-6 text-center text-(--muted)"
                   >
                     No events yet

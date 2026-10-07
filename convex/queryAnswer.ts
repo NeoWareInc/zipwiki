@@ -16,6 +16,22 @@ const excerptValidator = v.object({
   documents: v.optional(v.array(v.string())),
 });
 
+function anomalyFromGatewayError(
+  error: string | undefined,
+  anomaly: string | undefined,
+): string {
+  if (typeof anomaly === "string" && anomaly.trim()) {
+    return anomaly.trim().slice(0, 64);
+  }
+  const m = (error ?? "").trim();
+  if (/narrated a search without calling a tool/i.test(m)) return "query_preamble";
+  if (/incomplete answer/i.test(m) || /empty answer/i.test(m)) {
+    return "query_incomplete";
+  }
+  if (/without a (path|phrase)/i.test(m)) return "query_incomplete";
+  return "query_api_error";
+}
+
 export const ask = action({
   args: {
     question: v.string(),
@@ -25,6 +41,10 @@ export const ask = action({
     transcript: v.optional(v.string()),
     /** When true, the model must answer and cannot request another command. */
     finish: v.optional(v.boolean()),
+    /** Per-Ask session id for correlating charges and anomaly rows. */
+    askId: v.optional(v.string()),
+    /** Zero-based turn index within the Ask loop. */
+    round: v.optional(v.number()),
   },
   returns: v.object({
     status: v.union(
@@ -55,6 +75,11 @@ export const ask = action({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const askId =
+      typeof args.askId === "string" && args.askId.trim()
+        ? args.askId.trim().slice(0, 128)
+        : undefined;
+
     const question = args.question.trim().slice(0, QUESTION_CHARS);
     if (!question) throw new Error("question is required");
     let transcript: unknown[] | undefined;
@@ -78,9 +103,6 @@ export const ask = action({
         .slice(0, 8)
         .map((path) => path.slice(0, 512)),
     }));
-    if (excerpts.length === 0 || excerpts.every((excerpt) => !excerpt.text.trim())) {
-      throw new Error("no_excerpts");
-    }
 
     const billing: {
       accountId: Id<"accounts">;
@@ -96,11 +118,32 @@ export const ask = action({
       throw new Error("credits_exhausted");
     }
 
+    const recordAnomaly = async (engine: string) => {
+      await ctx.runMutation(internal.usage.recordQueryAnomaly, {
+        accountId: billing.accountId,
+        engine,
+        createId: askId,
+        filename: args.filename,
+        pages:
+          typeof args.round === "number"
+            ? Math.max(0, Math.floor(args.round))
+            : undefined,
+      });
+    };
+
+    if (excerpts.length === 0 || excerpts.every((excerpt) => !excerpt.text.trim())) {
+      await recordAnomaly("query_no_excerpts");
+      throw new Error("no_excerpts");
+    }
+
     const apiUrl = (process.env.ZIPWIKI_API_URL ?? "")
       .trim()
       .replace(/\/+$/, "");
     const workerSecret = process.env.ZIPWIKI_WORKER_SECRET?.trim();
-    if (!apiUrl || !workerSecret) throw new Error("anthropic_not_configured");
+    if (!apiUrl || !workerSecret) {
+      await recordAnomaly("query_api_error");
+      throw new Error("anthropic_not_configured");
+    }
 
     const res = await fetch(`${apiUrl}/api/query/answer`, {
       method: "POST",
@@ -117,6 +160,7 @@ export const ask = action({
     });
     const body = (await res.json().catch(() => ({}))) as {
       error?: string;
+      anomaly?: string;
       status?: string;
       answer?: string;
       reads?: Array<{ id?: string; path?: string; offset?: number }>;
@@ -129,8 +173,10 @@ export const ask = action({
     };
     if (!res.ok) {
       if (body.error === "anthropic_not_configured") {
+        await recordAnomaly("query_api_error");
         throw new Error("anthropic_not_configured");
       }
+      await recordAnomaly(anomalyFromGatewayError(body.error, body.anomaly));
       throw new Error(body.error || `Query API failed (${res.status})`);
     }
     const status: "answer" | "read" | "search" | "origin" =
@@ -165,14 +211,20 @@ export const ask = action({
         ? { id: body.origin.id, path: body.origin.path }
         : null;
     const answer = body.answer?.trim() ?? "";
-    if (status === "answer" && !answer) throw new Error("Claude returned an empty answer");
+    if (status === "answer" && !answer) {
+      await recordAnomaly("query_incomplete");
+      throw new Error("Claude returned an empty answer");
+    }
     if (status === "read" && reads.length === 0) {
+      await recordAnomaly("query_incomplete");
       throw new Error("Claude requested a read without a path");
     }
     if (status === "search" && !search) {
+      await recordAnomaly("query_incomplete");
       throw new Error("Claude requested a search without a phrase");
     }
     if (status === "origin" && !origin) {
+      await recordAnomaly("query_incomplete");
       throw new Error("Claude requested an origin link without a path");
     }
 

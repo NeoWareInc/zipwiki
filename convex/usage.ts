@@ -591,21 +591,19 @@ export const recordLiteparse = internalMutation({
 /**
  * Soft activity log for pack / open / search / query (no credit debit).
  * `engine` holds the action subtype for query events (open|search|query|…).
- */
-/**
- * Soft activity log for pack / open / search / query (no credit debit).
- * `engine` holds the action subtype for query events (open|search|query|…).
+ * Ask anomalies use status "fail", engine = anomaly code, createId = askId.
  */
 async function insertActivity(
   ctx: { db: any },
   args: {
     accountId: Id<"accounts">;
-    type: "pack" | "query";
+    type: "pack" | "pack_start" | "pack_end" | "query";
     engine?: string;
     status?: string;
     filename?: string;
     bytes?: number;
     pages?: number;
+    createId?: string;
   },
 ): Promise<void> {
   const safeFilename =
@@ -616,6 +614,10 @@ async function insertActivity(
     typeof args.engine === "string" && args.engine.trim()
       ? args.engine.trim().slice(0, 64)
       : undefined;
+  const safeCreateId =
+    typeof args.createId === "string" && args.createId.trim()
+      ? args.createId.trim().slice(0, 128)
+      : undefined;
   await ctx.db.insert("usageEvents", {
     accountId: args.accountId,
     type: args.type,
@@ -624,7 +626,12 @@ async function insertActivity(
     filename: safeFilename,
     bytes: args.bytes,
     pages: args.pages,
+    ...(safeCreateId ? { createId: safeCreateId } : {}),
   });
+
+  const bumpPack = args.type === "pack" || args.type === "pack_end";
+  const bumpQuery =
+    args.type === "query" && (args.status ?? "success") === "success";
 
   const periodStart = startOfMonthMs();
   let period = await ctx.db
@@ -641,41 +648,65 @@ async function insertActivity(
       okfCount: 0,
       liteparseSuccessCount: 0,
       liteparseFailCount: 0,
-      packCount: args.type === "pack" ? 1 : 0,
-      queryCount: args.type === "query" ? 1 : 0,
+      packCount: bumpPack ? 1 : 0,
+      queryCount: bumpQuery ? 1 : 0,
     });
-  } else {
+  } else if (bumpPack || bumpQuery) {
     await ctx.db.patch(period._id, {
-      packCount: (period.packCount ?? 0) + (args.type === "pack" ? 1 : 0),
-      queryCount: (period.queryCount ?? 0) + (args.type === "query" ? 1 : 0),
+      packCount: (period.packCount ?? 0) + (bumpPack ? 1 : 0),
+      queryCount: (period.queryCount ?? 0) + (bumpQuery ? 1 : 0),
     });
   }
 }
 
+const activityTypeValidator = v.union(
+  v.literal("pack"),
+  v.literal("pack_start"),
+  v.literal("pack_end"),
+  v.literal("query"),
+);
+
 export const recordActivity = internalMutation({
   args: {
     accountId: v.id("accounts"),
-    type: v.union(v.literal("pack"), v.literal("query")),
+    type: activityTypeValidator,
     engine: v.optional(v.string()),
     status: v.optional(v.string()),
     filename: v.optional(v.string()),
     bytes: v.optional(v.number()),
     pages: v.optional(v.number()),
+    createId: v.optional(v.string()),
+    creditCost: v.optional(v.number()),
+    llamaCredits: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    okfCount: v.optional(v.number()),
+    parseCount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await insertActivity(ctx, args);
+    await insertActivity(ctx, {
+      accountId: args.accountId,
+      type: args.type,
+      engine: args.engine,
+      status: args.status,
+      filename: args.filename,
+      bytes: args.bytes,
+      pages: args.pages,
+      createId: args.createId,
+    });
   },
 });
 
 /** Authenticated portal: report pack/query activity from the website. */
 export const reportActivity = mutation({
   args: {
-    type: v.union(v.literal("pack"), v.literal("query")),
+    type: activityTypeValidator,
     engine: v.optional(v.string()),
     status: v.optional(v.string()),
     filename: v.optional(v.string()),
     bytes: v.optional(v.number()),
     pages: v.optional(v.number()),
+    createId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -693,8 +724,64 @@ export const reportActivity = mutation({
       filename: args.filename,
       bytes: args.bytes,
       pages: args.pages,
+      createId: args.createId,
     });
     return { ok: true as const };
+  },
+});
+
+/** Portal Ask anomaly row (never debits). engine = anomaly code; createId = askId. */
+export const reportQueryAnomaly = mutation({
+  args: {
+    engine: v.string(),
+    createId: v.optional(v.string()),
+    filename: v.optional(v.string()),
+    pages: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const account = await ctx.db
+      .query("accounts")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!account) throw new Error("No account");
+    const code = args.engine.trim().slice(0, 64);
+    if (!code) throw new Error("engine is required");
+    await insertActivity(ctx, {
+      accountId: account._id,
+      type: "query",
+      engine: code,
+      status: "fail",
+      filename: args.filename,
+      pages: args.pages,
+      createId: args.createId,
+    });
+    return { ok: true as const };
+  },
+});
+
+/** Internal: Ask anomaly for portal action / Fly Bearer path. */
+export const recordQueryAnomaly = internalMutation({
+  args: {
+    accountId: v.id("accounts"),
+    engine: v.string(),
+    createId: v.optional(v.string()),
+    filename: v.optional(v.string()),
+    pages: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const code = args.engine.trim().slice(0, 64);
+    if (!code) return;
+    await insertActivity(ctx, {
+      accountId: args.accountId,
+      type: "query",
+      engine: code,
+      status: "fail",
+      filename: args.filename,
+      pages: args.pages,
+      createId: args.createId,
+    });
   },
 });
 

@@ -738,6 +738,42 @@ describe("POST /api/query/answer", () => {
     assert.match(body.answer, /do not include a termination section/i);
     await app.close();
   });
+
+  it("returns anomaly code when finish turn stays incomplete", async () => {
+    const app = await buildApp({
+      env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
+      fetchImpl: async () =>
+        json({
+          model: "claude-haiku-4-5",
+          content: [{ type: "text", text: "Let me search more broadly:" }],
+          usage: { input_tokens: 8, output_tokens: 4 },
+        }),
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/query/answer",
+      headers: {
+        "content-type": "application/json",
+        "x-zipwiki-worker-secret": "worker",
+      },
+      payload: {
+        question: "Find termination",
+        finish: true,
+        excerpts: [
+          {
+            path: "wiki/okf/waterlin.md",
+            kind: "okf",
+            text: "Waterlin Stewardship District.",
+          },
+        ],
+      },
+    });
+    assert.equal(res.statusCode, 502);
+    const body = res.json() as { error: string; anomaly: string };
+    assert.match(body.error, /incomplete answer/i);
+    assert.equal(body.anomaly, "query_incomplete");
+    await app.close();
+  });
 });
 
 describe("OKF profile prompt", () => {

@@ -2,7 +2,9 @@
  * Hosted package question. The archive stays local. The model may search
  * for a phrase or read stored text, up to four times, on this package.
  */
+import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
+import { maybeReportActivity } from "../config/activity-telemetry.js";
 import {
   formatFollowWindow,
   formatPhraseHits,
@@ -179,6 +181,15 @@ export async function askArchive(args: {
     query: question,
   });
   if (!bundled) {
+    const askId = randomUUID();
+    void maybeReportActivity({
+      type: "query",
+      action: "query_no_excerpts",
+      status: "fail",
+      path: args.package,
+      createId: askId,
+      quiet: true,
+    });
     return {
       answer: "No concept matched this question.",
       reads: [],
@@ -191,6 +202,7 @@ export async function askArchive(args: {
     };
   }
   const filename = basename(args.package ?? "wiki.zipwiki");
+  const askId = randomUUID();
   let creditsCharged = 0;
   let creditsRemaining = 0;
   let creditsUnlimited = false;
@@ -204,113 +216,152 @@ export async function askArchive(args: {
         results: Array<{ id: string; path: string; text?: string; error?: string }>;
       }
   > = [];
-  for (let round = 0; round < 5; round += 1) {
-    const turn = await postTurn(args.apiUrl, args.apiKey, fetchImpl, {
-      question,
-      filename,
-      excerpts: bundled.excerpts,
-      ...(transcript.length > 0 ? { transcript } : {}),
-      ...(round === 4 ? { finish: true } : {}),
-    });
-    creditsCharged += turn.creditsCharged ?? 0;
-    creditsRemaining = turn.creditsRemaining ?? creditsRemaining;
-    creditsUnlimited = turn.creditsUnlimited === true || creditsUnlimited;
-    model = turn.model ?? model;
-    const finish = round === 4;
-    const requested = (turn.reads ?? []).find(
-      (read) => typeof read.id === "string" && typeof read.path === "string",
-    );
-    const searchId = turn.search?.id;
-    const searchPhraseText = turn.search?.phrase;
-    if (
-      !finish &&
-      turn.status === "search" &&
-      typeof searchId === "string" &&
-      typeof searchPhraseText === "string"
-    ) {
-      args.onSearch?.(searchPhraseText);
-      searches.push(searchPhraseText);
-      const hits = searchPhrase(bundled.packagePath, searchPhraseText);
-      collapsePriorReads(transcript);
-      transcript.push(
-        { role: "assistant", content: turn.assistant ?? [] },
-        {
-          role: "user",
-          results: [
-            {
-              id: searchId,
-              path: "search",
-              text: formatPhraseHits(searchPhraseText, hits),
-            },
-          ],
-        },
+  let answered = false;
+  try {
+    for (let round = 0; round < 5; round += 1) {
+      const turn = await postTurn(args.apiUrl, args.apiKey, fetchImpl, {
+        question,
+        filename,
+        askId,
+        excerpts: bundled.excerpts,
+        ...(transcript.length > 0 ? { transcript } : {}),
+        ...(round === 4 ? { finish: true } : {}),
+      });
+      creditsCharged += turn.creditsCharged ?? 0;
+      creditsRemaining = turn.creditsRemaining ?? creditsRemaining;
+      creditsUnlimited = turn.creditsUnlimited === true || creditsUnlimited;
+      model = turn.model ?? model;
+      const finish = round === 4;
+      const requested = (turn.reads ?? []).find(
+        (read) => typeof read.id === "string" && typeof read.path === "string",
       );
-      continue;
-    }
-    const originId = turn.origin?.id;
-    const originPath = turn.origin?.path;
-    if (
-      !finish &&
-      turn.status === "origin" &&
-      typeof originId === "string" &&
-      typeof originPath === "string"
-    ) {
-      args.onOrigin?.(originPath);
-      let text = `No origin link for ${originPath}`;
-      try {
-        const found = lookupOrigin({ package: bundled.packagePath, path: originPath });
-        if (found.originUri) text = found.originUri;
-      } catch (err) {
-        text = err instanceof Error ? err.message : String(err);
+      const searchId = turn.search?.id;
+      const searchPhraseText = turn.search?.phrase;
+      if (
+        !finish &&
+        turn.status === "search" &&
+        typeof searchId === "string" &&
+        typeof searchPhraseText === "string"
+      ) {
+        args.onSearch?.(searchPhraseText);
+        searches.push(searchPhraseText);
+        const hits = searchPhrase(bundled.packagePath, searchPhraseText);
+        if (hits.length === 0) {
+          void maybeReportActivity({
+            type: "query",
+            action: "query_no_phrase_hits",
+            status: "fail",
+            path: args.package,
+            createId: askId,
+            quiet: true,
+          });
+        }
+        collapsePriorReads(transcript);
+        transcript.push(
+          { role: "assistant", content: turn.assistant ?? [] },
+          {
+            role: "user",
+            results: [
+              {
+                id: searchId,
+                path: "search",
+                text: formatPhraseHits(searchPhraseText, hits),
+              },
+            ],
+          },
+        );
+        continue;
       }
-      collapsePriorReads(transcript);
-      transcript.push(
-        { role: "assistant", content: turn.assistant ?? [] },
-        {
-          role: "user",
-          results: [{ id: originId, path: originPath, text }],
-        },
-      );
-      continue;
+      const originId = turn.origin?.id;
+      const originPath = turn.origin?.path;
+      if (
+        !finish &&
+        turn.status === "origin" &&
+        typeof originId === "string" &&
+        typeof originPath === "string"
+      ) {
+        args.onOrigin?.(originPath);
+        let text = `No origin link for ${originPath}`;
+        try {
+          const found = lookupOrigin({
+            package: bundled.packagePath,
+            path: originPath,
+          });
+          if (found.originUri) text = found.originUri;
+        } catch (err) {
+          text = err instanceof Error ? err.message : String(err);
+        }
+        collapsePriorReads(transcript);
+        transcript.push(
+          { role: "assistant", content: turn.assistant ?? [] },
+          {
+            role: "user",
+            results: [{ id: originId, path: originPath, text }],
+          },
+        );
+        continue;
+      }
+      if (!finish && turn.status === "read" && requested?.id && requested.path) {
+        const offset =
+          typeof requested.offset === "number" && requested.offset > 0
+            ? Math.floor(requested.offset)
+            : 0;
+        args.onRead?.(requested.path, offset);
+        reads.push(requested.path);
+        const loaded = readFollow(bundled.packagePath, requested.path, offset);
+        if ("error" in loaded) {
+          void maybeReportActivity({
+            type: "query",
+            action: "query_follow_fail",
+            status: "fail",
+            path: args.package,
+            createId: askId,
+            quiet: true,
+          });
+        }
+        collapsePriorReads(transcript);
+        transcript.push(
+          { role: "assistant", content: turn.assistant ?? [] },
+          {
+            role: "user",
+            results: [
+              {
+                id: requested.id,
+                path: requested.path,
+                ...("error" in loaded
+                  ? { error: loaded.error }
+                  : { text: formatFollowWindow(loaded) }),
+              },
+            ],
+          },
+        );
+        continue;
+      }
+      const answer = turn.answer?.trim() ?? "";
+      if (!answer) throw new Error("Claude returned an empty answer");
+      answered = true;
+      return {
+        answer,
+        reads,
+        searches,
+        gaps: bundled.gaps,
+        model,
+        creditsCharged,
+        creditsRemaining,
+        creditsUnlimited,
+      };
     }
-    if (!finish && turn.status === "read" && requested?.id && requested.path) {
-      const offset =
-        typeof requested.offset === "number" && requested.offset > 0
-          ? Math.floor(requested.offset)
-          : 0;
-      args.onRead?.(requested.path, offset);
-      reads.push(requested.path);
-      const loaded = readFollow(bundled.packagePath, requested.path, offset);
-      collapsePriorReads(transcript);
-      transcript.push(
-        { role: "assistant", content: turn.assistant ?? [] },
-        {
-          role: "user",
-          results: [
-            {
-              id: requested.id,
-              path: requested.path,
-              ...("error" in loaded
-                ? { error: loaded.error }
-                : { text: formatFollowWindow(loaded) }),
-            },
-          ],
-        },
-      );
-      continue;
+    throw new Error("Claude returned an empty answer");
+  } finally {
+    if (!answered) {
+      void maybeReportActivity({
+        type: "query",
+        action: "query_session_no_answer",
+        status: "fail",
+        path: args.package,
+        createId: askId,
+        quiet: true,
+      });
     }
-    const answer = turn.answer?.trim() ?? "";
-    if (!answer) throw new Error("Claude returned an empty answer");
-    return {
-      answer,
-      reads,
-      searches,
-      gaps: bundled.gaps,
-      model,
-      creditsCharged,
-      creditsRemaining,
-      creditsUnlimited,
-    };
   }
-  throw new Error("Claude returned an empty answer");
 }

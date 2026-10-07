@@ -358,6 +358,7 @@ export default function KnowledgePage() {
   const archiveRef = useRef<ArrayBuffer | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const reportActivity = useMutation(api.usage.reportActivity);
+  const reportQueryAnomaly = useMutation(api.usage.reportQueryAnomaly);
   const ask = useAction(api.queryAnswer.ask);
   const usage = useQuery(api.usage.myUsage);
   const creditsLocked = usage?.creditsLocked === true;
@@ -509,7 +510,17 @@ export default function KnowledgePage() {
         sources = rememberSource(sources, passage.path);
       }
       setAskSources(sources);
-      if (found.excerpts.length === 0 && found.passages.length === 0) return;
+      if (found.excerpts.length === 0 && found.passages.length === 0) {
+        const askId = crypto.randomUUID();
+        void reportQueryAnomaly({
+          engine: "query_no_excerpts",
+          createId: askId,
+          filename: summary.filename,
+          pages: found.hits.length,
+        });
+        setAskError("No matching text was found in this package for that question.");
+        return;
+      }
       // Deep parsed windows first so section hits (e.g. Termination) are not
       // buried behind OKF intro cards that only cover early sections.
       const excerpts: Array<{
@@ -547,6 +558,8 @@ export default function KnowledgePage() {
             : gap.reason,
         });
       }
+      const askId = crypto.randomUUID();
+      let answered = false;
       let transcript: Array<
         | { role: "assistant"; content: unknown[] }
         | {
@@ -558,122 +571,162 @@ export default function KnowledgePage() {
       let remaining = 0;
       let unlimited = false;
       const followReads: string[] = [];
-      for (let round = 0; round < 5; round += 1) {
-        const finish = round === 4;
-        setFollowKind(null);
-        setAsking(finish || round === 0 ? "answering" : "reading");
-        const result = await ask({
-          question: q,
-          filename: summary.filename,
-          excerpts,
-          ...(transcript.length > 0
-            ? { transcript: JSON.stringify(transcript) }
-            : {}),
-          ...(finish ? { finish: true } : {}),
-        });
-        charged += result.creditsCharged;
-        remaining = result.creditsRemaining;
-        unlimited = result.creditsUnlimited;
-        const reads = Array.isArray(result.reads) ? result.reads : [];
-        const read = reads[0];
-        const phrase = result.search;
-        if (!finish && result.status === "search" && phrase) {
-          setFollowKind("search");
-          setFollowPath(phrase.phrase);
-          setAsking("reading");
-          const hits = await searchPackagePhrase(buf, summary.entries, phrase.phrase);
-          for (const hit of hits) sources = rememberSource(sources, hit.path);
-          setAskSources(sources);
-          const assistant = JSON.parse(result.assistant || "[]") as unknown[];
-          collapsePriorReads(transcript);
-          transcript = [
-            ...transcript,
-            { role: "assistant", content: assistant },
-            {
-              role: "user",
-              results: [
-                {
-                  id: phrase.id,
-                  path: "search",
-                  text: formatPhraseHits(phrase.phrase, hits),
-                },
-              ],
-            },
-          ];
-          continue;
+      try {
+        for (let round = 0; round < 5; round += 1) {
+          const finish = round === 4;
+          setFollowKind(null);
+          setAsking(finish || round === 0 ? "answering" : "reading");
+          const result = await ask({
+            question: q,
+            filename: summary.filename,
+            excerpts,
+            askId,
+            round,
+            ...(transcript.length > 0
+              ? { transcript: JSON.stringify(transcript) }
+              : {}),
+            ...(finish ? { finish: true } : {}),
+          });
+          charged += result.creditsCharged;
+          remaining = result.creditsRemaining;
+          unlimited = result.creditsUnlimited;
+          const reads = Array.isArray(result.reads) ? result.reads : [];
+          const read = reads[0];
+          const phrase = result.search;
+          if (!finish && result.status === "search" && phrase) {
+            setFollowKind("search");
+            setFollowPath(phrase.phrase);
+            setAsking("reading");
+            const hits = await searchPackagePhrase(buf, summary.entries, phrase.phrase);
+            if (hits.length === 0) {
+              void reportQueryAnomaly({
+                engine: "query_no_phrase_hits",
+                createId: askId,
+                filename: summary.filename,
+              });
+            }
+            for (const hit of hits) sources = rememberSource(sources, hit.path);
+            setAskSources(sources);
+            const assistant = JSON.parse(result.assistant || "[]") as unknown[];
+            collapsePriorReads(transcript);
+            transcript = [
+              ...transcript,
+              { role: "assistant", content: assistant },
+              {
+                role: "user",
+                results: [
+                  {
+                    id: phrase.id,
+                    path: "search",
+                    text: formatPhraseHits(phrase.phrase, hits),
+                  },
+                ],
+              },
+            ];
+            continue;
+          }
+          const origin = result.origin;
+          if (!finish && result.status === "origin" && origin) {
+            setFollowKind("origin");
+            setFollowPath(origin.path);
+            setAsking("reading");
+            const link = originLink(summary.entries, origin.path);
+            sources = rememberSource(sources, origin.path);
+            setAskSources(sources);
+            const assistant = JSON.parse(result.assistant || "[]") as unknown[];
+            collapsePriorReads(transcript);
+            transcript = [
+              ...transcript,
+              { role: "assistant", content: assistant },
+              {
+                role: "user",
+                results: [
+                  {
+                    id: origin.id,
+                    path: origin.path,
+                    text: link ?? `No origin link for ${origin.path}`,
+                  },
+                ],
+              },
+            ];
+            continue;
+          }
+          if (!finish && result.status === "read" && read) {
+            const offset =
+              typeof read.offset === "number" && read.offset > 0
+                ? Math.floor(read.offset)
+                : 0;
+            setFollowKind("read");
+            setFollowPath(offset > 0 ? `${read.path} at ${offset}` : read.path);
+            setAsking("reading");
+            const loaded = await readPackageFollow(
+              buf,
+              summary.entries,
+              read.path,
+              offset,
+            );
+            if ("error" in loaded) {
+              void reportQueryAnomaly({
+                engine: "query_follow_fail",
+                createId: askId,
+                filename: summary.filename,
+              });
+            }
+            followReads.push(read.path);
+            sources = rememberSource(sources, read.path);
+            setAskSources(sources);
+            const assistant = JSON.parse(result.assistant || "[]") as unknown[];
+            collapsePriorReads(transcript);
+            transcript = [
+              ...transcript,
+              { role: "assistant", content: assistant },
+              {
+                role: "user",
+                results: [
+                  {
+                    id: read.id,
+                    path: read.path,
+                    ...("error" in loaded
+                      ? { error: loaded.error }
+                      : { text: formatFollowWindow(loaded) }),
+                  },
+                ],
+              },
+            ];
+            continue;
+          }
+          const answerText = (result.answer ?? "").trim();
+          // Safety net: never show "Let me search…" as the final answer.
+          if (
+            /^(let me|i('ll| will)|trying)\b/i.test(answerText) ||
+            (answerText.length < 280 && /[:…]\s*$/.test(answerText))
+          ) {
+            void reportQueryAnomaly({
+              engine: "query_client_reject",
+              createId: askId,
+              filename: summary.filename,
+              pages: round,
+            });
+            throw new Error("incomplete answer");
+          }
+          setAnswer({
+            text: answerText,
+            reads: followReads,
+            creditsCharged: charged,
+            creditsRemaining: remaining,
+            creditsUnlimited: unlimited,
+          });
+          answered = true;
+          return;
         }
-        const origin = result.origin;
-        if (!finish && result.status === "origin" && origin) {
-          setFollowKind("origin");
-          setFollowPath(origin.path);
-          setAsking("reading");
-          const link = originLink(summary.entries, origin.path);
-          sources = rememberSource(sources, origin.path);
-          setAskSources(sources);
-          const assistant = JSON.parse(result.assistant || "[]") as unknown[];
-          collapsePriorReads(transcript);
-          transcript = [
-            ...transcript,
-            { role: "assistant", content: assistant },
-            {
-              role: "user",
-              results: [
-                {
-                  id: origin.id,
-                  path: origin.path,
-                  text: link ?? `No origin link for ${origin.path}`,
-                },
-              ],
-            },
-          ];
-          continue;
+      } finally {
+        if (!answered) {
+          void reportQueryAnomaly({
+            engine: "query_session_no_answer",
+            createId: askId,
+            filename: summary.filename,
+          });
         }
-        if (!finish && result.status === "read" && read) {
-          const offset =
-            typeof read.offset === "number" && read.offset > 0 ? Math.floor(read.offset) : 0;
-          setFollowKind("read");
-          setFollowPath(offset > 0 ? `${read.path} at ${offset}` : read.path);
-          setAsking("reading");
-          const loaded = await readPackageFollow(buf, summary.entries, read.path, offset);
-          followReads.push(read.path);
-          sources = rememberSource(sources, read.path);
-          setAskSources(sources);
-          const assistant = JSON.parse(result.assistant || "[]") as unknown[];
-          collapsePriorReads(transcript);
-          transcript = [
-            ...transcript,
-            { role: "assistant", content: assistant },
-            {
-              role: "user",
-              results: [
-                {
-                  id: read.id,
-                  path: read.path,
-                  ...("error" in loaded
-                    ? { error: loaded.error }
-                    : { text: formatFollowWindow(loaded) }),
-                },
-              ],
-            },
-          ];
-          continue;
-        }
-        const answerText = (result.answer ?? "").trim();
-        // Safety net: never show "Let me search…" as the final answer.
-        if (
-          /^(let me|i('ll| will)|trying)\b/i.test(answerText) ||
-          (answerText.length < 280 && /[:…]\s*$/.test(answerText))
-        ) {
-          throw new Error("incomplete answer");
-        }
-        setAnswer({
-          text: answerText,
-          reads: followReads,
-          creditsCharged: charged,
-          creditsRemaining: remaining,
-          creditsUnlimited: unlimited,
-        });
-        return;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

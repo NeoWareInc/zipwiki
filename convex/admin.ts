@@ -156,6 +156,7 @@ export const accountDetail = query({
         llamaCredits: e.llamaCredits ?? null,
         creditCost: e.creditCost ?? null,
         filename: e.filename ?? null,
+        createId: e.createId ?? null,
         createdAt: new Date(e._creationTime).toISOString(),
       })),
     };
@@ -269,50 +270,6 @@ function serializeUsageEvent(
   };
 }
 
-function serializeStepEvent(
-  row: {
-    _id: Id<"usageStepEvents">;
-    _creationTime: number;
-    accountId: Id<"accounts">;
-    createId: string;
-    type: string;
-    engine?: string;
-    status?: string;
-    provider?: string;
-    model?: string;
-    pages?: number;
-    bytes?: number;
-    llamaCredits?: number;
-    creditCost?: number;
-    filename?: string;
-    jobId?: string;
-    inputTokens?: number;
-    outputTokens?: number;
-  },
-  email: string,
-) {
-  return {
-    id: row._id,
-    createdAt: row._creationTime,
-    accountId: row.accountId,
-    email,
-    createId: row.createId,
-    type: row.type,
-    engine: row.engine ?? null,
-    status: row.status ?? null,
-    provider: row.provider ?? null,
-    model: row.model ?? null,
-    pages: row.pages ?? null,
-    bytes: row.bytes ?? null,
-    llamaCredits: row.llamaCredits ?? null,
-    creditCost: row.creditCost ?? null,
-    filename: row.filename ?? null,
-    jobId: row.jobId ?? null,
-    inputTokens: row.inputTokens ?? null,
-    outputTokens: row.outputTokens ?? null,
-  };
-}
-
 async function emailForAccount(
   ctx: { db: any },
   accountId: Id<"accounts">,
@@ -338,34 +295,17 @@ function buildPrimaryEventsQuery(
   ctx: { db: any },
   args: {
     accountId?: Id<"accounts">;
-    type?: string;
     status?: string;
     engine?: string;
   },
 ) {
-  const { accountId, type, status, engine } = args;
-  // Map UI "pack" filter to pack_start|pack_end|pack — scan by account / all.
-  const typeIndexable =
-    type && type !== "pack" && PRIMARY_LOG_TYPES.has(type) ? type : undefined;
-
-  let base;
-  if (accountId && typeIndexable) {
-    base = ctx.db
-      .query("usageEvents")
-      .withIndex("by_accountId_and_type", (q: any) =>
-        q.eq("accountId", accountId).eq("type", typeIndexable),
-      );
-  } else if (accountId) {
-    base = ctx.db
-      .query("usageEvents")
-      .withIndex("by_accountId", (q: any) => q.eq("accountId", accountId));
-  } else if (typeIndexable) {
-    base = ctx.db
-      .query("usageEvents")
-      .withIndex("by_type", (q: any) => q.eq("type", typeIndexable));
-  } else {
-    base = ctx.db.query("usageEvents");
-  }
+  const { accountId, status, engine } = args;
+  // Current schema only indexes by_accountId. Type/status/engine filter in-memory.
+  let base = accountId
+    ? ctx.db
+        .query("usageEvents")
+        .withIndex("by_accountId", (q: any) => q.eq("accountId", accountId))
+    : ctx.db.query("usageEvents");
 
   let filtered = base.order("desc");
   if (status) {
@@ -399,16 +339,13 @@ export const usageEventLog = query({
 
     const filtered = buildPrimaryEventsQuery(ctx, {
       accountId,
-      type,
       status,
       engine,
     });
 
-    // Oversample when filtering client-side (pack umbrella / primary-only).
-    const numItems = PAGE_SIZE;
     const result = await filtered.paginate({
       ...args.paginationOpts,
-      numItems: type === "pack" || !type ? Math.min(250, PAGE_SIZE * 2) : numItems,
+      numItems: Math.min(250, PAGE_SIZE * 2),
     });
 
     const emailByAccount = new Map<Id<"accounts">, string>();
@@ -444,36 +381,18 @@ export const usageEventLog = query({
 });
 
 /**
- * Step log for one Create ZipWiki session (parse / OKF / LiteParse / BYO).
+ * Step log stub — usageStepEvents is not on HEAD schema.
+ * Returns empty so Admin callers do not crash.
  */
 export const usageStepLog = query({
   args: {
     createId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
-  handler: async (ctx, { createId, paginationOpts }) => {
+  handler: async (ctx, { createId }) => {
     await requireAdmin(ctx);
-    const id = createId.trim().slice(0, 128);
-    if (!id) {
-      return { page: [], isDone: true, continueCursor: "" };
-    }
-
-    const result = await ctx.db
-      .query("usageStepEvents")
-      .withIndex("by_createId", (q: any) => q.eq("createId", id))
-      .order("desc")
-      .paginate({
-        ...paginationOpts,
-        numItems: Math.min(PAGE_SIZE, paginationOpts.numItems ?? PAGE_SIZE),
-      });
-
-    const emailByAccount = new Map<Id<"accounts">, string>();
-    const page = [];
-    for (const row of result.page) {
-      const email = await emailForAccount(ctx, row.accountId, emailByAccount);
-      page.push(serializeStepEvent(row, email));
-    }
-    return { ...result, page };
+    void createId;
+    return { page: [], isDone: true, continueCursor: "" };
   },
 });
 

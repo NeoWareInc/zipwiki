@@ -9,6 +9,7 @@ import {
   LlamaParseTimeoutError,
   type LlamaParseProgress,
 } from "./llamaparse.js";
+import { anomalyFromErrorMessage, QUERY_ANOMALY } from "./queryAnomaly.js";
 import type { ConvexGateway, GatewayResponse } from "./types.js";
 
 export type GatewayDeps = {
@@ -271,7 +272,10 @@ export async function handleQueryAnswer(
       .map((path) => path.slice(0, 512)),
   }));
   if (!question || excerpts.every((excerpt) => !excerpt.text.trim())) {
-    return { status: 400, body: { error: "invalid_request" } };
+    return {
+      status: 400,
+      body: { error: "invalid_request", anomaly: QUERY_ANOMALY.noExcerpts },
+    };
   }
 
   try {
@@ -288,6 +292,9 @@ export async function handleQueryAnswer(
     return { status: 200, body: completion };
   } catch (err) {
     const message = err instanceof Error ? err.message : "query_failed";
-    return { status: 502, body: { error: message } };
+    return {
+      status: 502,
+      body: { error: message, anomaly: anomalyFromErrorMessage(message) },
+    };
   }
 }

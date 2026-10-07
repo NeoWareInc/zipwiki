@@ -368,7 +368,6 @@ http.route({
         filename: body.filename,
         jobId: body.job_id,
         userKey: body.user_key === true,
-        createId: body.create_id,
       });
       return json({ ok: true, ...result });
     } catch {
@@ -397,7 +396,6 @@ http.route({
         accountId: body.account_id as never,
         success: body.success,
         bytes: body.bytes,
-        createId: body.create_id,
       });
       return json({ ok: true });
     } catch {

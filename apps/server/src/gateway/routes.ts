@@ -483,7 +483,34 @@ export async function registerGateway(
       transcript,
       finish,
     });
-    if (result.status !== 200 || !accountId) {
+    if (result.status !== 200) {
+      if (accountId) {
+        const failBody = result.body as { anomaly?: string };
+        const engine =
+          typeof failBody.anomaly === "string" && failBody.anomaly.trim()
+            ? failBody.anomaly.trim().slice(0, 64)
+            : "query_api_error";
+        const askIdRaw = raw.askId ?? raw.ask_id;
+        const askId =
+          typeof askIdRaw === "string" && askIdRaw.trim()
+            ? askIdRaw.trim().slice(0, 128)
+            : undefined;
+        try {
+          await deps.convex.recordActivity({
+            accountId,
+            type: "query",
+            engine,
+            status: "fail",
+            ...(filename ? { filename } : {}),
+            ...(askId ? { createId: askId } : {}),
+          });
+        } catch {
+          // Best-effort anomaly log.
+        }
+      }
+      return reply.code(result.status).send(result.body);
+    }
+    if (!accountId) {
       return reply.code(result.status).send(result.body);
     }
     const turn = result.body as {

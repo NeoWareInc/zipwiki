@@ -1,10 +1,42 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { usageColor, usageInk, usageKindLabel } from "../lib/usage-colors";
+
+const ANOMALY_ENGINES = [
+  "query_no_excerpts",
+  "query_no_phrase_hits",
+  "query_follow_fail",
+  "query_preamble",
+  "query_incomplete",
+  "query_api_error",
+  "query_client_reject",
+  "query_session_no_answer",
+  "anthropic",
+  "web_open",
+] as const;
 
 export default function AdminUsagePage() {
   const data = useQuery(api.admin.usageOverview);
+  const [status, setStatus] = useState<"all" | "success" | "fail">("fail");
+  const [engine, setEngine] = useState("");
+  const [accountId, setAccountId] = useState<Id<"accounts"> | "">("");
+
+  const logArgs = useMemo(
+    () => ({
+      ...(status !== "all" ? { status } : {}),
+      ...(engine.trim() ? { engine: engine.trim() } : {}),
+      ...(accountId ? { accountId } : {}),
+      type: "query" as const,
+    }),
+    [status, engine, accountId],
+  );
+
+  const log = usePaginatedQuery(api.admin.usageEventLog, logArgs, {
+    initialNumItems: 40,
+  });
 
   if (data === undefined) {
     return <p className="text-(--muted)">Loading…</p>;
@@ -155,6 +187,138 @@ export default function AdminUsagePage() {
           </tbody>
         </table>
       </div>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Query event log</h2>
+          <p className="mt-1 text-sm text-(--muted)">
+            Soft activity and Ask anomalies share this log. Filter by fail to
+            find sessions that charged or stalled without a good answer.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-(--muted)">Status</span>
+            <select
+              className="rounded-md border border-(--border) bg-white px-2 py-1.5"
+              value={status}
+              onChange={(e) =>
+                setStatus(e.target.value as "all" | "success" | "fail")
+              }
+            >
+              <option value="all">All</option>
+              <option value="success">Success</option>
+              <option value="fail">Fail</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-(--muted)">Engine / anomaly</span>
+            <select
+              className="min-w-48 rounded-md border border-(--border) bg-white px-2 py-1.5"
+              value={engine}
+              onChange={(e) => setEngine(e.target.value)}
+            >
+              <option value="">All</option>
+              {ANOMALY_ENGINES.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-(--muted)">Account</span>
+            <select
+              className="min-w-56 rounded-md border border-(--border) bg-white px-2 py-1.5"
+              value={accountId}
+              onChange={(e) =>
+                setAccountId((e.target.value || "") as Id<"accounts"> | "")
+              }
+            >
+              <option value="">All accounts</option>
+              {data.accounts.map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.email}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+          <table className="w-full min-w-[56rem] text-left text-sm">
+            <thead>
+              <tr className="border-b border-(--border) text-(--muted)">
+                <th className="px-4 py-2 font-medium">When</th>
+                <th className="px-4 py-2 font-medium">Account</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Engine</th>
+                <th className="px-4 py-2 font-medium">Ask id</th>
+                <th className="px-4 py-2 font-medium">File</th>
+                <th className="px-4 py-2 font-medium tabular-nums">Credits</th>
+              </tr>
+            </thead>
+            <tbody>
+              {log.results.map((e) => (
+                <tr key={e.id} className="border-b border-(--border)/60">
+                  <td className="px-4 py-2 whitespace-nowrap text-(--muted)">
+                    {new Date(e.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2">
+                    <Link
+                      to={`/admin/accounts/${e.accountId}`}
+                      className="text-(--accent) hover:underline"
+                    >
+                      {e.email}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-2">
+                    <span
+                      className={
+                        e.status === "fail"
+                          ? "font-medium text-red-700"
+                          : "text-(--muted)"
+                      }
+                    >
+                      {e.status ?? "—"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">
+                    {e.engine ?? "—"}
+                  </td>
+                  <td className="max-w-36 truncate px-4 py-2 font-mono text-xs">
+                    {e.createId ?? "—"}
+                  </td>
+                  <td className="max-w-40 truncate px-4 py-2">
+                    {e.filename ?? e.model ?? "—"}
+                  </td>
+                  <td className="px-4 py-2 tabular-nums">
+                    {e.creditCost != null ? e.creditCost.toLocaleString() : "—"}
+                  </td>
+                </tr>
+              ))}
+              {log.results.length === 0 && log.status !== "LoadingFirstPage" && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-6 text-center text-(--muted)"
+                  >
+                    No events match these filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {log.status === "CanLoadMore" && (
+          <button
+            type="button"
+            className="rounded-md border border-(--border) px-3 py-1.5 text-sm hover:bg-(--surface)"
+            onClick={() => log.loadMore(40)}
+          >
+            Load more
+          </button>
+        )}
+      </section>
     </div>
   );
 }
