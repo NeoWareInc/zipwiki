@@ -173,6 +173,7 @@ export async function handleOkf(
   const apiKey = masterKey(env, "ANTHROPIC_API_KEY");
   if (!apiKey) return { status: 503, body: { error: "anthropic_not_configured" } };
 
+  const file = args.input.primaries?.[0]?.path ?? "document";
   let completion;
   try {
     completion = await invokeAnthropic(
@@ -183,6 +184,7 @@ export async function handleOkf(
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "okf_failed";
+    console.error(`[zipwiki] error OKF ${file}: ${message}`);
     return { status: 502, body: { error: message } };
   }
 
@@ -202,6 +204,7 @@ export async function handleOkf(
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "record_usage_failed";
+    console.error(`[zipwiki] error OKF ${file}: ${message}`);
     return { status: 502, body: { error: message } };
   }
 

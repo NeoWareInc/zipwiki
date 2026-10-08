@@ -1,8 +1,8 @@
 /** Keep in sync with convex/lib/credits.ts HOSTED_OKF_MODELS. */
-export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-4-5";
+export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-5-5";
 
 export const HOSTED_OKF_MODELS = [
-  "claude-haiku-4-5",
+  "claude-haiku-5-5",
   "claude-sonnet-4-5",
   "claude-opus-4-5",
 ] as const;
@@ -11,6 +11,12 @@ export type HostedOkfModel = (typeof HOSTED_OKF_MODELS)[number];
 
 /** @deprecated Use DEFAULT_HOSTED_OKF_MODEL */
 export const ANTHROPIC_MODEL = DEFAULT_HOSTED_OKF_MODEL;
+
+/** Haiku 5.5 thinks by default. Low effort keeps a short OKF reply inside max_tokens. */
+function haiku55Body(model: string): { output_config?: { effort: "low" } } {
+  if (model !== "claude-haiku-5-5") return {};
+  return { output_config: { effort: "low" } };
+}
 
 export function resolveHostedOkfModel(model?: string | null): HostedOkfModel {
   const trimmed = model?.trim();
@@ -437,6 +443,7 @@ async function postQueryMessages(
     body: JSON.stringify({
       model: args.model,
       max_tokens: 1024,
+      ...haiku55Body(args.model),
       ...(args.finish
         ? {}
         : {
@@ -667,6 +674,7 @@ export async function invokeAnthropic(
     body: JSON.stringify({
       model: resolved,
       max_tokens: 1024,
+      ...haiku55Body(resolved),
       messages: [{ role: "user", content: promptFor(input) }],
     }),
   });

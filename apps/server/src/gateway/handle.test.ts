@@ -234,7 +234,7 @@ describe("hosted gateway", () => {
         env: { ANTHROPIC_API_KEY: "master" },
         fetchImpl: async () =>
           json({
-            model: "claude-haiku-4-5",
+            model: "claude-haiku-5-5",
             content: [
               {
                 type: "text",
@@ -290,7 +290,7 @@ describe("POST /api/query/answer", () => {
         };
         prompt = body.messages?.[0]?.content ?? "";
         return json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [{ type: "text", text: "The grantor signed the deed." }],
           usage: { input_tokens: 12, output_tokens: 8 },
         });
@@ -330,7 +330,7 @@ describe("POST /api/query/answer", () => {
       env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
       fetchImpl: async () =>
         json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [
             {
               type: "tool_use",
@@ -378,7 +378,7 @@ describe("POST /api/query/answer", () => {
         };
         tools = body.tools ?? [];
         return json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [
             {
               type: "tool_use",
@@ -432,7 +432,7 @@ describe("POST /api/query/answer", () => {
       env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
       fetchImpl: async () =>
         json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [
             {
               type: "tool_use",
@@ -485,7 +485,7 @@ describe("POST /api/query/answer", () => {
       env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
       fetchImpl: async () =>
         json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [
             {
               type: "tool_use",
@@ -535,7 +535,7 @@ describe("POST /api/query/answer", () => {
       env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
       fetchImpl: async () =>
         json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [
             {
               type: "tool_use",
@@ -605,7 +605,7 @@ describe("POST /api/query/answer", () => {
         if (calls === 1) {
           assert.equal(body.tool_choice?.type, "auto");
           return json({
-            model: "claude-haiku-4-5",
+            model: "claude-haiku-5-5",
             content: [
               { type: "text", text: "Let me search more broadly:" },
             ],
@@ -614,7 +614,7 @@ describe("POST /api/query/answer", () => {
         }
         assert.equal(body.tool_choice?.type, "any");
         return json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [
             {
               type: "tool_use",
@@ -667,7 +667,7 @@ describe("POST /api/query/answer", () => {
         calls += 1;
         if (calls === 1) {
           return json({
-            model: "claude-haiku-4-5",
+            model: "claude-haiku-5-5",
             content: [
               {
                 type: "text",
@@ -678,7 +678,7 @@ describe("POST /api/query/answer", () => {
           });
         }
         return json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [
             {
               type: "text",
@@ -744,7 +744,7 @@ describe("POST /api/query/answer", () => {
       env: { ZIPWIKI_WORKER_SECRET: "worker", ANTHROPIC_API_KEY: "master" },
       fetchImpl: async () =>
         json({
-          model: "claude-haiku-4-5",
+          model: "claude-haiku-5-5",
           content: [{ type: "text", text: "Let me search more broadly:" }],
           usage: { input_tokens: 8, output_tokens: 4 },
         }),

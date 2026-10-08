@@ -126,7 +126,7 @@ export const DEFAULT_ACCOUNT_SETTINGS: AccountSettingsBody =
     okf: {
       useAi: true,
       provider: "anthropic",
-      model: "claude-haiku-4-5",
+      model: "claude-haiku-5-5",
     },
     pack: {
       noOcr: false,

@@ -53,10 +53,10 @@ export function llamaCreditsPerPageForTier(tier?: string | null): number {
 }
 
 /** Default hosted ZipWiki OKF model (cheapest Claude). */
-export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-4-5";
+export const DEFAULT_HOSTED_OKF_MODEL = "claude-haiku-5-5";
 
 export const HOSTED_OKF_MODELS = [
-  "claude-haiku-4-5",
+  "claude-haiku-5-5",
   "claude-sonnet-4-5",
   "claude-opus-4-5",
 ] as const;
@@ -72,10 +72,10 @@ export const ANTHROPIC_MODEL_PRICES: Record<
   HostedOkfModel,
   { inputUsdPerMTok: number; outputUsdPerMTok: number; label: string }
 > = {
-  "claude-haiku-4-5": {
-    label: "Claude Haiku 4.5",
-    inputUsdPerMTok: 1,
-    outputUsdPerMTok: 5,
+  "claude-haiku-5-5": {
+    label: "Claude Haiku 5.5",
+    inputUsdPerMTok: 0.1,
+    outputUsdPerMTok: 0.5,
   },
   "claude-sonnet-4-5": {
     label: "Claude Sonnet 4.5",

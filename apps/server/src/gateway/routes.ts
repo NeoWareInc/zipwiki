@@ -527,7 +527,7 @@ export async function registerGateway(
     try {
       const billed = await deps.convex.recordQuery({
         accountId,
-        model: turn.model ?? "claude-haiku-4-5",
+        model: turn.model ?? "claude-haiku-5-5",
         inputTokens: turn.inputTokens,
         outputTokens: turn.outputTokens,
         filename,

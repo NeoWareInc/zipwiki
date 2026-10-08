@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS = JSON.stringify({
     omitOriginalDocuments: true,
     recurse: true,
   },
-  okf: { useAi: true, model: "claude-haiku-4-5" },
+  okf: { useAi: true, model: "claude-haiku-5-5" },
 });
 
 export const getByAccountId = internalQuery({

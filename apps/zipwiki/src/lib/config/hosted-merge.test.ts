@@ -29,7 +29,7 @@ function config(partial: {
       maxUploadBytes: null,
       supportedExtensions: [".pdf"],
     },
-    okf: { provider: "anthropic", model: "claude-haiku-4-5", configured: true },
+    okf: { provider: "anthropic", model: "claude-haiku-5-5", configured: true },
     features: { mcp: true, packages: true },
   };
 }

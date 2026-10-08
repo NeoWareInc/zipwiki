@@ -25,7 +25,7 @@ function view(env: EffectiveConfigView["env"]): EffectiveConfigView {
       parserMode: "fixed",
       okfUseAi: true,
       okfProvider: "anthropic",
-      okfModel: "claude-haiku-4-5",
+      okfModel: "claude-haiku-5-5",
       packCompression: "zstd",
       packLevel: 7,
       omitOriginalDocuments: true,
@@ -46,7 +46,7 @@ describe("config show text", () => {
     assert.match(text, /Account:.*steve@neoware\.io/);
     assert.match(text, /Environment:.*Dev/);
     assert.match(text, /Document parsing:.*ZipWiki account · LlamaParse/);
-    assert.match(text, /OKF:.*ZipWiki account · Anthropic claude-haiku-4-5/);
+    assert.match(text, /OKF:.*ZipWiki account · Anthropic claude-haiku-5-5/);
     assert.doesNotMatch(text, /fly\.dev/);
     assert.doesNotMatch(text, /LLAMA_CLOUD_API_KEY/);
     assert.doesNotMatch(text, /\/Users\//);

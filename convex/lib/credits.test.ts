@@ -54,31 +54,31 @@ describe("credits", () => {
     assert.equal(zipwikiCreditsForAnthropicTokens({}), CREDIT_COST_LLM);
     assert.equal(
       zipwikiCreditsForAnthropicTokens({
-        model: "claude-haiku-4-5",
+        model: "claude-haiku-5-5",
         inputTokens: 0,
         outputTokens: 0,
       }),
       CREDIT_COST_LLM,
     );
-    // Haiku: 1M in + 1M out = $1 + $5 = $6 cost → $7.50 sell → 750 credits.
+    // Haiku 5.5: 1M in + 1M out = $0.10 + $0.50 = $0.60 cost → $0.75 sell → 75 credits.
     assert.equal(
       zipwikiCreditsForAnthropicTokens({
-        model: "claude-haiku-4-5",
+        model: "claude-haiku-5-5",
         inputTokens: 1_000_000,
         outputTokens: 1_000_000,
       }),
-      750,
+      75,
     );
     assert.equal(
       zipwikiCreditsForAnthropicTokens({
-        model: "claude-haiku-4-5",
+        model: "claude-haiku-5-5",
         inputTokens: 100,
         outputTokens: 50,
       }),
       1,
     );
     const haiku = zipwikiCreditsForAnthropicTokens({
-      model: "claude-haiku-4-5",
+      model: "claude-haiku-5-5",
       inputTokens: 100_000,
       outputTokens: 10_000,
     });
@@ -101,7 +101,7 @@ describe("credits", () => {
         outputTokens: 0,
       }),
       zipwikiCreditsForAnthropicTokens({
-        model: "claude-haiku-4-5",
+        model: "claude-haiku-5-5",
         inputTokens: 1_000_000,
         outputTokens: 0,
       }),

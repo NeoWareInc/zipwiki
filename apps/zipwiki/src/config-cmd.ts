@@ -59,7 +59,7 @@ function environmentName(url: string | undefined): string | undefined {
   return undefined;
 }
 
-const HOSTED_OKF_MODEL = "claude-haiku-4-5";
+const HOSTED_OKF_MODEL = "claude-haiku-5-5";
 
 function okfModelLabel(view: EffectiveConfigView): string {
   const openaiDefaults = new Set(["gpt-4o-mini", "gpt-4o"]);

@@ -313,7 +313,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
               }))
             }
             options={[
-              { value: "claude-haiku-4-5", label: "Haiku 4.5 (cheapest)" },
+              { value: "claude-haiku-5-5", label: "Haiku 5.5 (cheapest)" },
               { value: "claude-sonnet-4-5", label: "Sonnet 4.5" },
               { value: "claude-opus-4-5", label: "Opus 4.5" },
             ]}
@@ -596,20 +596,20 @@ function ByoHint({ env, cmd }: { env: string; cmd: string }) {
 function hostedOkfModel(model: string | undefined): string {
   const value = model?.trim();
   if (
-    value === "claude-haiku-4-5" ||
+    value === "claude-haiku-5-5" ||
     value === "claude-sonnet-4-5" ||
     value === "claude-opus-4-5"
   ) {
     return value;
   }
-  return "claude-haiku-4-5";
+  return "claude-haiku-5-5";
 }
 
 function hostedOkfModelLabel(model: string | undefined): string {
   const id = hostedOkfModel(model);
   if (id === "claude-sonnet-4-5") return "Sonnet 4.5";
   if (id === "claude-opus-4-5") return "Opus 4.5";
-  return "Haiku 4.5";
+  return "Haiku 5.5";
 }
 
 export default function SettingsPage() {

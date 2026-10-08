@@ -46,9 +46,9 @@ export const OKF_PROVIDER_CONFIGS: Record<OkfProviderId, OkfProviderConfig> = {
     label: "Anthropic",
     apiKeyEnvKey: "ANTHROPIC_API_KEY",
     baseUrlEnvKey: "ANTHROPIC_BASE_URL",
-    defaultModel: "claude-haiku-4-5",
+    defaultModel: "claude-haiku-5-5",
     modelOptions: [
-      { id: "claude-haiku-4-5", label: "Claude Haiku" },
+      { id: "claude-haiku-5-5", label: "Claude Haiku" },
       { id: "claude-sonnet-4-5", label: "Claude Sonnet" },
       { id: "claude-opus-4-5", label: "Claude Opus" },
     ],
@@ -71,7 +71,7 @@ export const OKF_PROVIDER_CONFIGS: Record<OkfProviderId, OkfProviderConfig> = {
     defaultModel: "openai/gpt-4o-mini",
     modelOptions: [
       { id: "openai/gpt-4o-mini", label: "GPT-4o mini" },
-      { id: "anthropic/claude-haiku-4.5", label: "Claude Haiku" },
+      { id: "anthropic/claude-haiku-5.5", label: "Claude Haiku" },
       { id: "google/gemini-2.0-flash-001", label: "Gemini Flash" },
     ],
   },
@@ -246,7 +246,7 @@ export type OkfLanguageModelHandle = {
   provider: OkfProviderId;
   modelId: string;
   model: LanguageModel;
-  /** Actor fragment for `generated.by` (e.g. `anthropic/claude-haiku-4-5`). */
+  /** Actor fragment for `generated.by` (e.g. `anthropic/claude-haiku-5-5`). */
   generatedByTag: string;
 };
 

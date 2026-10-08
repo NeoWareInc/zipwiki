@@ -46,7 +46,7 @@ describe("okf providers", () => {
   });
 
   it("uses provider default models and strips prefixes", () => {
-    assert.equal(resolveOkfModel("anthropic"), "claude-haiku-4-5");
+    assert.equal(resolveOkfModel("anthropic"), "claude-haiku-5-5");
     assert.equal(
       resolveOkfModel("anthropic", "anthropic/claude-sonnet-4-5"),
       "claude-sonnet-4-5",

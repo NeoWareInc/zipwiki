@@ -107,7 +107,7 @@ function labelOkfSummary(input: {
   const model =
     rawModel && rawModel !== "gpt-4o-mini" && rawModel !== "gpt-4o"
       ? rawModel
-      : "claude-haiku-4-5";
+      : "claude-haiku-5-5";
   switch (input.source) {
     case "zipwiki":
       return `${heading("OKF")}: ZipWiki account · Anthropic ${model} · ${keyStatus(input.hasKey)}`;

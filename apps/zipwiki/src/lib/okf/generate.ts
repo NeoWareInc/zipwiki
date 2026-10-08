@@ -3,6 +3,7 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { isRemoteOkfMode, resolveOkfCredentialSource } from "../config/index.js";
 import { RemoteOkfAdapter } from "./adapters/remote.js";
+import { logOkfError, withOkfCommRetry } from "./comm-error.js";
 import {
   conceptFileNameFor,
   fallbackEnrichment,
@@ -232,6 +233,9 @@ export async function fetchOkfEnrichment(
       model: handle.model,
       schema: enrichmentSchema,
       prompt,
+      ...(handle.modelId === "claude-haiku-5-5"
+        ? { providerOptions: { anthropic: { effort: "low" as const } } }
+        : {}),
     }));
   } catch (err) {
     const text =
@@ -296,29 +300,35 @@ async function resolveEnrichment(
     mode = "ai";
     generatedBy = input.generatedBy ?? `zipwiki/okf@${tag}`;
   } else if (input.useAi !== false) {
+    const file = input.primaries[0]?.path ?? "document";
     try {
       if (isRemoteOkfMode()) {
         const remote = new RemoteOkfAdapter();
-        enrichment = await remote.enrich({
-          ...input,
-          model: input.model ?? modelId,
-        });
+        enrichment = await withOkfCommRetry(file, () =>
+          remote.enrich({
+            ...input,
+            model: input.model ?? modelId,
+          }),
+        );
         generatedBy =
           input.generatedBy ?? `zipwiki-api/anthropic/${input.model ?? modelId}`;
       } else {
-        enrichment = await fetchOkfEnrichment({
-          ...input,
-          provider:
-            input.provider ??
-            (resolveOkfCredentialSource() === "anthropic"
-              ? "anthropic"
-              : undefined),
-        });
+        enrichment = await withOkfCommRetry(file, () =>
+          fetchOkfEnrichment({
+            ...input,
+            provider:
+              input.provider ??
+              (resolveOkfCredentialSource() === "anthropic"
+                ? "anthropic"
+                : undefined),
+          }),
+        );
         generatedBy = input.generatedBy ?? `zipwiki/okf@${tag}`;
       }
       mode = "ai";
     } catch (err) {
       if (requireAi) throw err;
+      logOkfError(file, err, false);
       const msg = err instanceof Error ? err.message : String(err);
       aiError = msg.length > 240 ? `${msg.slice(0, 240)}…` : msg;
       enrichment = fallbackEnrichment(input);
