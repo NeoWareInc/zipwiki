@@ -5,7 +5,10 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { maybeCheckForUpdate } from "@zipwiki/zipwiki/config";
 import { registerTools } from "./register-tools.js";
+
+void maybeCheckForUpdate();
 
 const server = new McpServer({
   name: "zipwiki",

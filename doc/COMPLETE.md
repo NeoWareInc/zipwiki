@@ -36,8 +36,8 @@ Need `npx convex dev` (new ZipWiki project) before settings persist.
 
 ## Packaging
 
-- [ ] Ship LiteParse notices with the distributed app — [DISTRIBUTION.md](DISTRIBUTION.md)
-- [ ] CLI update reminder against `latest.json` — [DISTRIBUTION.md](DISTRIBUTION.md)
+- [x] Ship LiteParse notices with the distributed app — [DISTRIBUTION.md](DISTRIBUTION.md)
+- [x] CLI update reminder against `latest.json` — [DISTRIBUTION.md](DISTRIBUTION.md)
 
 ## Later gates
 

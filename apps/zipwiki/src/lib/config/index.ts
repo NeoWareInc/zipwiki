@@ -137,6 +137,10 @@ export {
   maybeReportLocalLiteParse,
 } from "./liteparse-telemetry.js";
 export {
+  maybeCheckForUpdate,
+  readZipwikiPackageVersion,
+} from "./update-check.js";
+export {
   maybeReportActivity,
   type ActivityReportInput,
 } from "./activity-telemetry.js";

@@ -1,0 +1,18 @@
+{
+  "name": "zipwiki",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZipWiki CLI and stdio MCP server, with LiteParse included",
+  "type": "module",
+  "bin": {
+    "zipwiki": "./bin/zipwiki.js",
+    "zipwiki-mcp": "./bin/zipwiki-mcp.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@zipwiki/zipwiki": "workspace:*",
+    "@zipwiki/mcp": "workspace:*"
+  }
+}

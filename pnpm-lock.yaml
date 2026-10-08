@@ -233,6 +233,15 @@ importers:
 
   packages/typescript-config: {}
 
+  packages/zipwiki-bundle:
+    dependencies:
+      '@zipwiki/mcp':
+        specifier: workspace:*
+        version: link:../../apps/mcp
+      '@zipwiki/zipwiki':
+        specifier: workspace:*
+        version: link:../../apps/zipwiki
+
 packages:
 
   '@ai-sdk/anthropic@2.0.102':

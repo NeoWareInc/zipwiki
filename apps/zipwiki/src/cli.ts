@@ -5,6 +5,7 @@ import {
   loadEnvFiles,
   loadRepoLlamaCloudKey,
   loadZipwikiHomeEnv,
+  maybeCheckForUpdate,
 } from "./lib/config/index.js";
 import {
   runIsComplex,
@@ -59,6 +60,7 @@ import {
 loadEnvFiles(REPO_ROOT);
 loadZipwikiHomeEnv();
 loadRepoLlamaCloudKey(REPO_ROOT);
+void maybeCheckForUpdate();
 const CATEGORY_LIST = DOCUMENT_TYPES.join("|");
 
 const program = new Command();

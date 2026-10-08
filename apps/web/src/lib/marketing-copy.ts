@@ -14,6 +14,7 @@ export const NAV = [
   { to: "/how-it-works", label: "How it works" },
   { to: "/pricing", label: "Pricing" },
   { to: "/roadmap", label: "Roadmap" },
+  { to: "/install", label: "Install" },
 ] as const;
 
 export const PAGE_TITLES: Record<string, string> = {
@@ -22,6 +23,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/how-it-works": `How it works — ${SITE_NAME}`,
   "/pricing": `Pricing — ${SITE_NAME}`,
   "/roadmap": `Roadmap — ${SITE_NAME}`,
+  "/install": `Install — ${SITE_NAME}`,
   "/terms": `Terms — ${SITE_NAME}`,
   "/privacy": `Privacy — ${SITE_NAME}`,
 };
