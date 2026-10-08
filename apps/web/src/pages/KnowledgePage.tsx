@@ -327,16 +327,51 @@ function originalByteTotal(summary: NzipOpenSummary): number | null {
   return sized > 0 ? bytes : null;
 }
 
+type OriginalPlacement = "included" | "linked" | "omitted";
+
+function originalPlacement(
+  summary: NzipOpenSummary,
+  primary: NzipOpenSummary["primaries"][number],
+): OriginalPlacement {
+  const { uri, storedInArchive } = documentOrigin(summary, primary);
+  if (storedInArchive) return "included";
+  if (uri) return "linked";
+  return "omitted";
+}
+
+function originalPlacementPhrase(summary: NzipOpenSummary): string {
+  let included = 0;
+  let linked = 0;
+  let omitted = 0;
+  for (const primary of summary.primaries) {
+    const placement = originalPlacement(summary, primary);
+    if (placement === "included") included += 1;
+    else if (placement === "linked") linked += 1;
+    else omitted += 1;
+  }
+  const total = included + linked + omitted;
+  if (total === 0) return "not included";
+  if (included === total) return "included in archive";
+  if (linked === total) return "linked to originals";
+  if (omitted === total) return "not included";
+  const parts: string[] = [];
+  if (included > 0) parts.push(`${included} included in archive`);
+  if (linked > 0) parts.push(`${linked} linked to originals`);
+  if (omitted > 0) parts.push(`${omitted} not included`);
+  return parts.join(", ");
+}
+
 function inputDocumentsLine(summary: NzipOpenSummary): string {
   const count = summary.primaryCount || summary.primaries.length;
   const files = `${count} input document${count === 1 ? "" : "s"}`;
+  const placement = originalPlacementPhrase(summary);
   const total = originalByteTotal(summary);
-  if (total == null) return files;
+  if (total == null) return `${files} · ${placement}`;
   const size = formatBytes(total);
   if (summary.byteLength < total) {
-    return `${files} · ${size} · ${compressionSaved(summary.byteLength, total)} compressed`;
+    return `${files} · ${size} · ${placement} · ${compressionSaved(summary.byteLength, total)} compressed`;
   }
-  return `${files} · ${size}`;
+  return `${files} · ${size} · ${placement}`;
 }
 
 function documentSizeLine(summary: NzipOpenSummary): string {
@@ -924,7 +959,7 @@ export default function KnowledgePage() {
             <OverviewRow label="AI root" value={summary.aiRoot} />
             <OverviewRow
               label="Original documents"
-              value={String(summary.primaryCount)}
+              value={`${summary.primaryCount} · ${originalPlacementPhrase(summary)}`}
             />
             <OverviewRow
               label="Open Knowledge Format (OKF)"
@@ -1073,7 +1108,6 @@ export default function KnowledgePage() {
                         stored={entryNamed(source.path) != null}
                         primaryStored={(name) => entryNamed(name) != null}
                         onView={setViewing}
-                        onDownload={(path) => void downloadEntry(path)}
                       />
                     ))}
                   </ul>
@@ -1298,16 +1332,11 @@ function SectionBody({
                       </span>
                     ) : null}
                   </span>
-                  {stored ? (
-                    <span className="flex shrink-0 items-center gap-3">
-                      {isMarkdownPath(stored.name) ? (
-                        <ViewButton
-                          path={stored.name}
-                          onView={() => onView(stored.name)}
-                        />
-                      ) : null}
-                      <DownloadButton onClick={() => onDownload(stored.name)} />
-                    </span>
+                  {stored && isMarkdownPath(stored.name) ? (
+                    <ViewButton
+                      path={stored.name}
+                      onView={() => onView(stored.name)}
+                    />
                   ) : null}
                 </li>
               );
@@ -1423,14 +1452,12 @@ function AskSourceRow({
   stored,
   primaryStored,
   onView,
-  onDownload,
 }: {
   source: AskSource;
   summary: NzipOpenSummary;
   stored: boolean;
   primaryStored: (path: string) => boolean;
   onView: (path: string) => void;
-  onDownload: (path: string) => void;
 }) {
   const primaryName = source.kind === "parsed" ? primaryFromParsed(source.path) : null;
   const primary = primaryName
@@ -1448,18 +1475,7 @@ function AskSourceRow({
       ) : (
         <span className="font-mono">{source.path}</span>
       )}
-      {stored && isMarkdownPath(source.path) ? (
-        <span className="text-(--muted)">{fileLabel}</span>
-      ) : null}
-      {stored && !isMarkdownPath(source.path) ? (
-        <span className="inline-flex items-center gap-1">
-          <DownloadIconButton
-            path={source.path}
-            onDownload={() => onDownload(source.path)}
-          />
-          <span className="text-(--muted)">{fileLabel}</span>
-        </span>
-      ) : null}
+      {stored ? <span className="text-(--muted)">{fileLabel}</span> : null}
       {primaryName && originalInZip && isMarkdownPath(primaryName) ? (
         <span className="inline-flex items-center gap-1">
           <ViewButton path={primaryName} onView={() => onView(primaryName)} />
@@ -1467,13 +1483,7 @@ function AskSourceRow({
         </span>
       ) : null}
       {primaryName && originalInZip && !isMarkdownPath(primaryName) ? (
-        <span className="inline-flex items-center gap-1">
-          <DownloadIconButton
-            path={primaryName}
-            onDownload={() => onDownload(primaryName)}
-          />
-          <span className="text-(--muted)">original</span>
-        </span>
+        <span className="text-(--muted)">original</span>
       ) : null}
       {primaryName && !originalInZip && origin?.uri ? (
         originHttp ? (
@@ -1531,27 +1541,6 @@ function ViewButton({
   );
 }
 
-function DownloadIconButton({
-  path,
-  onDownload,
-}: {
-  path: string;
-  onDownload: () => void;
-}) {
-  const name = path.split("/").pop() ?? path;
-  return (
-    <button
-      type="button"
-      onClick={onDownload}
-      aria-label={`Download ${name}`}
-      title="Download"
-      className="shrink-0 text-(--accent) hover:opacity-80"
-    >
-      <DownloadIcon />
-    </button>
-  );
-}
-
 function ViewIcon() {
   return (
     <svg
@@ -1568,38 +1557,6 @@ function ViewIcon() {
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 3v12" />
-      <path d="m7 11 5 5 5-5" />
-      <path d="M5 21h14" />
-    </svg>
-  );
-}
-
-function DownloadButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="shrink-0 text-xs font-medium text-(--accent) hover:underline"
-    >
-      Download
-    </button>
   );
 }
 
