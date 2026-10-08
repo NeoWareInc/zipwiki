@@ -64,8 +64,16 @@ export {
 } from "./evidence.js";
 export {
   askArchive,
+  askFailureMessage,
+  bundleAskExcerpts,
+  formatAskReport,
+  isIncompleteAskAnswer,
+  rememberSource,
+  resolveAskQuestion,
+  sourceKind,
   type AskArchiveResult,
   type AskExcerpt,
+  type AskSource,
 } from "./ask.js";
 export {
   enrichOkf,

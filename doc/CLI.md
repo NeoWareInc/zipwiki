@@ -48,6 +48,8 @@ Full flag reference and evaluation shortcuts: **[QUERY.md](QUERY.md)**.
 ```bash
 zipwiki open ./knowledge/docs.zipwiki
 zipwiki search ./knowledge/docs.zipwiki "deed"
+zipwiki ask ./knowledge/docs.zipwiki "Who signed the deed?"
+zipwiki ask ./knowledge/florida-laws-2025.zipwiki
 zipwiki read ./knowledge/docs.zipwiki --okf deed
 zipwiki read ./knowledge/docs.zipwiki --parsed deed.pdf
 zipwiki read -p ./knowledge/docs.zipwiki --path wiki/okf/deed.md
@@ -58,6 +60,8 @@ zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
 | --- | --- |
 | `open` | Catalog + manifest summary |
 | `search` | Ranked OKF hits (snippets). Parsed text only when OKF misses |
+| `query` | Local search plus cited passages and gaps. No hosted credits |
+| `ask` | Website Query: local evidence, then a hosted answer. Prompts when the question is omitted. `pnpm query:florida-laws`, `pnpm query:charles-dickens`, and `pnpm query:medical-pdfs` call this |
 | `read` | Stream OKF, parsed, or entry bodies |
 | `extract` | Verified write to disk |
 | `origin` | Extra Field `0x014F`; `--link` prints the URI; `--fetch` downloads and checks CRC-32 |

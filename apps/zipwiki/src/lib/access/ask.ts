@@ -13,7 +13,7 @@ import {
   searchPhrase,
 } from "./evidence.js";
 import { lookupOrigin } from "./origin.js";
-import type { EvidenceGap } from "./search.js";
+import type { EvidenceGap, EvidencePassage } from "./search.js";
 
 function collapsePriorReads(
   transcript: Array<
@@ -41,6 +41,7 @@ function collapsePriorReads(
 }
 
 const BODY_CHARS = 12_000;
+const ASK_EXCERPT_CAP = 9;
 
 export type AskExcerpt = {
   path: string;
@@ -50,16 +51,108 @@ export type AskExcerpt = {
   documents?: string[];
 };
 
+export type AskSource = {
+  path: string;
+  kind: "parsed" | "okf" | "original";
+};
+
 export type AskArchiveResult = {
   answer: string;
   reads: string[];
   searches: string[];
+  sources: AskSource[];
+  passages: EvidencePassage[];
   gaps: EvidenceGap[];
   model: string;
   creditsCharged: number;
   creditsRemaining: number;
   creditsUnlimited: boolean;
 };
+
+export function sourceKind(path: string): AskSource["kind"] {
+  if (path.startsWith("wiki/okf/")) return "okf";
+  if (path.startsWith("wiki/parsed/")) return "parsed";
+  return "original";
+}
+
+export function rememberSource(current: AskSource[], path: string): AskSource[] {
+  if (!path || path === "search" || current.some((item) => item.path === path)) {
+    return current;
+  }
+  return [...current, { path, kind: sourceKind(path) }];
+}
+
+/** Website rejects a reply that only announces a search. */
+export function isIncompleteAskAnswer(answerText: string): boolean {
+  return (
+    /^(let me|i('ll| will)|trying)\b/i.test(answerText) ||
+    (answerText.length < 280 && /[:…]\s*$/.test(answerText))
+  );
+}
+
+export function askFailureMessage(error: string): string {
+  if (/credits_locked/.test(error)) {
+    return "ZipWiki credits are locked for this account.";
+  }
+  if (/account_disabled/.test(error)) return "This account is disabled.";
+  if (/credits_exhausted/.test(error)) {
+    return "Credits are required to ask a question.";
+  }
+  if (/anthropic_not_configured/.test(error)) {
+    return "Hosted answers are not configured on this deployment.";
+  }
+  if (/incomplete answer|without calling a tool/i.test(error)) {
+    return "The answer stopped mid-search. Try asking again with a shorter phrase from the document (for example “termination”).";
+  }
+  return error;
+}
+
+/**
+ * Question from the command line, or one line from the terminal.
+ * A pipe with no question exits instead of waiting.
+ */
+export async function resolveAskQuestion(input: {
+  question?: string;
+  isTTY: boolean;
+  readLine: () => Promise<string>;
+}): Promise<string> {
+  const given = input.question?.trim() ?? "";
+  if (given) return given;
+  if (!input.isTTY) {
+    throw new Error(
+      "A question is required. Pass it after the package, or run ask in a terminal.",
+    );
+  }
+  const line = (await input.readLine()).trim();
+  if (!line) throw new Error("A question is required.");
+  return line;
+}
+
+/** Stderr block after the answer: credits, sources, passages, and gaps. */
+export function formatAskReport(result: AskArchiveResult): string {
+  const lines: string[] = [];
+  if (result.model) {
+    lines.push(
+      result.creditsUnlimited
+        ? "Unlimited · no charge"
+        : `Charged ${result.creditsCharged} credit${result.creditsCharged === 1 ? "" : "s"} · ${result.creditsRemaining.toLocaleString()} remaining`,
+    );
+  }
+  if (result.reads.length > 0) {
+    lines.push(`Also read ${result.reads.join(", ")}`);
+  }
+  for (const source of result.sources) {
+    lines.push(`${source.path}  ${source.kind}`);
+  }
+  for (const passage of result.passages) {
+    lines.push(`Passage: ${passage.path}`);
+  }
+  for (const gap of result.gaps) {
+    const origin = gap.originUri ? ` Original: ${gap.originUri}` : "";
+    lines.push(`Gap: ${gap.path} — ${gap.reason}${origin}`);
+  }
+  return lines.length > 0 ? `${lines.join("\n")}\n` : "";
+}
 
 type TurnBody = {
   status?: string;
@@ -91,50 +184,84 @@ function gapText(gap: EvidenceGap): string {
     : gap.reason;
 }
 
+/**
+ * Parsed windows first, then OKF or parsed hit bodies, then gaps.
+ * Stops at nine items, matching the website Ask bundle.
+ */
+export function bundleAskExcerpts(input: {
+  passages: Array<{ path: string; text: string }>;
+  hits: Array<{
+    path: string;
+    title?: string;
+    kind: "okf" | "parsed";
+    text: string;
+    documents?: string[];
+  }>;
+  gaps: EvidenceGap[];
+}): AskExcerpt[] {
+  const excerpts: AskExcerpt[] = [];
+  for (const passage of input.passages) {
+    if (excerpts.length >= ASK_EXCERPT_CAP) break;
+    excerpts.push({ path: passage.path, kind: "parsed", text: passage.text });
+  }
+  for (const hit of input.hits) {
+    if (excerpts.length >= ASK_EXCERPT_CAP) break;
+    excerpts.push({
+      path: hit.path,
+      title: hit.title,
+      kind: hit.kind,
+      text: hit.text.slice(0, BODY_CHARS),
+      ...(hit.documents && hit.documents.length > 0
+        ? { documents: hit.documents }
+        : {}),
+    });
+  }
+  for (const gap of input.gaps) {
+    if (excerpts.length >= ASK_EXCERPT_CAP) break;
+    excerpts.push({ path: gap.path, kind: "gap", text: gapText(gap) });
+  }
+  return excerpts;
+}
+
 function excerptsFor(args: {
   package?: string;
   query: string;
-}): { excerpts: AskExcerpt[]; gaps: EvidenceGap[]; packagePath: string } | null {
+}): {
+  excerpts: AskExcerpt[];
+  gaps: EvidenceGap[];
+  passages: EvidencePassage[];
+  packagePath: string;
+} | null {
   const found = queryArchive({
     package: args.package,
     query: args.query,
     readTopK: 3,
     maxBytes: BODY_CHARS,
   });
-  if (found.hits.length === 0) return null;
   const top = found.hits.slice(0, 3);
   const bodies = new Map(found.topK.map((row) => [row.path, row.text ?? ""]));
-  const excerpts: AskExcerpt[] = [];
-  const gaps: EvidenceGap[] = [];
-  for (const hit of top) {
+  const passages = top.flatMap((hit) => hit.passages ?? []);
+  const gaps = top.flatMap((hit) => hit.gaps ?? []);
+  const hits = top.map((hit) => {
     const documents = [
       ...(hit.passages ?? []).map((passage) => passage.path),
       ...(hit.gaps ?? []).map((gap) => gap.path),
     ];
-    excerpts.push({
+    return {
       path: hit.path,
       title: hit.title,
       kind: hit.kind,
       text: (bodies.get(hit.path) ?? hit.snippet).slice(0, BODY_CHARS),
       ...(documents.length > 0 ? { documents } : {}),
-    });
-    for (const passage of hit.passages ?? []) {
-      excerpts.push({
-        path: passage.path,
-        kind: "parsed",
-        text: passage.text,
-      });
-    }
-    for (const gap of hit.gaps ?? []) {
-      gaps.push(gap);
-      excerpts.push({
-        path: gap.path,
-        kind: "gap",
-        text: gapText(gap),
-      });
-    }
-  }
-  return { excerpts: excerpts.slice(0, 9), gaps, packagePath: found.package };
+    };
+  });
+  if (passages.length === 0 && hits.length === 0) return null;
+  return {
+    excerpts: bundleAskExcerpts({ passages, hits, gaps }),
+    gaps,
+    passages,
+    packagePath: found.package,
+  };
 }
 
 async function postTurn(
@@ -153,7 +280,9 @@ async function postTurn(
   });
   const payload = (await response.json().catch(() => ({}))) as TurnBody;
   if (!response.ok) {
-    throw new Error(payload.error || `Query API failed (${response.status})`);
+    throw new Error(
+      askFailureMessage(payload.error || `Query API failed (${response.status})`),
+    );
   }
   return payload;
 }
@@ -191,9 +320,11 @@ export async function askArchive(args: {
       quiet: true,
     });
     return {
-      answer: "No concept matched this question.",
+      answer: "No matching text was found in this package for that question.",
       reads: [],
       searches: [],
+      sources: [],
+      passages: [],
       gaps: [],
       model: "",
       creditsCharged: 0,
@@ -209,6 +340,10 @@ export async function askArchive(args: {
   let model = "";
   const reads: string[] = [];
   const searches: string[] = [];
+  let sources: AskSource[] = [];
+  for (const passage of bundled.passages) {
+    sources = rememberSource(sources, passage.path);
+  }
   const transcript: Array<
     | { role: "assistant"; content: unknown[] }
     | {
@@ -246,6 +381,7 @@ export async function askArchive(args: {
         args.onSearch?.(searchPhraseText);
         searches.push(searchPhraseText);
         const hits = searchPhrase(bundled.packagePath, searchPhraseText);
+        for (const hit of hits) sources = rememberSource(sources, hit.path);
         if (hits.length === 0) {
           void maybeReportActivity({
             type: "query",
@@ -281,6 +417,7 @@ export async function askArchive(args: {
         typeof originPath === "string"
       ) {
         args.onOrigin?.(originPath);
+        sources = rememberSource(sources, originPath);
         let text = `No origin link for ${originPath}`;
         try {
           const found = lookupOrigin({
@@ -308,6 +445,7 @@ export async function askArchive(args: {
             : 0;
         args.onRead?.(requested.path, offset);
         reads.push(requested.path);
+        sources = rememberSource(sources, requested.path);
         const loaded = readFollow(bundled.packagePath, requested.path, offset);
         if ("error" in loaded) {
           void maybeReportActivity({
@@ -339,11 +477,25 @@ export async function askArchive(args: {
       }
       const answer = turn.answer?.trim() ?? "";
       if (!answer) throw new Error("Claude returned an empty answer");
+      if (isIncompleteAskAnswer(answer)) {
+        void maybeReportActivity({
+          type: "query",
+          action: "query_client_reject",
+          status: "fail",
+          path: args.package,
+          createId: askId,
+          count: round,
+          quiet: true,
+        });
+        throw new Error(askFailureMessage("incomplete answer"));
+      }
       answered = true;
       return {
         answer,
         reads,
         searches,
+        sources,
+        passages: bundled.passages,
         gaps: bundled.gaps,
         model,
         creditsCharged,

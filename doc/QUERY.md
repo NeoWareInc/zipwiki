@@ -101,10 +101,23 @@ zipwiki query ./knowledge/docs.zipwiki "deed" -j
 
 ### `ask` — hosted answer over the local evidence
 
-Reads the same local bundle, then asks the hosted model. The model may search for a phrase, read 12,000 characters of one text file (`wiki/okf`, `wiki/parsed`, or a stored `.txt` / `.md`) starting at an offset, or ask for the original's link, up to four times, then it must answer. A search hit includes the character offset of the phrase so the next read can start there. A request for an unparsed PDF or Office file is refused. Uses hosted credits (`zipwiki login`).
+Reads the same local bundle the website Query page uses: parsed passages first, then concept cards, then gaps (nine items). The model may search for a phrase, read 12,000 characters of one text file (`wiki/okf`, `wiki/parsed`, or a stored `.txt` / `.md`) starting at an offset, or ask for the original's link, up to four times, then it must answer. A search hit includes the character offset of the phrase so the next read can start there. A request for an unparsed PDF or Office file is refused. Uses hosted credits (`zipwiki login`).
+
+Omit the question in a terminal and the CLI prompts `Query:`. A pipe with no question exits instead of waiting.
 
 ```bash
 zipwiki ask ./knowledge/docs.zipwiki "Who signed the deed?"
+zipwiki ask ./knowledge/florida-laws-2025.zipwiki
+```
+
+After the answer, stderr prints the credit charge, follow-up paths (`Also read`), source lines (`parsed`, `okf`, or `original`), and any passage or gap paths from the local search.
+
+Repo shortcuts that prompt for the question:
+
+```bash
+pnpm query:florida-laws
+pnpm query:charles-dickens
+pnpm query:medical-pdfs
 ```
 
 ---

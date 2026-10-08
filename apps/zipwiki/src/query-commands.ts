@@ -2,11 +2,14 @@
  * Query commands on the zipwiki CLI: open, search, read, origin, extract.
  * The zipaccess library implements these; this module is the only shell surface.
  */
+import { createInterface } from "node:readline";
 import type { Command } from "commander";
 import { runExtractCommand } from "./inspect-cmd.js";
 import {
   AccessError,
   askArchive,
+  formatAskReport,
+  resolveAskQuestion,
   buildCatalog,
   extractEntries,
   extractWithOrigin,
@@ -28,6 +31,16 @@ import { resolveZipwikiApiKey, resolveZipwikiApiUrl } from "./lib/config/index.j
 import { resolveRepoPath } from "./lib/parse/index.js";
 
 const QUERY = "Query";
+
+function promptAskQuestion(): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stderr });
+  return new Promise((resolve) => {
+    rl.question("Query: ", (answer) => {
+      rl.close();
+      resolve(answer);
+    });
+  });
+}
 
 function fail(err: unknown): never {
   if (err instanceof AccessError) {
@@ -243,13 +256,18 @@ export function registerQueryCommands(program: Command): void {
     .command("ask")
     .helpGroup(QUERY)
     .description(
-      "Ask a question. Matching text is read locally first. The model may search or read the open package, then answer. Uses hosted credits.",
+      "Ask a question. Matching text is read locally first. The model may search or read the open package, then answer. Uses hosted credits. Prompts when the question is omitted.",
     )
     .argument("<package>", "Path to .zipwiki")
-    .argument("<question>", "Question")
+    .argument("[question]", "Question (prompted when omitted)")
     .option("-j, --json", "JSON output")
-    .action(async (pkg: string, question: string, opts: { json?: boolean }) => {
+    .action(async (pkg: string, question: string | undefined, opts: { json?: boolean }) => {
       try {
+        const asked = await resolveAskQuestion({
+          question,
+          isTTY: Boolean(process.stdin.isTTY),
+          readLine: promptAskQuestion,
+        });
         const apiUrl = resolveZipwikiApiUrl();
         const apiKey = resolveZipwikiApiKey();
         if (!apiUrl || !apiKey) {
@@ -257,21 +275,24 @@ export function registerQueryCommands(program: Command): void {
             "ZIPWIKI_API_URL and ZIPWIKI_API_KEY are required. Run zipwiki login.",
           );
         }
+        if (!opts.json) console.error("Searching the package…");
         const result = await askArchive({
           package: resolvePkg(pkg),
-          question,
+          question: asked,
           apiUrl,
           apiKey,
           onRead(path, offset) {
             if (!opts.json) {
-              console.error(offset > 0 ? `Reading ${path} at ${offset}` : `Reading ${path}`);
+              console.error(
+                offset > 0 ? `Reading ${path} at ${offset}…` : `Reading ${path}…`,
+              );
             }
           },
           onSearch(phrase) {
-            if (!opts.json) console.error(`Searching ${phrase}`);
+            if (!opts.json) console.error(`Searching for ${phrase}…`);
           },
           onOrigin(path) {
-            if (!opts.json) console.error(`Origin ${path}`);
+            if (!opts.json) console.error(`Origin of ${path}…`);
           },
         });
         if (opts.json) {
@@ -279,9 +300,8 @@ export function registerQueryCommands(program: Command): void {
           return;
         }
         process.stdout.write(`${result.answer}\n`);
-        if (result.reads.length > 0) {
-          console.error(`Also read ${result.reads.join(", ")}`);
-        }
+        const report = formatAskReport(result);
+        if (report) process.stderr.write(report);
       } catch (err) {
         fail(err);
       }
