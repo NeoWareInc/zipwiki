@@ -7,6 +7,7 @@ import {
   DEFAULT_ZIPWIKI_CONFIG,
   type ResolvedZipwikiConfig,
 } from "../../config/index.js";
+import { runWithCreateIdAsync } from "../../config/create-session.js";
 import { RemoteParseAdapter } from "./remote.js";
 import type { DocumentParseResult } from "../types.js";
 
@@ -47,14 +48,18 @@ describe("RemoteParseAdapter", () => {
       fetchImpl,
     });
 
-    const result = await adapter.parse(tmp, {
-      project: project(),
-      cli: { maxPages: 2, noOcr: true },
-    });
+    const result = await runWithCreateIdAsync("cid-test-1", () =>
+      adapter.parse(tmp, {
+        project: project(),
+        cli: { maxPages: 2, noOcr: true },
+      }),
+    );
 
     unlinkSync(tmp);
 
-    assert.match(seenUrl, /\/api\/parse\?stream=1$/);
+    assert.match(seenUrl, /\/api\/parse\?/);
+    assert.match(seenUrl, /stream=1/);
+    assert.match(seenUrl, /createId=cid-test-1/);
     assert.equal(seenAuth, "Bearer test-key");
     assert.equal(result.text, fakeResult.text);
     assert.equal(result.engine, "liteparse");

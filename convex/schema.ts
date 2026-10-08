@@ -117,9 +117,13 @@ export default defineSchema({
     byoLlamaCredits: v.optional(v.number()),
   }).index("by_account_period", ["accountId", "periodStart"]),
 
+  /**
+   * Primary activity log: pack_start / pack_end / pack / query (+ legacy flat
+   * parse/okf/liteparse rows). Create steps live in usageStepEvents.
+   */
   usageEvents: defineTable({
     accountId: v.id("accounts"),
-    type: v.string(), // parse | okf | liteparse | pack | query
+    type: v.string(), // pack_start | pack_end | pack | query (+ legacy)
     engine: v.optional(v.string()),
     bytes: v.optional(v.number()),
     status: v.optional(v.string()),
@@ -136,10 +140,41 @@ export default defineSchema({
     filename: v.optional(v.string()),
     /** LlamaParse job id when known. */
     jobId: v.optional(v.string()),
-    /** Legacy pack summary fields kept so older events still validate. */
+    /** Links pack_start / pack_end and usageStepEvents (also askId for anomalies). */
     createId: v.optional(v.string()),
+    /** pack_end: hosted OKF call count for this create. */
     okfCount: v.optional(v.number()),
-  }).index("by_accountId", ["accountId"]),
+    /** pack_end: hosted parse document count for this create. */
+    parseCount: v.optional(v.number()),
+  })
+    .index("by_accountId", ["accountId"])
+    .index("by_createId", ["createId"])
+    .index("by_accountId_and_createId", ["accountId", "createId"]),
+
+  /**
+   * Step detail for Create ZipWiki (parse / OKF / LiteParse / BYO).
+   * Loaded by createId when Admin expands a pack log entry.
+   */
+  usageStepEvents: defineTable({
+    accountId: v.id("accounts"),
+    /** Session id from pack_start; "orphan" when createId was not supplied. */
+    createId: v.string(),
+    type: v.string(), // parse | okf | liteparse | llamaparse_byo
+    engine: v.optional(v.string()),
+    bytes: v.optional(v.number()),
+    status: v.optional(v.string()),
+    provider: v.optional(v.string()),
+    model: v.optional(v.string()),
+    pages: v.optional(v.number()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
+    llamaCredits: v.optional(v.number()),
+    creditCost: v.optional(v.number()),
+    filename: v.optional(v.string()),
+    jobId: v.optional(v.string()),
+  })
+    .index("by_createId", ["createId"])
+    .index("by_accountId_and_createId", ["accountId", "createId"]),
 
   /** Master vendor float. The API key itself stays a Fly secret named by `secretEnv`. */
   providerAccounts: defineTable({

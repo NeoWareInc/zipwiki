@@ -251,7 +251,6 @@ export default function AdminAccountPage() {
                 <th className="px-4 py-2 font-medium">Type</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">File / model</th>
-                <th className="px-4 py-2 font-medium">Ask id</th>
                 <th className="px-4 py-2 font-medium tabular-nums">Pages / tok</th>
                 <th className="px-4 py-2 font-medium tabular-nums">Credits</th>
               </tr>
@@ -286,9 +285,6 @@ export default function AdminAccountPage() {
                   <td className="max-w-48 truncate px-4 py-2">
                     {e.filename ?? e.model ?? "—"}
                   </td>
-                  <td className="max-w-28 truncate px-4 py-2 font-mono text-xs">
-                    {e.createId ?? "—"}
-                  </td>
                   <td className="px-4 py-2 tabular-nums">
                     {e.pages != null
                       ? `${e.pages} pg`
@@ -314,7 +310,7 @@ export default function AdminAccountPage() {
               {data.events.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-4 py-6 text-center text-(--muted)"
                   >
                     No events yet

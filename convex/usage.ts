@@ -138,6 +138,8 @@ export const recordUsage = internalMutation({
      * parse and do not debit ZipWiki credits.
      */
     userKey: v.optional(v.boolean()),
+    /** Create ZipWiki session id; links this step to pack_start / pack_end. */
+    createId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const {
@@ -155,6 +157,7 @@ export const recordUsage = internalMutation({
       filename,
       jobId,
       userKey,
+      createId,
     } = args;
     const ownKey = userKey === true && kind === "parse";
     const safeFilename =
@@ -229,8 +232,13 @@ export const recordUsage = internalMutation({
       });
     }
 
-    await ctx.db.insert("usageEvents", {
+    const safeCreateId =
+      typeof createId === "string" && createId.trim()
+        ? createId.trim().slice(0, 128)
+        : "orphan";
+    await ctx.db.insert("usageStepEvents", {
       accountId,
+      createId: safeCreateId,
       type: ownKey ? "llamaparse_byo" : kind,
       engine,
       bytes,
@@ -553,8 +561,9 @@ export const recordLiteparse = internalMutation({
     accountId: v.id("accounts"),
     success: v.boolean(),
     bytes: v.optional(v.number()),
+    createId: v.optional(v.string()),
   },
-  handler: async (ctx, { accountId, success, bytes }) => {
+  handler: async (ctx, { accountId, success, bytes, createId }) => {
     const periodStart = startOfMonthMs();
     let period = await ctx.db
       .query("usagePeriods")
@@ -580,8 +589,13 @@ export const recordLiteparse = internalMutation({
       });
     }
 
-    await ctx.db.insert("usageEvents", {
+    const safeCreateId =
+      typeof createId === "string" && createId.trim()
+        ? createId.trim().slice(0, 128)
+        : "orphan";
+    await ctx.db.insert("usageStepEvents", {
       accountId,
+      createId: safeCreateId,
       type: "liteparse",
       status: success ? "success" : "fail",
       bytes,

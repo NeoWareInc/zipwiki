@@ -135,7 +135,10 @@ export class RemoteParseAdapter {
     }
 
     return withActivityDots(filename, { quiet: opts.cli?.quiet }, async () => {
-      const response = await this.fetchImpl(`${base}/api/parse?stream=1`, {
+      const parseUrl = new URL(`${base}/api/parse`);
+      parseUrl.searchParams.set("stream", "1");
+      if (createId) parseUrl.searchParams.set("createId", createId);
+      const response = await this.fetchImpl(parseUrl.toString(), {
         method: "POST",
         headers,
         body: form,

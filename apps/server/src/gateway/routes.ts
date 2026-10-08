@@ -257,10 +257,16 @@ export async function registerGateway(
     const noOcr = readField(fields, "noOcr") === "true";
     const tier = readField(fields, "tier") || undefined;
     const version = readField(fields, "version") || undefined;
+    const queryCreate =
+      typeof (req.query as { createId?: unknown }).createId === "string"
+        ? String((req.query as { createId?: string }).createId).trim()
+        : typeof (req.query as { create_id?: unknown }).create_id === "string"
+          ? String((req.query as { create_id?: string }).create_id).trim()
+          : "";
     const createId =
       readField(fields, "createId") ||
       readField(fields, "create_id") ||
-      undefined;
+      (queryCreate ? queryCreate.slice(0, 128) : undefined);
     const stream =
       (req.query as { stream?: string }).stream === "1" ||
       String(req.headers.accept ?? "").includes("application/x-ndjson");
@@ -595,7 +601,17 @@ function readField(
   name: string,
 ): string | undefined {
   const field = fields?.[name];
+  if (typeof field === "string" && field.trim()) return field.trim();
+  if (Array.isArray(field) && field.length > 0) {
+    return readField({ [name]: field[0] }, name);
+  }
   if (!field || typeof field !== "object") return undefined;
-  if ("value" in field && typeof field.value === "string") return field.value;
+  if ("value" in field) {
+    const value = (field as { value?: unknown }).value;
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (Buffer.isBuffer(value) && value.length > 0) {
+      return value.toString("utf8").trim() || undefined;
+    }
+  }
   return undefined;
 }

@@ -214,11 +214,16 @@ export const usageOverview = query({
 
 const PAGE_SIZE = 100;
 
-const PRIMARY_LOG_TYPES = new Set([
+/** Types shown in the Admin event log (all usageEvents writers). */
+const ALL_LOG_TYPES = new Set([
   "pack_start",
   "pack_end",
   "pack",
   "query",
+  "parse",
+  "okf",
+  "liteparse",
+  "llamaparse_byo",
 ]);
 
 function serializeUsageEvent(
@@ -318,8 +323,7 @@ function buildPrimaryEventsQuery(
 }
 
 /**
- * Primary activity log: pack_start / pack_end / pack (legacy) / query only.
- * Step details live in usageStepEvents (see usageStepLog).
+ * Full usage event log: parse / OKF / liteparse / pack / query (and anomalies).
  */
 export const usageEventLog = query({
   args: {
@@ -351,8 +355,17 @@ export const usageEventLog = query({
     const emailByAccount = new Map<Id<"accounts">, string>();
     const page = [];
     for (const row of result.page) {
-      if (!PRIMARY_LOG_TYPES.has(row.type)) continue;
+      if (!ALL_LOG_TYPES.has(row.type)) continue;
       if (type === "query" && row.type !== "query") continue;
+      if (type === "okf" && row.type !== "okf") continue;
+      if (
+        type === "parse" &&
+        row.type !== "parse" &&
+        row.type !== "liteparse" &&
+        row.type !== "llamaparse_byo"
+      ) {
+        continue;
+      }
       if (
         type === "pack" &&
         row.type !== "pack" &&
@@ -380,19 +393,164 @@ export const usageEventLog = query({
   },
 });
 
-/**
- * Step log stub — usageStepEvents is not on HEAD schema.
- * Returns empty so Admin callers do not crash.
- */
+function serializeStepEvent(
+  row: {
+    _id: Id<"usageStepEvents">;
+    _creationTime: number;
+    accountId: Id<"accounts">;
+    createId: string;
+    type: string;
+    engine?: string;
+    status?: string;
+    provider?: string;
+    model?: string;
+    pages?: number;
+    bytes?: number;
+    llamaCredits?: number;
+    creditCost?: number;
+    filename?: string;
+    jobId?: string;
+    inputTokens?: number;
+    outputTokens?: number;
+  },
+  email: string,
+) {
+  return {
+    id: row._id,
+    createdAt: row._creationTime,
+    accountId: row.accountId,
+    email,
+    createId: row.createId,
+    type: row.type,
+    engine: row.engine ?? null,
+    status: row.status ?? null,
+    provider: row.provider ?? null,
+    model: row.model ?? null,
+    pages: row.pages ?? null,
+    bytes: row.bytes ?? null,
+    llamaCredits: row.llamaCredits ?? null,
+    creditCost: row.creditCost ?? null,
+    filename: row.filename ?? null,
+    jobId: row.jobId ?? null,
+    inputTokens: row.inputTokens ?? null,
+    outputTokens: row.outputTokens ?? null,
+  };
+}
+
+const STEP_TYPES = new Set([
+  "parse",
+  "okf",
+  "liteparse",
+  "llamaparse_byo",
+]);
+
+/** Step details for one Create ZipWiki session (parse / OKF / LiteParse / BYO). */
 export const usageStepLog = query({
   args: {
     createId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
-  handler: async (ctx, { createId }) => {
+  handler: async (ctx, { createId, paginationOpts }) => {
     await requireAdmin(ctx);
-    void createId;
-    return { page: [], isDone: true, continueCursor: "" };
+    const id = createId.trim().slice(0, 128);
+    if (!id) {
+      return { page: [], isDone: true, continueCursor: "" };
+    }
+
+    const result = await ctx.db
+      .query("usageStepEvents")
+      .withIndex("by_createId", (q) => q.eq("createId", id))
+      .order("desc")
+      .paginate({
+        ...paginationOpts,
+        numItems: Math.min(PAGE_SIZE, paginationOpts.numItems ?? PAGE_SIZE),
+      });
+
+    const emailByAccount = new Map<Id<"accounts">, string>();
+    const page = [];
+    for (const row of result.page) {
+      const email = await emailForAccount(ctx, row.accountId, emailByAccount);
+      page.push(serializeStepEvent(row, email));
+    }
+
+    const firstPage =
+      paginationOpts.cursor == null || paginationOpts.cursor === "";
+
+    // Legacy: steps written into usageEvents before the step-table split.
+    if (page.length === 0 && firstPage) {
+      const sessionRows = await ctx.db
+        .query("usageEvents")
+        .withIndex("by_createId", (q) => q.eq("createId", id))
+        .order("desc")
+        .take(PAGE_SIZE);
+      for (const row of sessionRows) {
+        if (!STEP_TYPES.has(row.type)) continue;
+        const email = await emailForAccount(ctx, row.accountId, emailByAccount);
+        page.push(
+          serializeStepEvent(
+            {
+              _id: row._id as unknown as Id<"usageStepEvents">,
+              _creationTime: row._creationTime,
+              accountId: row.accountId,
+              createId: id,
+              type: row.type,
+              engine: row.engine,
+              status: row.status,
+              provider: row.provider,
+              model: row.model,
+              pages: row.pages,
+              bytes: row.bytes,
+              llamaCredits: row.llamaCredits,
+              creditCost: row.creditCost,
+              filename: row.filename,
+              jobId: row.jobId,
+              inputTokens: row.inputTokens,
+              outputTokens: row.outputTokens,
+            },
+            email,
+          ),
+        );
+      }
+    }
+
+    // Orphan recovery: parse/OKF recorded without createId (multipart miss).
+    if (page.length === 0 && firstPage) {
+      const sessionRows = await ctx.db
+        .query("usageEvents")
+        .withIndex("by_createId", (q) => q.eq("createId", id))
+        .order("asc")
+        .take(40);
+      const packRows = sessionRows.filter(
+        (row) =>
+          row.type === "pack_start" ||
+          row.type === "pack_end" ||
+          row.type === "pack",
+      );
+      if (packRows.length > 0) {
+        const accountId = packRows[0]!.accountId;
+        const times = packRows.map((row) => row._creationTime);
+        const startMs = Math.min(...times) - 5_000;
+        const endMs = Math.max(...times) + 120_000;
+        const orphans = await ctx.db
+          .query("usageStepEvents")
+          .withIndex("by_accountId_and_createId", (q) =>
+            q.eq("accountId", accountId).eq("createId", "orphan"),
+          )
+          .order("desc")
+          .take(200);
+        for (const row of orphans) {
+          if (row._creationTime < startMs || row._creationTime > endMs) {
+            continue;
+          }
+          const email = await emailForAccount(ctx, row.accountId, emailByAccount);
+          page.push(serializeStepEvent(row, email));
+          if (page.length >= PAGE_SIZE) break;
+        }
+      }
+      return { page, isDone: true, continueCursor: "" };
+    }
+
+    return { ...result, page };
   },
 });
 
