@@ -2,11 +2,11 @@ import { useQuery } from "convex/react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { ReactNode } from "react";
 import { api } from "@convex/_generated/api";
+import { UsageEventLog } from "../components/UsageEventLog";
 import {
   usageColor,
   usageInk,
   usageKindLabel,
-  usageVisualKind,
   type UsageVisualKind,
 } from "../lib/usage-colors";
 
@@ -177,52 +177,6 @@ function KindCard({
     >
       {children}
     </div>
-  );
-}
-
-function formatBytes(n: number | null): string {
-  if (n == null || !Number.isFinite(n) || n <= 0) return "—";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function eventLabel(type: string, engine?: string | null): string {
-  if (type === "llamaparse_byo") return "LlamaParse (your key)";
-  if (type === "parse") return "Parsing";
-  if (type === "okf") return "OKF Enrichment";
-  if (type === "liteparse") return "LiteParse";
-  if (type === "pack") return "Pack Knowledge Archive";
-  if (type === "query") {
-    const action = engine?.trim();
-    if (action === "open") return "Open Knowledge Archive";
-    if (action === "search") return "Search Knowledge Archive";
-    if (action === "query") return "Query Knowledge Archive";
-    if (action === "list") return "List Knowledge Archive";
-    if (action === "web_open") return "Web open Knowledge Archive";
-    if (action === "web_search") return "Web search Knowledge Archive";
-    return action
-      ? `Query Knowledge Archive · ${action}`
-      : "Query Knowledge Archive";
-  }
-  return type;
-}
-
-function CreditAmount({
-  type,
-  creditCost,
-}: {
-  type: string;
-  creditCost: number | null;
-}) {
-  const kind = usageVisualKind(type);
-  if (creditCost == null) {
-    return <span className="text-(--muted)">—</span>;
-  }
-  return (
-    <span className="font-medium tabular-nums" style={{ color: usageInk(kind) }}>
-      {creditCost.toLocaleString()}
-    </span>
   );
 }
 
@@ -402,107 +356,16 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 space-y-4">
+      <section className="space-y-3">
         <div>
           <h2 className="font-display text-xl font-semibold">Activity log</h2>
           <p className="mt-1 text-sm text-(--muted)">
-            Pack, open/search/query, hosted parse, and OKF enrichment — with
-            pages and ZipWiki credits when billed.
+            Pack and query events. Open Details on a pack row to
+            see parse / OKF / LiteParse steps for that create session.
           </p>
         </div>
-        {usageLog === undefined && (
-          <p className="text-sm text-(--muted)">Loading…</p>
-        )}
-        {usageLog && usageLog.length === 0 && (
-          <p className="text-sm text-(--muted)">
-            No activity yet. Pack a Knowledge Archive or open one with the agent
-            to see entries here.
-          </p>
-        )}
-        {usageLog && usageLog.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-xl text-left text-sm">
-              <thead>
-                <tr className="border-b border-(--border) text-(--muted)">
-                  <th className="py-2 pr-3 font-medium">When</th>
-                  <th className="py-2 pr-3 font-medium">Type</th>
-                  <th className="py-2 pr-3 font-medium">File / model</th>
-                  <th className="py-2 pr-3 font-medium tabular-nums">
-                    Pages / tokens
-                  </th>
-                  <th className="py-2 font-medium tabular-nums">
-                    ZipWiki credits
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {usageLog.map((row) => {
-                  const kind = usageVisualKind(row.type);
-                  return (
-                    <tr
-                      key={row.id}
-                      className="border-b border-(--border)/60 align-top"
-                    >
-                      <td className="py-2 pr-3 whitespace-nowrap text-(--muted)">
-                        {new Date(row.createdAt).toLocaleString()}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <span
-                          className="font-medium"
-                          style={{ color: usageInk(kind) }}
-                        >
-                          {eventLabel(row.type, row.engine)}
-                        </span>
-                        {row.status && row.status !== "success" ? (
-                          <span className="text-(--muted)">
-                            {" "}
-                            · {row.status}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td
-                        className="py-2 pr-3 max-w-56 truncate"
-                        title={row.filename ?? row.model ?? undefined}
-                      >
-                        {row.filename ??
-                          row.model ??
-                          (row.bytes != null ? (
-                            <span className="text-(--muted)">
-                              {formatBytes(row.bytes)}
-                            </span>
-                          ) : (
-                            "—"
-                          ))}
-                      </td>
-                      <td className="py-2 pr-3 tabular-nums">
-                        {row.pages != null
-                          ? row.pages.toLocaleString()
-                          : row.inputTokens != null || row.outputTokens != null
-                            ? `${(row.inputTokens ?? 0).toLocaleString()} / ${(row.outputTokens ?? 0).toLocaleString()}`
-                            : "—"}
-                      </td>
-                      <td className="py-2">
-                        {row.type === "llamaparse_byo" ? (
-                          <span className="tabular-nums text-(--muted)">
-                            {(row.llamaCredits ?? 0).toLocaleString()} Llama
-                          </span>
-                        ) : row.type === "query" && row.creditCost == null ? (
-                          <span className="text-(--muted)">not billed</span>
-                        ) : (
-                          <CreditAmount
-                            type={row.type}
-                            creditCost={row.creditCost}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        <UsageEventLog mode="account" />
+      </section>
     </div>
   );
 }

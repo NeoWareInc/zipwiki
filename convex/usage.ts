@@ -5,6 +5,7 @@ import {
   query,
   type QueryCtx,
 } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
@@ -874,6 +875,262 @@ export const myUsage = query({
       autoReloadLastError: account.autoReloadLastError || null,
       hasPaymentMethod: Boolean(account.stripePaymentMethodId),
     };
+  },
+});
+
+const ACTIVITY_PAGE_SIZE = 100;
+
+const ACTIVITY_LOG_TYPES = new Set([
+  "pack_start",
+  "pack_end",
+  "pack",
+  "query",
+  "parse",
+  "okf",
+  "liteparse",
+  "llamaparse_byo",
+]);
+
+const STEP_TYPES = new Set(["parse", "okf", "liteparse", "llamaparse_byo"]);
+
+function emptyActivityPage() {
+  return { page: [], isDone: true as const, continueCursor: "" };
+}
+
+async function signedInAccount(ctx: QueryCtx) {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) return null;
+  return await ctx.db
+    .query("accounts")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .unique();
+}
+
+function matchesActivityType(rowType: string, type: string | undefined): boolean {
+  if (!ACTIVITY_LOG_TYPES.has(rowType)) return false;
+  if (!type) return true;
+  if (type === "query") return rowType === "query";
+  if (type === "okf") return rowType === "okf";
+  if (type === "parse") {
+    return (
+      rowType === "parse" ||
+      rowType === "liteparse" ||
+      rowType === "llamaparse_byo"
+    );
+  }
+  if (type === "pack") {
+    return rowType === "pack" || rowType === "pack_start" || rowType === "pack_end";
+  }
+  if (type === "pack_start") return rowType === "pack_start";
+  if (type === "pack_end") return rowType === "pack_end" || rowType === "pack";
+  return true;
+}
+
+function serializeActivityEvent(row: {
+  _id: Id<"usageEvents">;
+  _creationTime: number;
+  accountId: Id<"accounts">;
+  type: string;
+  engine?: string;
+  status?: string;
+  provider?: string;
+  model?: string;
+  pages?: number;
+  bytes?: number;
+  llamaCredits?: number;
+  creditCost?: number;
+  filename?: string;
+  jobId?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  createId?: string;
+  okfCount?: number;
+  parseCount?: number;
+}) {
+  return {
+    id: row._id,
+    createdAt: row._creationTime,
+    accountId: row.accountId,
+    email: null as string | null,
+    type: row.type === "pack" ? "pack_end" : row.type,
+    engine: row.engine ?? null,
+    status: row.status ?? null,
+    provider: row.provider ?? null,
+    model: row.model ?? null,
+    pages: row.pages ?? null,
+    bytes: row.bytes ?? null,
+    llamaCredits: row.llamaCredits ?? null,
+    creditCost: row.creditCost ?? null,
+    filename: row.filename ?? null,
+    jobId: row.jobId ?? null,
+    inputTokens: row.inputTokens ?? null,
+    outputTokens: row.outputTokens ?? null,
+    createId: row.createId ?? null,
+    okfCount: row.okfCount ?? null,
+    parseCount: row.parseCount ?? null,
+  };
+}
+
+function serializeActivityStep(row: {
+  _id: string;
+  _creationTime: number;
+  type: string;
+  engine?: string;
+  status?: string;
+  provider?: string;
+  model?: string;
+  pages?: number;
+  bytes?: number;
+  llamaCredits?: number;
+  creditCost?: number;
+  filename?: string;
+  jobId?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+}) {
+  return {
+    id: row._id,
+    createdAt: row._creationTime,
+    type: row.type,
+    engine: row.engine ?? null,
+    status: row.status ?? null,
+    provider: row.provider ?? null,
+    model: row.model ?? null,
+    pages: row.pages ?? null,
+    bytes: row.bytes ?? null,
+    llamaCredits: row.llamaCredits ?? null,
+    creditCost: row.creditCost ?? null,
+    filename: row.filename ?? null,
+    jobId: row.jobId ?? null,
+    inputTokens: row.inputTokens ?? null,
+    outputTokens: row.outputTokens ?? null,
+  };
+}
+
+/** Signed-in account event log. Same rows as the admin log, one account. */
+export const myUsageEventLog = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    type: v.optional(v.string()),
+    status: v.optional(v.string()),
+    engine: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const account = await signedInAccount(ctx);
+    if (!account) return emptyActivityPage();
+
+    const type = args.type?.trim() || undefined;
+    const status = args.status?.trim() || undefined;
+    const engine = args.engine?.trim() || undefined;
+
+    let filtered = ctx.db
+      .query("usageEvents")
+      .withIndex("by_accountId", (q) => q.eq("accountId", account._id))
+      .order("desc");
+    if (status) {
+      filtered = filtered.filter((q) => q.eq(q.field("status"), status));
+    }
+    if (engine) {
+      filtered = filtered.filter((q) => q.eq(q.field("engine"), engine));
+    }
+
+    const result = await filtered.paginate({
+      ...args.paginationOpts,
+      numItems: Math.min(250, ACTIVITY_PAGE_SIZE * 2),
+    });
+
+    const page = [];
+    for (const row of result.page) {
+      if (!matchesActivityType(row.type, type)) continue;
+      page.push(serializeActivityEvent(row));
+    }
+
+    return {
+      ...result,
+      page: page.slice(0, ACTIVITY_PAGE_SIZE),
+    };
+  },
+});
+
+/** Parse / OKF / LiteParse steps for one of the signed-in account's creates. */
+export const myUsageStepLog = query({
+  args: {
+    createId: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, { createId, paginationOpts }) => {
+    const account = await signedInAccount(ctx);
+    if (!account) return emptyActivityPage();
+    const id = createId.trim().slice(0, 128);
+    if (!id) return emptyActivityPage();
+
+    const result = await ctx.db
+      .query("usageStepEvents")
+      .withIndex("by_accountId_and_createId", (q) =>
+        q.eq("accountId", account._id).eq("createId", id),
+      )
+      .order("desc")
+      .paginate({
+        ...paginationOpts,
+        numItems: Math.min(
+          ACTIVITY_PAGE_SIZE,
+          paginationOpts.numItems ?? ACTIVITY_PAGE_SIZE,
+        ),
+      });
+
+    const page = result.page.map((row) => serializeActivityStep(row));
+    const firstPage =
+      paginationOpts.cursor == null || paginationOpts.cursor === "";
+
+    if (page.length === 0 && firstPage) {
+      const sessionRows = await ctx.db
+        .query("usageEvents")
+        .withIndex("by_accountId_and_createId", (q) =>
+          q.eq("accountId", account._id).eq("createId", id),
+        )
+        .order("desc")
+        .take(ACTIVITY_PAGE_SIZE);
+      for (const row of sessionRows) {
+        if (!STEP_TYPES.has(row.type)) continue;
+        page.push(serializeActivityStep(row));
+      }
+    }
+
+    if (page.length === 0 && firstPage) {
+      const sessionRows = await ctx.db
+        .query("usageEvents")
+        .withIndex("by_accountId_and_createId", (q) =>
+          q.eq("accountId", account._id).eq("createId", id),
+        )
+        .order("asc")
+        .take(40);
+      const packRows = sessionRows.filter(
+        (row) =>
+          row.type === "pack_start" ||
+          row.type === "pack_end" ||
+          row.type === "pack",
+      );
+      if (packRows.length > 0) {
+        const times = packRows.map((row) => row._creationTime);
+        const startMs = Math.min(...times) - 5_000;
+        const endMs = Math.max(...times) + 120_000;
+        const orphans = await ctx.db
+          .query("usageStepEvents")
+          .withIndex("by_accountId_and_createId", (q) =>
+            q.eq("accountId", account._id).eq("createId", "orphan"),
+          )
+          .order("desc")
+          .take(200);
+        for (const row of orphans) {
+          if (row._creationTime < startMs || row._creationTime > endMs) continue;
+          page.push(serializeActivityStep(row));
+          if (page.length >= ACTIVITY_PAGE_SIZE) break;
+        }
+      }
+      return { page, isDone: true as const, continueCursor: "" };
+    }
+
+    return { ...result, page };
   },
 });
 
