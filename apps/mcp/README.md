@@ -1,6 +1,6 @@
 # @zipwiki/mcp
 
-Stdio MCP (`zipwiki-mcp`). Tools: `open`, `search`, `query`, `read_okf`,
+Stdio MCP (`zipwiki-mcp`). Tools: `open`, `search`, `query`, `ask`, `read_okf`,
 `read_parsed`, `read_entry`, `read`, `origin`, `extract`, `pack`, `update`,
 `okf_enrich`.
 

@@ -14,6 +14,7 @@ export {
   readOkf,
   readOkfIndex,
   readParsed,
+  ask,
   search,
   query,
   type ToolResult,

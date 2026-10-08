@@ -318,7 +318,7 @@ Same zipaccess library; tools are short verbs on the `zipwiki` MCP server:
 | `list` | `list` |
 | `search` | `search` |
 | `query` | `query` (bodies, passages, and gaps) |
-| `ask` | Hosted model over the same local bundle. MCP has no `ask` tool; the host agent uses `query`, then `read_parsed` when a parsed file exists. A gap ends that document. |
+| `ask` | `ask` — same hosted loop. Pass `question`. The archive stays local. Uses credits from `zipwiki login`. |
 | `read --okf` | `read_okf` / `read` |
 | `read --parsed` | `read_parsed` / `read` |
 | `read --path` / `--entry` | `read_entry` / `read` |

@@ -22,6 +22,7 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 | `list` | Entry inventory (`prefix` / `limit`) | zipaccess lib |
 | `search` | Ranked OKF search (snippets + `readHints`). Parsed text only when OKF misses | zipaccess lib |
 | `query` | Search plus capped bodies, cited passages, and gaps for files never extracted | zipaccess lib |
+| `ask` | Website Query: local passages, then a hosted answer. Uses credits from `zipwiki login` | zipaccess `askArchive` |
 | `read_okf_index` | OKF index or concept list | zipaccess lib |
 | `read_okf` | One OKF concept | zipaccess lib |
 | `read_parsed` | Parsed markdown (size-capped) | zipaccess lib |
@@ -46,7 +47,7 @@ Optional: request hosted/BYO OKF on `pack` when the plan still has hosted OKF re
 ### Query workflow
 
 1. `open` — catalog rows (title/type, parsed?, original?, `readHints`)
-2. `search` (preferred) or `query` or `read_okf_index`. `query` already includes passages from cited text. A gap means no extract was stored at pack time; do not expect `read_entry` to recover that text.
+2. `search` (preferred) or `query` or `read_okf_index`. `query` already includes passages from cited text. A gap means no extract was stored at pack time; do not expect `read_entry` to recover that text. `ask` runs the website question loop (hosted credits) when the agent wants an answer instead of reading the package itself.
 3. `read_okf` → `read_parsed` / `read` / `read_entry` when a parsed or text file exists (stream through MCP; verified inflate)
 4. `origin` with `fetch: true` to download an omitted original and check CRC-32
 5. `extract` only when a filesystem path is required (`fetchOrigin` to pull originals next to the parse)

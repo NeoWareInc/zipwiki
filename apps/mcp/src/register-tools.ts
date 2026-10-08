@@ -14,6 +14,7 @@ import {
   readOkf,
   readOkfIndex,
   readParsed,
+  ask,
   search,
   query,
   type ToolResult,
@@ -111,6 +112,19 @@ export function registerTools(server: McpServer): void {
       },
     },
     async (args) => respond(await query(args)),
+  );
+
+  server.registerTool(
+    "ask",
+    {
+      description:
+        "Ask a question the way the website Query page does. The archive stays local. Matching passages are sent first, then concept cards and gaps. The hosted model may search, read, or request an origin link, then answer. Uses hosted credits (zipwiki login). Prefer search or query when you will read the package yourself.",
+      inputSchema: {
+        package: packageArg,
+        question: z.string().describe("Question to answer from the package"),
+      },
+    },
+    async (args) => respond(await ask(args)),
   );
 
   server.registerTool(

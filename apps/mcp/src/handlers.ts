@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import {
   AccessError,
+  askArchive,
   DEFAULT_MAX_BYTES,
   enrichOkf,
   extractEntries,
@@ -34,7 +35,12 @@ import {
   readZipEntryPayload,
 } from "@zipwiki/zipwiki/archive";
 import { runPack } from "@zipwiki/zipwiki";
-import { maybeReportActivity } from "@zipwiki/zipwiki/config";
+import {
+  loadZipwikiHomeEnv,
+  maybeReportActivity,
+  resolveZipwikiApiKey,
+  resolveZipwikiApiUrl,
+} from "@zipwiki/zipwiki/config";
 import {
   invalidatePackageCache,
   withCachedPackage,
@@ -171,6 +177,66 @@ export async function query(args: {
       quiet: true,
     });
     return jsonResult(result);
+  } catch (err) {
+    return errorResult(err);
+  }
+}
+
+export async function ask(args: {
+  package?: string;
+  question?: string;
+  /** Test double. Not an MCP tool field. */
+  fetchImpl?: typeof fetch;
+  /** When set, credentials come from here and ~/.zipwiki/.env is not loaded. */
+  env?: NodeJS.ProcessEnv;
+}): Promise<ToolResult> {
+  try {
+    const question = args.question?.trim() ?? "";
+    if (!question) {
+      return jsonResult(
+        { error: "question is required", code: "invalid_args" },
+        true,
+      );
+    }
+    if (!args.env) loadZipwikiHomeEnv();
+    const env = args.env ?? process.env;
+    const apiUrl = resolveZipwikiApiUrl(env);
+    const apiKey = resolveZipwikiApiKey(env);
+    if (!apiUrl || !apiKey) {
+      return jsonResult(
+        {
+          error:
+            "ZIPWIKI_API_URL and ZIPWIKI_API_KEY are required. Run zipwiki login.",
+          code: "invalid_args",
+        },
+        true,
+      );
+    }
+    const result = await askArchive({
+      package: args.package,
+      question,
+      apiUrl,
+      apiKey,
+      ...(args.fetchImpl ? { fetchImpl: args.fetchImpl } : {}),
+    });
+    void maybeReportActivity({
+      type: "query",
+      action: "ask",
+      path: args.package,
+      quiet: true,
+    });
+    return jsonResult({
+      answer: result.answer,
+      reads: result.reads,
+      searches: result.searches,
+      sources: result.sources,
+      passages: result.passages,
+      gaps: result.gaps,
+      model: result.model,
+      creditsCharged: result.creditsCharged,
+      creditsRemaining: result.creditsRemaining,
+      creditsUnlimited: result.creditsUnlimited,
+    });
   } catch (err) {
     return errorResult(err);
   }

@@ -10,7 +10,7 @@ import {
   buildCatalog,
 } from "@zipwiki/zipwiki/access";
 import { pathToFileURL } from "node:url";
-import { list, open, origin, query, readOkf, readOkfIndex, readParsed, search } from "./handlers.js";
+import { ask, list, open, origin, query, readOkf, readOkfIndex, readParsed, search } from "./handlers.js";
 
 const dir = mkdtempSync(join(tmpdir(), "mcp-nzip-"));
 const primary = join(dir, "lease.txt");
@@ -63,6 +63,8 @@ writeNzipCollectionBundle({
           'title: "Property Deed"',
           'description: "Warranty deed for 12 Oak Street."',
           "tags: [deed, property, real-estate]",
+          "sources:",
+          "  - resource: ../parsed/property-deed.pdf.md",
           "---",
           "",
           "# Key facts",
@@ -215,5 +217,90 @@ describe("MCP handlers", () => {
       origin?: { originUri?: string };
     };
     assert.ok(parsedBody.origin?.originUri?.startsWith("file:"));
+  });
+
+  it("ask does not call the model when nothing matches", async () => {
+    let called = 0;
+    const res = await ask({
+      package: sample,
+      question: "zzqqqqqq",
+      env: { ZIPWIKI_API_URL: "https://example.test", ZIPWIKI_API_KEY: "test" },
+      fetchImpl: async () => {
+        called += 1;
+        return new Response("{}", { status: 200 });
+      },
+    });
+    assert.equal(res.isError, undefined, res.content[0]?.text);
+    assert.equal(called, 0);
+    const body = JSON.parse(res.content[0]?.text ?? "{}") as { answer?: string; model?: string };
+    assert.match(body.answer ?? "", /No matching text was found/);
+    assert.equal(body.model, "");
+  });
+
+  it("ask sends parsed passages before the concept card", async () => {
+    const res = await ask({
+      package: sample,
+      question: "Oak Street warranty",
+      env: { ZIPWIKI_API_URL: "https://example.test", ZIPWIKI_API_KEY: "test" },
+      fetchImpl: async (_url, init) => {
+        const payload = JSON.parse(String(init?.body)) as {
+          excerpts: Array<{ kind: string; path: string }>;
+        };
+        const parsedAt = payload.excerpts.findIndex(
+          (row) => row.kind === "parsed" && row.path.includes("wiki/parsed/"),
+        );
+        const cardAt = payload.excerpts.findIndex((row) => row.kind === "okf");
+        assert.ok(parsedAt >= 0);
+        assert.ok(cardAt > parsedAt);
+        return new Response(
+          JSON.stringify({
+            status: "answer",
+            answer: "Warranty deed conveying 12 Oak Street.",
+            model: "claude-haiku-5-5",
+            creditsCharged: 2,
+            creditsRemaining: 40,
+            creditsUnlimited: false,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      },
+    });
+    assert.equal(res.isError, undefined, res.content[0]?.text);
+    const body = JSON.parse(res.content[0]?.text ?? "{}") as {
+      answer?: string;
+      creditsCharged?: number;
+      creditsRemaining?: number;
+      model?: string;
+    };
+    assert.match(body.answer ?? "", /12 Oak Street/);
+    assert.equal(body.model, "claude-haiku-5-5");
+    assert.equal(body.creditsCharged, 2);
+    assert.equal(body.creditsRemaining, 40);
+  });
+
+  it("ask rejects a blank question and missing login without calling the model", async () => {
+    let called = 0;
+    const fetchImpl: typeof fetch = async () => {
+      called += 1;
+      return new Response("{}", { status: 200 });
+    };
+    const blank = await ask({
+      package: sample,
+      question: "   ",
+      env: { ZIPWIKI_API_URL: "https://example.test", ZIPWIKI_API_KEY: "test" },
+      fetchImpl,
+    });
+    assert.equal(blank.isError, true);
+    assert.match(blank.content[0]?.text ?? "", /question is required/);
+
+    const signedOut = await ask({
+      package: sample,
+      question: "Oak Street",
+      env: {},
+      fetchImpl,
+    });
+    assert.equal(signedOut.isError, true);
+    assert.match(signedOut.content[0]?.text ?? "", /zipwiki login/);
+    assert.equal(called, 0);
   });
 });
