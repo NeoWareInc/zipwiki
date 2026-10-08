@@ -1,6 +1,6 @@
 import type { ParseEngineId, ParserMode } from "../lib/config/index.js";
 import type { CliParseOptions } from "../lib/parse/index.js";
-import type { DocumentType, OkfAiSource, OriginRecordMode } from "../lib/archive/index.js";
+import type { DocumentType, OriginRecordMode } from "../lib/archive/index.js";
 import type { OkfProfile, OkfProfileFlag } from "../lib/okf/profiles.js";
 
 export type PipelinePhase =
@@ -20,8 +20,6 @@ export type StageMember = {
   okfProfile?: OkfProfile;
   /** Engine that produced this file's parse, when known. */
   parseEngine?: ParseEngineId;
-  /** Model source for this file's OKF, when an AI wrote it. */
-  okfSource?: OkfAiSource;
   structuredMarkdown?: string;
   /** Figure files written beside the parse as `{name}.assets/`. */
   assets?: Array<{ name: string; data: Buffer }>;

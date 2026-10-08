@@ -124,11 +124,6 @@ export type OkfBuildResult = {
   digest: string;
   title: string;
   conceptType: string;
-  /**
-   * Model that wrote the concept. Omitted for an injected concept (the caller
-   * stamps `mcp`) and for the filename fallback.
-   */
-  source?: "zipwiki" | "user";
   /** When mode is fallback after a failed AI attempt, truncated error. */
   aiError?: string;
 };

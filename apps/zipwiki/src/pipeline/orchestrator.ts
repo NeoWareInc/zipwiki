@@ -51,6 +51,7 @@ import {
   shouldConfirmPack,
   type PackPlanSettings,
 } from "./pack-confirm.js";
+import { openPackage } from "../lib/access/index.js";
 import { runListCommand, runTestCommand } from "../inspect-cmd.js";
 import { discoverInputs } from "./discover.js";
 import {
@@ -85,6 +86,30 @@ function applyCredentialEnv(opts: StageOptions): void {
 function resolvePhase(opts: StageOptions): PipelinePhase {
   if (opts.phase) return opts.phase;
   return "all";
+}
+
+/** Included, linked, or omitted counts from the archive that was just written. */
+function originalPlacementCounts(packagePath: string): {
+  documentCount: number;
+  included: number;
+  linked: number;
+  omitted: number;
+} | null {
+  try {
+    const rows = openPackage(packagePath).catalog.rows;
+    if (rows.length === 0) return null;
+    let included = 0;
+    let linked = 0;
+    let omitted = 0;
+    for (const row of rows) {
+      if (row.hasOriginal) included += 1;
+      else if (row.originUri) linked += 1;
+      else omitted += 1;
+    }
+    return { documentCount: rows.length, included, linked, omitted };
+  } catch {
+    return null;
+  }
 }
 
 function resolveStageDir(
@@ -609,6 +634,16 @@ export async function runStage(
         runTestCommand(outputPath, { quiet: opts.quiet });
       }
 
+      let createSummary: {
+        fileName: string;
+        documentCount: number;
+        originalBytes: number;
+        archiveBytes: number;
+        included: number;
+        linked: number;
+        omitted: number;
+      } | null = null;
+
       if (outputPath && !opts.dryRun) {
         runListCommand(outputPath, {
           verbose: true,
@@ -628,14 +663,22 @@ export async function runStage(
           }
         }
         if (documentCount > 0) {
-          const archiveBytes = statSync(outputPath).size;
-          console.log(
-            formatOriginalsSummary({
-              documentCount,
-              originalBytes,
-              archiveBytes,
-            }),
-          );
+          const placement = originalPlacementCounts(outputPath);
+          const omitOriginals = resolveOmitOriginalDocuments({
+            cli: opts.omitOriginalDocuments,
+            pack: project.pack,
+          });
+          createSummary = {
+            fileName: basename(outputPath),
+            documentCount: placement?.documentCount || documentCount,
+            originalBytes,
+            archiveBytes: statSync(outputPath).size,
+            included:
+              placement?.included ?? (omitOriginals ? 0 : documentCount),
+            linked: placement?.linked ?? 0,
+            omitted:
+              placement?.omitted ?? (omitOriginals ? documentCount : 0),
+          };
         }
       }
 
@@ -656,6 +699,11 @@ export async function runStage(
             previous: hosted.config,
           })
         : null;
+
+      if (createSummary) {
+        console.error("");
+        console.error(formatOriginalsSummary(createSummary));
+      }
 
       if (phase === "all" && outputPath && !opts.dryRun) {
         let archiveBytes: number | undefined;

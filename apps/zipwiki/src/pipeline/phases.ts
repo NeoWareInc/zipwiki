@@ -21,7 +21,6 @@ import {
   type DocumentType,
   type NeoZipAiParser,
   type NeoZipParserUse,
-  type OkfAiSource,
 } from "../lib/archive/index.js";
 import {
   isLlamaCloudConfigured,
@@ -263,7 +262,6 @@ export async function okfOneFile(input: {
 }): Promise<{
   path: string;
   mode: "ai" | "fallback";
-  source?: OkfAiSource;
   aiError?: string;
   ms: number;
 }> {
@@ -327,7 +325,6 @@ export async function okfOneFile(input: {
   return {
     path: outFile,
     mode: result.mode,
-    source: result.source,
     aiError: result.aiError,
     ms,
   };
@@ -416,7 +413,7 @@ export async function runParseAndOkfPhase(input: {
             `[stage] okf done ${loaded.originalName} (${notes.join(", ")})`,
           );
         }
-        return { path: written.path, source: written.source };
+        return { path: written.path };
       },
       onOkfError: (item, _i, err) => {
         const msg = err instanceof Error ? err.message : String(err);
@@ -437,7 +434,6 @@ export async function runParseAndOkfPhase(input: {
             text: p.value.markdown,
           }).documentType,
           okfProfile: profileFor(opts, p.value.originalName),
-          ...(o.value.source ? { okfSource: o.value.source } : {}),
           structuredMarkdown: p.value.parseFailed
             ? undefined
             : p.value.markdown,
@@ -608,7 +604,7 @@ export async function runParseAndOkfPhase(input: {
           `[stage] okf done ${parsed.member.originalName} (${notes.join(", ")})`,
         );
       }
-      return { path: written.path, source: written.source };
+      return { path: written.path };
     },
     onOkfError: (item, _i, err) => {
       const msg = err instanceof Error ? err.message : String(err);
@@ -628,7 +624,6 @@ export async function runParseAndOkfPhase(input: {
           : p.value.member.structuredMarkdown ?? p.value.markdown,
         parsePath: p.value.parsePath,
         okfPath: o?.value?.path,
-        ...(o?.value?.source ? { okfSource: o.value.source } : {}),
         parseFailed: p.value.parseFailed,
         // Soft parse errors are tracked separately; OKF failure is hard.
         error: o?.error,
@@ -792,7 +787,6 @@ export function runCompressPhase(input: {
         ...(m.assets?.length ? { assets: m.assets } : {}),
         ...(originUri ? { originUri } : {}),
         parser: parserUseForEngine(m.parseEngine, input.opts, input.project),
-        ...(m.okfSource ? { okfSource: m.okfSource } : {}),
       };
     }),
     ...(okfFiles.length > 0 ? { okf: { files: okfFiles } } : {}),

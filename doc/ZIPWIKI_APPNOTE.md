@@ -363,7 +363,6 @@ Do **not** duplicate data already authoritative elsewhere:
 | `mimeType` | string | OPTIONAL |
 | `documentType` | string | OPTIONAL ZipWiki category / OKF type hint (`Financial_Report`, `Legal_Contract`, `Receipt_Scan`, `Technical_Doc`, `Generic`, …) |
 | `okfProfile` | string | OPTIONAL. `book`, `legislation`, or `invoice` when that template was used. Omit `generic` |
-| `okfSource` | string | OPTIONAL. `zipwiki`, `user`, or `mcp` when this file’s OKF source differs from `ai.okf.source` |
 | `parser` | object | OPTIONAL. `{ engine, tier?, credential? }` when this file’s parser differs from `ai.parser` |
 | `origin` | object | OPTIONAL. `{ uri?, size?, mtime? }` for the original. `mtime` is Unix seconds UTC. Omit when the original is in the ZIP and no URI was resolved |
 | `hasParsed` | boolean | `true` when `{ai.root}/parsed/{path}.md` is present |
@@ -467,7 +466,6 @@ With defaults `root = "wiki"` and `parsedDir = "parsed"`:
 | `root` | string | Zip prefix, normally `"{ai.root}/okf/"` e.g. `"wiki/okf/"` |
 | `index` | string | Bundle root markdown with `okf_version`, e.g. `"wiki/okf/index.md"` |
 | `version` | string | OKF language version (e.g. `"0.2"`) |
-| `source` | string | OPTIONAL. `zipwiki` (hosted credits), `user` (the machine’s model key), or `mcp` (the agent supplied the concept). Omit when OKF was the filename fallback |
 | `profiles` | string[] | OPTIONAL. Templates actually used (`book`, `legislation`, `invoice`). Omit when every file stayed generic |
 
 If omitted or `present` is false, tools **MUST NOT** expect OKF.

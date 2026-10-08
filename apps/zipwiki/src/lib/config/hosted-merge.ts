@@ -115,6 +115,7 @@ export function formatClientUsageSummary(
   }
 
   const lines = [`[zipwiki] ${label}`];
+  const services: string[] = [];
 
   if (previous?.usage && config.usage) {
     const cur = usageSlice(config);
@@ -128,20 +129,22 @@ export function formatClientUsageSummary(
     const dByoCredits = cur.byoCredits - prev.byoCredits;
 
     if (dLite > 0) {
-      lines.push(serviceLine("LiteParse", dLite, null));
+      services.push(serviceLine("LiteParse", dLite, null));
     }
     if (dByo > 0) {
-      lines.push(ownKeyLine(dByo, dByoCredits));
+      services.push(ownKeyLine(dByo, dByoCredits));
     }
     if (dParse > 0) {
-      lines.push(serviceLine("LlamaParse", dParse, dParseCredits));
+      services.push(serviceLine("LlamaParse", dParse, dParseCredits));
     }
     if (dOkf > 0) {
-      lines.push(serviceLine("ZipWiki OKF", dOkf, dOkfCredits));
+      services.push(serviceLine("ZipWiki OKF", dOkf, dOkfCredits));
     }
   }
 
-  lines.push(`[zipwiki]   ${"remaining".padEnd(12)} ${creditLabel}`);
+  if (services.length > 0) {
+    lines.push("", ...services);
+  }
   return lines.join("\n");
 }
 

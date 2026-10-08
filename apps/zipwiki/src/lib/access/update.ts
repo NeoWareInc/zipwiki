@@ -370,7 +370,6 @@ async function ingestFile(input: {
 
   const okfPath = `${inventory.okfRoot}${conceptFileNameFor(zipPath)}`;
   let okfMode: "ai" | "fallback" | "skipped" = "skipped";
-  let okfSource: NeoZipAiPrimary["okfSource"];
   const stemOwners = [...inventory.primaries.values()]
     .filter((s) => s.okfPath === okfPath)
     .map((s) => s.path);
@@ -401,7 +400,6 @@ async function ingestFile(input: {
         okfProfile,
       });
       okfMode = okf.mode;
-      okfSource = okf.source;
       entries.push({
         name: okfPath,
         data: readFileSync(okf.path),
@@ -429,7 +427,6 @@ async function ingestFile(input: {
     documentType,
     ...(notableProfile ? { okfProfile: notableProfile } : {}),
     ...(sameParser ? {} : { parser: recorded }),
-    ...(okfSource ? { okfSource } : {}),
     ...(split.manifest ? { origin: split.manifest } : {}),
     hasParsed: true,
     ...(omit ? { sourceIncluded: false } : {}),

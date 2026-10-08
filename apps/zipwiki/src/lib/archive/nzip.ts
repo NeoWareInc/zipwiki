@@ -52,15 +52,11 @@ export type AiRootName = "wiki" | "codex" | "ai" | "context";
 
 export type EntryClass = "meta" | "ai" | "primary";
 
-export type OkfAiSource = "zipwiki" | "user" | "mcp";
-
 export type NeoZipAiOkf = {
   present: boolean;
   root?: string;
   index?: string;
   version?: string;
-  /** Model that wrote the concepts. Omitted for the filename fallback. */
-  source?: OkfAiSource;
   /** Templates actually used (`book`, `legislation`, `invoice`). Omitted when every file stayed generic. */
   profiles?: string[];
 };
@@ -146,8 +142,6 @@ export type NeoZipAiPrimary = {
    * or `generic`). Chosen once at pack so a later `okf_enrich` reuses it.
    */
   okfProfile?: string;
-  /** Set when this file's model source differs from `ai.okf.source`. */
-  okfSource?: OkfAiSource;
   /** Set when this file's parser differs from `ai.parser`. */
   parser?: NeoZipParserUse;
   /**
@@ -251,8 +245,6 @@ export type CollectionMemberInput = {
   okfProfile?: string;
   /** Parser used for this file. Uniform values are lifted onto `ai.parser`. */
   parser?: NeoZipParserUse;
-  /** OKF model source. Uniform values are lifted onto `ai.okf.source`. */
-  okfSource?: OkfAiSource;
   /**
    * Whole-document markdown under `{ai.root}/parsed/{P}.md`.
    * Omit or leave undefined when extract failed — no parse entry is written
@@ -722,8 +714,6 @@ export function buildNeoZipManifest(
   const recordedParser = normalizeParserRecords(primaries);
   const profiles = okfProfilesUsed(primaries);
   if (aiOkf && profiles) aiOkf.profiles = profiles;
-  const packageOkfSource = liftOkfSource(primaries);
-  if (aiOkf && packageOkfSource) aiOkf.source = packageOkfSource;
   const parserRecord: NeoZipAiParser = {
     ...input.parser,
     ...(recordedParser ?? {}),
@@ -770,17 +760,6 @@ function okfProfilesUsed(primaries: NeoZipAiPrimary[]): string[] | undefined {
     if (primary.okfProfile && !profile) delete primary.okfProfile;
   }
   return found.size > 0 ? [...found] : undefined;
-}
-
-function liftOkfSource(primaries: NeoZipAiPrimary[]): OkfAiSource | undefined {
-  if (primaries.length === 0 || primaries.some((primary) => !primary.okfSource)) {
-    return undefined;
-  }
-  const unique = [...new Set(primaries.map((primary) => primary.okfSource!))];
-  if (unique.length !== 1) return undefined;
-  const source = unique[0]!;
-  for (const primary of primaries) delete primary.okfSource;
-  return source;
 }
 
 /** Lift a uniform parser onto `ai.parser`. Mixed engines stay on each primary. */
@@ -920,7 +899,6 @@ export function writeNzipCollectionBundle(
       documentType: m.documentType,
       okfProfile: m.okfProfile,
       parser: m.parser,
-      okfSource: m.okfSource,
       manifestOrigin: undefined as ManifestOrigin | undefined,
       extraOrigin: undefined as OriginLocator | undefined,
       structuredMarkdown,
@@ -1006,7 +984,6 @@ export function writeNzipCollectionBundle(
     ...(m.documentType ? { documentType: m.documentType } : {}),
     ...(m.okfProfile ? { okfProfile: m.okfProfile } : {}),
     ...(m.parser ? { parser: m.parser } : {}),
-    ...(m.okfSource ? { okfSource: m.okfSource } : {}),
     ...(m.manifestOrigin ? { origin: m.manifestOrigin } : {}),
     hasParsed: m.hasParsed,
     ...(m.sourceIncluded ? {} : { sourceIncluded: false }),

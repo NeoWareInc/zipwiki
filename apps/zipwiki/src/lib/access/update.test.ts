@@ -554,12 +554,10 @@ describe("enrichOkf preserves origins", () => {
         .data.toString("utf8"),
     ) as {
       ai?: {
-        okf?: { source?: string };
-        primaries?: Array<{ origin?: { uri?: string }; okfSource?: string }>;
+        primaries?: Array<{ origin?: { uri?: string } }>;
       };
     };
     assert.equal(manifestAfter.ai?.primaries?.[0]?.origin?.uri, uri);
-    assert.equal(manifestAfter.ai?.okf?.source, "mcp");
     assert.equal(after.method, before.method);
     assert.deepEqual(
       readCompressedPayload(readFileSync(out), after),

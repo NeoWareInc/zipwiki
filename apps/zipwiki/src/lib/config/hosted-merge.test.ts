@@ -42,7 +42,7 @@ describe("formatClientUsageSummary", () => {
     );
   });
 
-  it("at done shows only services used this run, then remaining", () => {
+  it("at done shows a blank line, then only services used this run", () => {
     const previous = config({
       creditsRemaining: 1350,
       usage: {
@@ -73,9 +73,9 @@ describe("formatClientUsageSummary", () => {
       formatClientUsageSummary(current, "done", previous),
       [
         "[zipwiki] done",
+        "",
         "[zipwiki]   LlamaParse   4 files · 8 credits",
         "[zipwiki]   ZipWiki OKF  5 files · 5 credits",
-        "[zipwiki]   remaining    1341",
       ].join("\n"),
     );
   });
@@ -115,8 +115,8 @@ describe("formatClientUsageSummary", () => {
       formatClientUsageSummary(current, "done", previous),
       [
         "[zipwiki] done",
+        "",
         "[zipwiki]   LlamaParse   5 files · 441 Llama credits (your key)",
-        "[zipwiki]   remaining    770",
       ].join("\n"),
     );
   });

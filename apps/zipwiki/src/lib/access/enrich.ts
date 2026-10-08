@@ -185,10 +185,6 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
         okfProfile && okfProfile !== "generic" && okfProfile !== "auto"
           ? okfProfile
           : undefined;
-      const packageSource = okf.source;
-      const perFileSource =
-        packageSource === "zipwiki" || packageSource === "user";
-      if (!perFileSource) okf.source = "mcp";
       if (notable) {
         const profiles = Array.isArray(okf.profiles)
           ? okf.profiles.filter(
@@ -208,13 +204,10 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
           const primary = row as {
             path?: string;
             okfProfile?: string;
-            okfSource?: string;
           };
           if (targetPath && primary.path !== targetPath) continue;
           if (notable) primary.okfProfile = notable;
           else delete primary.okfProfile;
-          if (perFileSource) primary.okfSource = "mcp";
-          else delete primary.okfSource;
           if (targetPath) break;
         }
       }

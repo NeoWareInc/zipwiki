@@ -99,7 +99,6 @@ export type {
   NeoZipAiOkf,
   NeoZipAiParser,
   NeoZipParserUse,
-  OkfAiSource,
   NeoZipAiPrimary,
   NeoZipManifest,
   NeoZipOcrConfidence,

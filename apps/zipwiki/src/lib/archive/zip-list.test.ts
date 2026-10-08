@@ -75,31 +75,50 @@ describe("formatZipListing", () => {
 });
 
 describe("formatOriginalsSummary", () => {
-  it("reports document count, sizes, and Info-ZIP-style compression %", () => {
-    const n = (x: number) => x.toLocaleString();
+  it("reports archive size, input documents, placement, and compression", () => {
     assert.equal(
       formatOriginalsSummary({
-        documentCount: 6,
-        originalBytes: 1_000_000,
-        archiveBytes: 25_000,
+        fileName: "florida-laws-2025.zipwiki",
+        documentCount: 253,
+        originalBytes: 17_960_000,
+        archiveBytes: 2_233_303,
+        included: 0,
+        linked: 253,
+        omitted: 0,
       }),
-      `Originals: ${n(6)} documents, ${n(1_000_000)} bytes → archive ${n(25_000)} bytes (97.5%)`,
+      [
+        "florida-laws-2025.zipwiki · 2.13 MB",
+        "253 input documents · 17.13 MB · linked to originals · 88% compressed",
+      ].join("\n"),
     );
     assert.equal(
       formatOriginalsSummary({
+        fileName: "note.zipwiki",
         documentCount: 1,
         originalBytes: 100,
         archiveBytes: 100,
+        included: 1,
+        linked: 0,
+        omitted: 0,
       }),
-      `Originals: ${n(1)} document, ${n(100)} bytes → archive ${n(100)} bytes (0%)`,
+      ["note.zipwiki · 100 B", "1 input document · 100 B · included in archive"].join(
+        "\n",
+      ),
     );
     assert.equal(
       formatOriginalsSummary({
+        fileName: "sample.zipwiki",
         documentCount: 6,
         originalBytes: 3_958_966,
         archiveBytes: 25_304,
+        included: 0,
+        linked: 0,
+        omitted: 6,
       }),
-      `Originals: ${n(6)} documents, ${n(3_958_966)} bytes → archive ${n(25_304)} bytes (99.4%)`,
+      [
+        "sample.zipwiki · 24.7 KB",
+        "6 input documents · 3.78 MB · not included · 99.4% compressed",
+      ].join("\n"),
     );
   });
 });

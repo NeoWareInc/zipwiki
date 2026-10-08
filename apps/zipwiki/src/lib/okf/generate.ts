@@ -279,13 +279,11 @@ async function resolveEnrichment(
   enrichment: OkfEnrichment;
   mode: "ai" | "fallback";
   generatedBy: string;
-  source?: "zipwiki" | "user";
   aiError?: string;
 }> {
   let mode: "ai" | "fallback" = "fallback";
   let enrichment: OkfEnrichment;
   let generatedBy = input.generatedBy ?? "process:zipwiki-okf-fallback";
-  let source: "zipwiki" | "user" | undefined;
   let aiError: string | undefined;
 
   const provider = resolveOkfProvider(input.provider);
@@ -307,7 +305,6 @@ async function resolveEnrichment(
         });
         generatedBy =
           input.generatedBy ?? `zipwiki-api/anthropic/${input.model ?? modelId}`;
-        source = "zipwiki";
       } else {
         enrichment = await fetchOkfEnrichment({
           ...input,
@@ -318,7 +315,6 @@ async function resolveEnrichment(
               : undefined),
         });
         generatedBy = input.generatedBy ?? `zipwiki/okf@${tag}`;
-        source = "user";
       }
       mode = "ai";
     } catch (err) {
@@ -331,7 +327,7 @@ async function resolveEnrichment(
     enrichment = fallbackEnrichment(input);
   }
 
-  return { enrichment, mode, generatedBy, source, aiError };
+  return { enrichment, mode, generatedBy, aiError };
 }
 
 /**
@@ -346,7 +342,7 @@ export async function buildOkfBundle(
   }
 
   const generatedAt = input.generatedAt ?? new Date().toISOString();
-  const { enrichment, mode, generatedBy, source, aiError } =
+  const { enrichment, mode, generatedBy, aiError } =
     await resolveEnrichment(input);
 
   const files = renderOkfFiles({
@@ -366,7 +362,6 @@ export async function buildOkfBundle(
     digest: enrichment.description.slice(0, 240),
     title: enrichment.title,
     conceptType: enrichment.type,
-    ...(source ? { source } : {}),
     aiError,
   };
 }

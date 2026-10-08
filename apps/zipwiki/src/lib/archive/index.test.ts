@@ -970,21 +970,18 @@ describe("multi-primary package", () => {
           originalName: "act.pdf",
           structuredMarkdown: "# act\n",
           okfProfile: "legislation",
-          okfSource: "zipwiki",
         },
         {
           originalPath: book,
           originalName: "tale.epub",
           structuredMarkdown: "# tale\n",
           okfProfile: "book",
-          okfSource: "zipwiki",
         },
         {
           originalPath: note,
           originalName: "note.txt",
           structuredMarkdown: "# note\n",
           okfProfile: "generic",
-          okfSource: "zipwiki",
         },
       ],
       okf: {
@@ -999,7 +996,13 @@ describe("multi-primary package", () => {
       readZipEntry(out, "META-INF/manifest.json").toString("utf-8"),
     );
     assert.deepEqual(manifest.ai.okf.profiles, ["legislation", "book"]);
-    assert.equal(manifest.ai.okf.source, "zipwiki");
+    assert.equal(manifest.ai.okf.source, undefined);
+    assert.equal(
+      manifest.ai.primaries.some(
+        (p: { okfSource?: string }) => p.okfSource !== undefined,
+      ),
+      false,
+    );
     const profiles = manifest.ai.primaries.map(
       (p: { okfProfile?: string }) => p.okfProfile,
     );

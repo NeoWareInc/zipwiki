@@ -444,22 +444,59 @@ export function formatZipListing(
   return lines.join("\n");
 }
 
+/** Byte size for the create summary. Megabytes and above use two decimals. */
+export function formatByteSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 * 1024 * 1024) {
+    return `${(n / (1024 * 1024)).toFixed(2)} MB`;
+  }
+  return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+/** Where the input documents live, matching the package overview. */
+export function formatOriginalPlacement(input: {
+  included: number;
+  linked: number;
+  omitted: number;
+}): string {
+  const included = input.included;
+  const linked = input.linked;
+  const omitted = input.omitted;
+  const total = included + linked + omitted;
+  if (total === 0 || omitted === total) return "not included";
+  if (included === total) return "included in archive";
+  if (linked === total) return "linked to originals";
+  const parts: string[] = [];
+  if (included > 0) parts.push(`${included} included in archive`);
+  if (linked > 0) parts.push(`${linked} linked to originals`);
+  if (omitted > 0) parts.push(`${omitted} not included`);
+  return parts.join(", ");
+}
+
 /**
- * Summary line after an archive listing: source document count/size vs
- * on-disk `.nzip` size, with Info-ZIP-style compression % (bytes saved).
+ * Closing lines after a create: archive name and size, then input documents,
+ * their size, where the originals live, and compression when the archive
+ * is smaller than those documents.
  */
 export function formatOriginalsSummary(input: {
+  fileName: string;
   documentCount: number;
   originalBytes: number;
   archiveBytes: number;
+  included: number;
+  linked: number;
+  omitted: number;
 }): string {
-  const n = input.documentCount;
-  const cmpr = formatCompressionPercent(
-    input.archiveBytes,
-    input.originalBytes,
-  );
-  return (
-    `Originals: ${n.toLocaleString()} document${n === 1 ? "" : "s"}, ${input.originalBytes.toLocaleString()} bytes → ` +
-    `archive ${input.archiveBytes.toLocaleString()} bytes (${cmpr})`
-  );
+  const count = input.documentCount;
+  const files = `${count.toLocaleString()} input document${count === 1 ? "" : "s"}`;
+  const placement = formatOriginalPlacement(input);
+  const compressed =
+    input.originalBytes > 0 && input.archiveBytes < input.originalBytes
+      ? ` · ${formatCompressionPercent(input.archiveBytes, input.originalBytes)} compressed`
+      : "";
+  return [
+    `${input.fileName} · ${formatByteSize(input.archiveBytes)}`,
+    `${files} · ${formatByteSize(input.originalBytes)} · ${placement}${compressed}`,
+  ].join("\n");
 }
