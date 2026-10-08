@@ -20,6 +20,8 @@ export type NzipOpenSummary = {
   profiles: unknown;
   aiRoot: string;
   primaryCount: number;
+  /** Sum of original file sizes from `ai.originalBytes`, when the manifest recorded it. */
+  originalBytes?: number;
   primaries: NzipPrimary[];
   okf: {
     present: boolean;
@@ -43,6 +45,32 @@ export type NzipOpenSummary = {
   entries: ZipListEntry[];
   entryCount: number;
 };
+
+/**
+ * Manifest `primaries[].origin` (uri, size, mtime) wins. Extra Field 0x014F
+ * fills anything the manifest did not record.
+ */
+export function applyManifestOrigin(
+  primary: NzipPrimary,
+  extra?: {
+    originUri?: string;
+    originCrc32?: string;
+    originSize?: number;
+    originMtime?: number;
+    originMtimeUtc?: string;
+    originSha256?: string;
+  },
+): NzipPrimary {
+  const origin = asRecord(primary.origin);
+  const fromManifest = {
+    ...(typeof origin?.uri === "string" && origin.uri
+      ? { originUri: origin.uri }
+      : {}),
+    ...(typeof origin?.size === "number" ? { originSize: origin.size } : {}),
+    ...(typeof origin?.mtime === "number" ? { originMtime: origin.mtime } : {}),
+  };
+  return { ...primary, ...extra, ...fromManifest };
+}
 
 function asRecord(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" && !Array.isArray(v)
@@ -146,10 +174,8 @@ export async function openNzip(
         : typeof p.name === "string"
           ? p.name
           : null;
-    if (pathKey && originByPrimary.has(pathKey)) {
-      return { ...p, ...originByPrimary.get(pathKey) };
-    }
-    return p;
+    const extra = pathKey ? originByPrimary.get(pathKey) : undefined;
+    return applyManifestOrigin(p, extra);
   });
 
   const methodSet = new Set(files.map((e) => zipMethodLabel(e.method)));
@@ -165,6 +191,9 @@ export async function openNzip(
       typeof ai?.primaryCount === "number"
         ? ai.primaryCount
         : primaries.length,
+    ...(typeof ai?.originalBytes === "number"
+      ? { originalBytes: ai.originalBytes }
+      : {}),
     primaries: primariesEnriched,
     okf: {
       present: Boolean(okfMeta?.present) || okfConcepts.length > 0,

@@ -205,8 +205,9 @@ function primaryPath(p: NzipOpenSummary["primaries"][number]): string {
 }
 
 /**
- * Size / mtime for an input document: prefer the original bytes stored in the
- * archive; otherwise Extra Field 0x014F on the parse (omit-original packs).
+ * Size / mtime for an input document. Manifest `origin.size` / `origin.mtime`
+ * win. Otherwise the original bytes stored in the archive, then Extra Field
+ * 0x014F on the parse.
  */
 function documentOrigin(
   summary: NzipOpenSummary,
@@ -216,28 +217,24 @@ function documentOrigin(
   const matched = summary.origins.find((o) => o.primaryPath === key);
   const uri =
     (typeof p.originUri === "string" && p.originUri) || matched?.originUri;
-  // Bytes at the primary path are the original in-archive; omit-original packs
-  // leave that path out and keep size/mtime on Extra Field 0x014F instead.
   const stored = listedEntry(summary, key);
+  const manifestSize =
+    typeof p.originSize === "number" ? p.originSize : matched?.originSize;
+  const manifestMtime =
+    typeof p.originMtime === "number" ? p.originMtime : matched?.originMtime;
 
-  let size: number | undefined;
-  let mtime: number | undefined;
-  if (stored) {
-    size = stored.uncompressedSize;
-    mtime =
-      typeof stored.originMtime === "number"
+  const size =
+    manifestSize ??
+    (stored ? stored.uncompressedSize : undefined);
+  const mtime =
+    manifestMtime ??
+    (stored
+      ? typeof stored.originMtime === "number"
         ? stored.originMtime
         : stored.mtimeSeconds > 0
           ? stored.mtimeSeconds
-          : typeof p.originMtime === "number"
-            ? p.originMtime
-            : matched?.originMtime;
-  } else {
-    size =
-      typeof p.originSize === "number" ? p.originSize : matched?.originSize;
-    mtime =
-      typeof p.originMtime === "number" ? p.originMtime : matched?.originMtime;
-  }
+          : undefined
+      : undefined);
 
   const bits: string[] = [];
   if (size !== undefined) bits.push(formatBytes(size));
@@ -317,12 +314,33 @@ function archiveSizeLine(summary: NzipOpenSummary): string {
   return `${formatBytes(compressed)} compressed / ${formatBytes(uncompressed)} · ${compressionSaved(compressed, uncompressed)}`;
 }
 
-function documentSizeLine(summary: NzipOpenSummary): string {
-  let original = 0;
+function originalByteTotal(summary: NzipOpenSummary): number | null {
+  if (typeof summary.originalBytes === "number") return summary.originalBytes;
+  let bytes = 0;
+  let sized = 0;
   for (const primary of summary.primaries) {
     const { size } = documentOrigin(summary, primary);
-    if (typeof size === "number") original += size;
+    if (typeof size !== "number") continue;
+    bytes += size;
+    sized += 1;
   }
+  return sized > 0 ? bytes : null;
+}
+
+function inputDocumentsLine(summary: NzipOpenSummary): string {
+  const count = summary.primaryCount || summary.primaries.length;
+  const files = `${count} input document${count === 1 ? "" : "s"}`;
+  const total = originalByteTotal(summary);
+  if (total == null) return files;
+  const size = formatBytes(total);
+  if (summary.byteLength < total) {
+    return `${files} · ${size} · ${compressionSaved(summary.byteLength, total)} compressed`;
+  }
+  return `${files} · ${size}`;
+}
+
+function documentSizeLine(summary: NzipOpenSummary): string {
+  const original = originalByteTotal(summary) ?? 0;
 
   let parsedCompressed = 0;
   for (const path of summary.parsed) {
@@ -867,6 +885,9 @@ export default function KnowledgePage() {
               <p className="mt-1 text-sm text-(--muted)">
                 {summary.filename} · {formatBytes(summary.byteLength)}
               </p>
+              <p className="text-sm text-(--muted)">
+                {inputDocumentsLine(summary)}
+              </p>
             </div>
             <div className="flex gap-2">
               <button
@@ -1122,20 +1143,6 @@ export default function KnowledgePage() {
                         ) : (
                           <span className="mr-2 font-mono">{hit.path}</span>
                         )}
-                        {hit.kind === "parsed" && entryNamed(hit.path) ? (
-                          <>
-                            {isMarkdownPath(hit.path) ? (
-                              <ViewButton
-                                path={hit.path}
-                                onView={() => setViewing(hit.path)}
-                              />
-                            ) : null}
-                            <DownloadIconButton
-                              path={hit.path}
-                              onDownload={() => void downloadEntry(hit.path)}
-                            />
-                          </>
-                        ) : null}
                         <span className="text-(--muted)">
                           · {hit.kind === "okf" ? "OKF" : "parsed"}
                           {excerpt?.truncated ? " · truncated" : ""}
@@ -1149,20 +1156,6 @@ export default function KnowledgePage() {
                               ) : (
                                 <span className="mr-2 font-mono">{doc}</span>
                               )}
-                              {entryNamed(doc) ? (
-                                <>
-                                  {isMarkdownPath(doc) ? (
-                                    <ViewButton
-                                      path={doc}
-                                      onView={() => setViewing(doc)}
-                                    />
-                                  ) : null}
-                                  <DownloadIconButton
-                                    path={doc}
-                                    onDownload={() => void downloadEntry(doc)}
-                                  />
-                                </>
-                              ) : null}
                             </div>
                           ))
                         : null}
@@ -1348,25 +1341,6 @@ function SectionBody({
                   ) : (
                     <span className="mr-2 font-mono">{c}</span>
                   )}
-                  {stored ? (
-                    <>
-                      {isMarkdownPath(stored.name) ? (
-                        <ViewButton
-                          path={stored.name}
-                          onView={() => onView(stored.name)}
-                        />
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => onDownload(stored.name)}
-                        aria-label={`Download ${c.split("/").pop() ?? c}`}
-                        title="Download"
-                        className="shrink-0 text-(--accent) hover:opacity-80"
-                      >
-                        <DownloadIcon />
-                      </button>
-                    </>
-                  ) : null}
                 </li>
               );
             })}
@@ -1398,23 +1372,6 @@ function SectionBody({
                   ) : (
                     <span className="mr-2 font-mono">{c}</span>
                   )}
-                  {stored ? (
-                    <>
-                      <ViewButton
-                        path={stored.name}
-                        onView={() => onView(stored.name)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => onDownload(stored.name)}
-                        aria-label={`Download ${c.split("/").pop() ?? c}`}
-                        title="Download"
-                        className="shrink-0 text-(--accent) hover:opacity-80"
-                      >
-                        <DownloadIcon />
-                      </button>
-                    </>
-                  ) : null}
                 </li>
               );
             })}
@@ -1492,10 +1449,7 @@ function AskSourceRow({
         <span className="font-mono">{source.path}</span>
       )}
       {stored && isMarkdownPath(source.path) ? (
-        <span className="inline-flex items-center gap-1">
-          <ViewButton path={source.path} onView={() => onView(source.path)} />
-          <span className="text-(--muted)">{fileLabel}</span>
-        </span>
+        <span className="text-(--muted)">{fileLabel}</span>
       ) : null}
       {stored && !isMarkdownPath(source.path) ? (
         <span className="inline-flex items-center gap-1">
