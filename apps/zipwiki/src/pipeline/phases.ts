@@ -45,10 +45,12 @@ import {
   classifyDocument,
   imageModeFrom,
   parseDocument,
+  resolveLibreOfficeMissing,
   retargetParsedImageHrefs,
   type CliParseOptions,
 } from "../lib/parse/index.js";
 import { runManifestCommand } from "../manifest-cmd.js";
+import { PackAbortedError } from "./pack-confirm.js";
 import { runParseOkfPipeline } from "./scheduler.js";
 import type { StageMember, StageOptions } from "./types.js";
 
@@ -199,6 +201,33 @@ export async function parseOneFile(
       ...(assets ? { assets } : {}),
     },
   };
+}
+
+/**
+ * Parse one file; on LibreOffice-missing, stop and prompt (interactive TTY)
+ * to install / continue / ignore / cancel before soft-failing.
+ */
+export async function parseOneFileWithLibreOfficeGate(
+  abs: string,
+  opts: StageOptions,
+  project: ResolvedZipwikiConfig,
+  forcedCategory?: DocumentType,
+): Promise<ParseFileResult> {
+  try {
+    return await parseOneFile(abs, opts, project, forcedCategory);
+  } catch (err) {
+    const action = await resolveLibreOfficeMissing(err, {
+      filename: basename(abs),
+      quiet: opts.quiet,
+      yes: opts.yes,
+      log: (line) => stageLog(line),
+    });
+    if (action === "cancel") throw new PackAbortedError();
+    if (action === "retry") {
+      return await parseOneFile(abs, opts, project, forcedCategory);
+    }
+    throw err;
+  }
 }
 
 /** Write parse markdown for one file into stage wiki/parsed. */
@@ -461,7 +490,12 @@ export async function runParseAndOkfPhase(input: {
       failFast: opts.failFast,
       parse: async (abs) => {
         try {
-          const result = await parseOneFile(abs, opts, project, forcedCategory);
+          const result = await parseOneFileWithLibreOfficeGate(
+            abs,
+            opts,
+            project,
+            forcedCategory,
+          );
           const parsePath = writeParsedFile(
             stageDir,
             result.member.originalName,
@@ -525,7 +559,12 @@ export async function runParseAndOkfPhase(input: {
     failFast: opts.failFast,
     parse: async (abs) => {
       try {
-        const result = await parseOneFile(abs, opts, project, forcedCategory);
+        const result = await parseOneFileWithLibreOfficeGate(
+          abs,
+          opts,
+          project,
+          forcedCategory,
+        );
         const parsePath = writeParsedFile(
           stageDir,
           result.member.originalName,
@@ -549,6 +588,7 @@ export async function runParseAndOkfPhase(input: {
         }
         return { ...result, parsePath, parseFailed: false as const };
       } catch (err) {
+        if (err instanceof PackAbortedError) throw err;
         softParseErrors += 1;
         await maybeReportLocalLiteParse({
           success: false,

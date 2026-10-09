@@ -40,9 +40,17 @@ export { LiteParseAdapter } from "./adapters/liteparse.js";
 export { RemoteParseAdapter } from "./adapters/remote.js";
 export {
   annotateParseError,
+  isLibreOfficeMissingError,
   LIBREOFFICE_INSTALL_HINT,
+  libreOfficeInstallCommand,
   withLibreOfficeHint,
 } from "./libreoffice-hint.js";
+export {
+  resetLibreOfficePromptSessionForTests,
+  resolveLibreOfficeMissing,
+  type LibreOfficeMissingAction,
+  type LibreOfficeMissingPromptDeps,
+} from "./libreoffice-prompt.js";
 export { resolveTessdataPath } from "./tessdata.js";
 export {
   LlamaParseAdapter,

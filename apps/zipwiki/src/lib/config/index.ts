@@ -141,6 +141,15 @@ export {
   readZipwikiPackageVersion,
 } from "./update-check.js";
 export {
+  CLI_PREFERENCES_FILENAME,
+  isLibreOfficeMissingIgnored,
+  loadCliPreferences,
+  saveCliPreferences,
+  setIgnoreLibreOfficeMissing,
+  zipwikiCliPreferencesPath,
+  type CliPreferences,
+} from "./cli-preferences.js";
+export {
   maybeReportActivity,
   type ActivityReportInput,
 } from "./activity-telemetry.js";
