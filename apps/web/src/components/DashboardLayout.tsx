@@ -14,7 +14,8 @@ import { AccountMenu } from "./AccountMenu";
 function LowCreditsBanner() {
   const location = useLocation();
   const usage = useQuery(api.usage.myUsage);
-  if (usage?.creditsLocked) {
+  if (!usage) return null;
+  if (usage.creditsLocked) {
     return (
       <p className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
         ZipWiki credits are locked for this account. Hosted parse, OKF, and
@@ -22,11 +23,17 @@ function LowCreditsBanner() {
       </p>
     );
   }
-  if (!usage?.lowCredits || usage.creditsUnlimited) return null;
+  if (!usage.lowCredits || usage.creditsUnlimited) return null;
   if (location.pathname.startsWith("/dashboard/billing")) return null;
+  const remaining =
+    typeof usage.creditsRemaining === "number" &&
+    Number.isFinite(usage.creditsRemaining)
+      ? usage.creditsRemaining
+      : null;
   return (
     <p className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-      Credits running low ({usage.creditsRemaining.toLocaleString()} remaining).{" "}
+      Credits running low
+      {remaining != null ? ` (${remaining.toLocaleString()} remaining)` : ""}.{" "}
       <Link
         className="font-semibold text-(--accent) underline"
         to="/dashboard/billing"

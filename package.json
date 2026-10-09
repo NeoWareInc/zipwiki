@@ -43,7 +43,7 @@
     "archive:source1": "pnpm zipwiki -- stage knowledge/test1 --phase all -o knowledge/source1.zipwiki --stage-dir knowledge/.stage/source1 --include-original -sf -T",
     "archive:test2": "pnpm zipwiki -- stage knowledge/test2 --phase all -o knowledge/test2.zipwiki --stage-dir knowledge/.stage/test2 -sf -T",
     "archive:project": "node scripts/archive-project.mjs",
-    "archive:charles-dickens": "pnpm zipwiki -- pack \"$HOME/Documents/Charles Dickens\" -r -o knowledge/charles-dickens.zipwiki --stage-dir knowledge/.stage/charles-dickens --omit-original --include '*.epub' --exclude index.txt --exclude .DS_Store --exclude '*.origin.json' --exclude '*.url' -sf -T",
+    "archive:charles-dickens": "pnpm archive:project charles-dickens",
     "archive:medical-pdfs": "pnpm zipwiki -- pack \"$HOME/Library/CloudStorage/GoogleDrive-steve@neoware.io/My Drive/Medical PDFs\" -r -o knowledge/medical-pdfs.zipwiki --stage-dir knowledge/.stage/medical-pdfs --omit-original --include '*.pdf' --origin-url-template 'https://drive.google.com/drive/folders/1KVVGU_TCc-7A9UqzG0qrdKtsP65KcciY?usp=drive_link' -sf -T",
     "archive:florida-laws": "pnpm zipwiki -- pack \"$HOME/Documents/florida-laws/2025-pdf\" -r -o knowledge/florida-laws-2025.zipwiki --stage-dir knowledge/.stage/florida-laws --omit-original --okf-profile legislation --include '*.pdf' --exclude .DS_Store --exclude '.zipwiki-origins.json' --exclude '*.url' --exclude '*.origin.json' --exclude MANIFEST.txt --exclude SUMMARY.json --origin-pattern 'Ch_(?<year>\\d{4})-(?<chapter>\\d+)' --origin-url-template 'https://laws.flrules.org/{year}/{chapter}' -sf -T",
     "query:florida-laws": "pnpm zipwiki -- ask knowledge/florida-laws-2025.zipwiki",

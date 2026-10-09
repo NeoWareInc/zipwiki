@@ -779,43 +779,6 @@ export const recordQueryAnomaly = internalMutation({
   },
 });
 
-/**
- * ZipWiki credits charged for portal and CLI asks this period.
- * Activity rows (MCP, open, search) have no creditCost and stay out.
- */
-async function billedQueryCredits(
-  ctx: QueryCtx,
-  accountId: Id<"accounts">,
-  periodStart: number,
-): Promise<number> {
-  let total = 0;
-  let cursor: string | null = null;
-  for (let page = 0; page < 30; page += 1) {
-    const result = await ctx.db
-      .query("usageEvents")
-      .withIndex("by_accountId", (q) => q.eq("accountId", accountId))
-      .order("desc")
-      .paginate({ numItems: 100, cursor });
-    let older = false;
-    for (const row of result.page) {
-      if (row._creationTime < periodStart) {
-        older = true;
-        break;
-      }
-      if (
-        row.type === "query" &&
-        typeof row.creditCost === "number" &&
-        row.creditCost > 0
-      ) {
-        total += row.creditCost;
-      }
-    }
-    if (older || result.isDone) break;
-    cursor = result.continueCursor;
-  }
-  return total;
-}
-
 export const myUsage = query({
   args: {},
   handler: async (ctx) => {
@@ -846,11 +809,9 @@ export const myUsage = query({
       okfInputTokens: period?.okfInputTokens ?? 0,
       okfOutputTokens: period?.okfOutputTokens ?? 0,
       okfCreditsSpent: period?.okfCreditsSpent ?? 0,
-      queryCreditsSpent: await billedQueryCredits(
-        ctx,
-        account._id,
-        periodStart,
-      ),
+      // Prefer the period aggregate — scanning usageEvents here can blow the
+      // read limit and crash every dashboard page via LowCreditsBanner.
+      queryCreditsSpent: period?.queryCreditsSpent ?? 0,
       packCount: period?.packCount ?? 0,
       queryCount: period?.queryCount ?? 0,
       liteparseSuccessCount: period?.liteparseSuccessCount ?? 0,

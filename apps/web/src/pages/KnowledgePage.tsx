@@ -1220,6 +1220,9 @@ export default function KnowledgePage() {
               entryNamed={entryNamed}
               onDownload={(name) => void downloadEntry(name)}
               onView={setViewing}
+              onClose={() =>
+                setOpened((current) => current.filter((section) => section !== id))
+              }
             />
           ))}
 
@@ -1275,18 +1278,21 @@ function SectionBody({
   entryNamed,
   onDownload,
   onView,
+  onClose,
 }: {
   summary: NzipOpenSummary;
   section: PackageSection;
   entryNamed: (path: string) => NzipOpenSummary["entries"][number] | null;
   onDownload: (entryName: string) => void;
   onView: (entryName: string) => void;
+  onClose: () => void;
 }) {
   if (section === "documents") {
     return (
       <ContentsSection
         title="Input documents"
         subtitle={inputDocumentSummary(summary)}
+        onClose={onClose}
       >
         {summary.primaries.length === 0 ? (
           <Empty>No input documents listed in the manifest.</Empty>
@@ -1351,6 +1357,7 @@ function SectionBody({
       <ContentsSection
         title="Open Knowledge Format (OKF) concepts"
         subtitle={okfConceptSummary(summary.okf.concepts)}
+        onClose={onClose}
       >
         <p className="mb-3 text-sm text-(--muted)">
           Short concept cards under <code className="text-xs">wiki/okf/</code>{" "}
@@ -1386,6 +1393,7 @@ function SectionBody({
           extractedMarkdownSummary(summary),
           documentSizeLine(summary),
         ]}
+        onClose={onClose}
       >
         {summary.parsed.length === 0 ? (
           <Empty>No extracted text in this package.</Empty>
@@ -1413,6 +1421,7 @@ function SectionBody({
     <ContentsSection
       title="All entries"
       subtitle={archiveSizeLine(summary)}
+      onClose={onClose}
     >
       <div className="overflow-x-auto">
         <table className="w-full min-w-xl text-left text-xs">
@@ -1572,21 +1581,36 @@ function OverviewRow({ label, value }: { label: string; value: string }) {
 function ContentsSection({
   title,
   subtitle,
+  onClose,
   children,
 }: {
   title: string;
   subtitle?: string | readonly string[];
+  onClose?: () => void;
   children: ReactNode;
 }) {
   const lines = subtitle == null ? [] : Array.isArray(subtitle) ? subtitle : [subtitle];
   return (
     <section>
-      <h2 className="font-display text-xl font-semibold">{title}</h2>
-      {lines.map((line, index) => (
-        <p key={`${index}:${line}`} className="mt-1 text-sm text-(--muted)">
-          {line}
-        </p>
-      ))}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl font-semibold">{title}</h2>
+          {lines.map((line, index) => (
+            <p key={`${index}:${line}`} className="mt-1 text-sm text-(--muted)">
+              {line}
+            </p>
+          ))}
+        </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 rounded-md border border-(--border) px-3 py-1.5 text-sm font-medium hover:bg-(--surface)"
+          >
+            Close
+          </button>
+        ) : null}
+      </div>
       <div className="mt-3 rounded-xl border border-(--border) bg-white p-4">
         {children}
       </div>
