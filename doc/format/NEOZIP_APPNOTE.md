@@ -396,7 +396,7 @@ advanced packages generally.
 | `primaryCount` | number | RECOMMENDED | Count of primary content entries |
 | `parsedCount` | number | RECOMMENDED | Count of files under `R/parsed/**` that end in `.md` and are not under `.assets/` |
 | `assetEntryCount` | number | OPTIONAL | Count of zip entries under any `R/parsed/**/**.assets/` |
-| `digest` | string | OPTIONAL | Package-level one-line summary (~280 chars). ZipWiki writers synthesize this from OKF index / concept descriptions when OKF is present |
+| `digest` | string | OPTIONAL | Package summary, at most 500 characters, starting with the document count. ZipWiki asks the OKF model once when a model wrote the concept cards; otherwise it joins the OKF descriptions |
 | `okf` | object | OPTIONAL | OKF availability (§4.4) |
 | `parser` | object | OPTIONAL | Default parse engine (§4.5) |
 | `primaries` | array | OPTIONAL | Advisory per-primary summary (§4.3.1). **Not** an inventory — ZIP central directory + Extra Field `0x014E` remain authoritative |

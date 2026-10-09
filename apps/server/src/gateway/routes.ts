@@ -4,6 +4,7 @@ import { createConvexGateway } from "./convex.js";
 import type { QueryTranscriptTurn } from "./anthropic.js";
 import {
   handleOkf,
+  handlePackageDigest,
   handleParse,
   handleQueryAnswer,
   type GatewayDeps,
@@ -436,6 +437,34 @@ export async function registerGateway(
         okfProfile:
           typeof raw.okfProfile === "string" ? raw.okfProfile : undefined,
       },
+    });
+    return reply.code(result.status).send(result.body);
+  });
+
+  app.post("/api/okf/digest", async (req, reply) => {
+    const token = bearer(req.headers.authorization);
+    if (!token) return reply.code(401).send({ error: "unauthorized" });
+    const body = req.body;
+    if (!body || typeof body !== "object") {
+      return reply.code(400).send({ error: "invalid_request" });
+    }
+    const raw = body as Record<string, unknown>;
+    const catalog = typeof raw.catalog === "string" ? raw.catalog : "";
+    const count = typeof raw.count === "number" ? raw.count : Number(raw.count);
+    const bodyBudget =
+      typeof raw.bodyBudget === "number" ? raw.bodyBudget : undefined;
+    const model = typeof raw.model === "string" ? raw.model : undefined;
+    const createId =
+      typeof raw.createId === "string" && raw.createId.trim()
+        ? raw.createId.trim().slice(0, 128)
+        : undefined;
+    const result = await handlePackageDigest(deps, {
+      token,
+      catalog,
+      count: Number.isFinite(count) ? count : 0,
+      ...(bodyBudget !== undefined ? { bodyBudget } : {}),
+      ...(model ? { model } : {}),
+      ...(createId ? { createId } : {}),
     });
     return reply.code(result.status).send(result.body);
   });

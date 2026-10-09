@@ -57,7 +57,10 @@ import {
   splitFrontmatter,
 } from "../okf/frontmatter.js";
 import { syncOkfArchive } from "../okf/bundle.js";
-import { synthesizePackageDigestFromOkfFiles } from "../okf/package-digest.js";
+import {
+  packageDigestEntriesFromOkfFiles,
+  resolvePackageDigest,
+} from "../okf/index.js";
 import { parseOneFile, okfOneFile, parserUseForEngine } from "../../pipeline/phases.js";
 import {
   loadZipwikiConfig,
@@ -467,11 +470,12 @@ function measuredOriginalBytes(
   return measured ? sum : undefined;
 }
 
-function patchManifest(
+async function patchManifest(
   inventory: PackageInventory,
   map: Map<string, ZipArchiveEntry>,
   primaries: NeoZipAiPrimary[],
-): void {
+  noAiOkf: boolean,
+): Promise<void> {
   const existing = map.get(BUNDLE_PATHS.manifest);
   let man: NeoZipManifest;
   if (existing) {
@@ -509,20 +513,22 @@ function patchManifest(
   }
   const originalBytes = measuredOriginalBytes(primaries, map, inventory);
   const okfRoot = inventory.okfRoot.replace(/\\/g, "/").replace(/\/?$/, "/");
+  const okfMarkdown = [...map.values()]
+    .filter(
+      (e) =>
+        e.name.replace(/\\/g, "/").startsWith(okfRoot) &&
+        e.name.endsWith(".md"),
+    )
+    .map((e) => ({
+      name: e.name.replace(/\\/g, "/").slice(okfRoot.length),
+      data: e.data.toString("utf8"),
+    }));
   const packageDigest =
     okfNames.length > 0 || hasIndex
-      ? synthesizePackageDigestFromOkfFiles(
-          [...map.values()]
-            .filter(
-              (e) =>
-                e.name.replace(/\\/g, "/").startsWith(okfRoot) &&
-                e.name.endsWith(".md"),
-            )
-            .map((e) => ({
-              name: e.name.replace(/\\/g, "/").slice(okfRoot.length),
-              data: e.data.toString("utf8"),
-            })),
-        )
+      ? await resolvePackageDigest({
+          entries: packageDigestEntriesFromOkfFiles(okfMarkdown),
+          useAi: !noAiOkf,
+        })
       : undefined;
   const built = buildNeoZipManifest({
     createdAt: man.createdAt,
@@ -746,7 +752,7 @@ export async function updatePackage(
       },
   );
   primaries.sort((a, b) => a.path.localeCompare(b.path));
-  patchManifest(inventory, map, primaries);
+  await patchManifest(inventory, map, primaries, input.noAiOkf === true);
 
   const entries = sortPackOrder([...map.values()], inventory.aiRoot);
   const allowedMissing = new Set(

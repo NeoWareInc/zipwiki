@@ -19,6 +19,8 @@ export type NzipOpenSummary = {
   specVersion: unknown;
   profiles: unknown;
   aiRoot: string;
+  /** Package-level one-line summary from `ai.digest`, when the manifest recorded it. */
+  digest?: string;
   primaryCount: number;
   /** Sum of original file sizes from `ai.originalBytes`, when the manifest recorded it. */
   originalBytes?: number;
@@ -187,6 +189,9 @@ export async function openNzip(
     specVersion: manifest.specVersion ?? null,
     profiles: manifest.profiles ?? null,
     aiRoot,
+    ...(typeof ai?.digest === "string" && ai.digest.trim()
+      ? { digest: ai.digest.trim() }
+      : {}),
     primaryCount:
       typeof ai?.primaryCount === "number"
         ? ai.primaryCount

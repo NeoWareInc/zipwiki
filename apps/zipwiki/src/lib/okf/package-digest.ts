@@ -13,8 +13,8 @@ import {
   type OkfIndexEntry,
 } from "./render.js";
 
-/** Soft cap for the one-line package summary (APPNOTE §5). */
-export const PACKAGE_DIGEST_MAX_CHARS = 280;
+/** Cap for `ai.digest` (APPNOTE §5). The model summary and the local join both stop here. */
+export const PACKAGE_DIGEST_MAX_CHARS = 500;
 
 const FILES_HEADING = /^#\s+Files\s*$/i;
 const TOPICS_HEADING = /^#\s+/;
@@ -110,47 +110,59 @@ export function synthesizePackageDigestFromEntries(
  * Prefer `index.md` `# Files` rows; else each concept's frontmatter.
  * Returns undefined when there is nothing useful to summarize.
  */
+export function packageDigestEntriesFromOkfDir(okfDir: string): OkfIndexEntry[] {
+  if (!existsSync(okfDir)) return [];
+  const indexPath = join(okfDir, OKF_INDEX_NAME);
+  if (existsSync(indexPath) && statSync(indexPath).isFile()) {
+    const fromIndex = parseOkfIndexFileEntries(readFileSync(indexPath, "utf-8"));
+    if (fromIndex.length > 0) return fromIndex;
+  }
+  return loadOkfConceptEntriesFromDir(okfDir);
+}
+
 export function synthesizePackageDigestFromOkfDir(
   okfDir: string,
   maxChars = PACKAGE_DIGEST_MAX_CHARS,
 ): string | undefined {
-  if (!existsSync(okfDir)) return undefined;
-  const indexPath = join(okfDir, OKF_INDEX_NAME);
-  let entries: OkfIndexEntry[] = [];
-  if (existsSync(indexPath) && statSync(indexPath).isFile()) {
-    entries = parseOkfIndexFileEntries(readFileSync(indexPath, "utf-8"));
-  }
-  if (entries.length === 0) {
-    entries = loadOkfConceptEntriesFromDir(okfDir);
-  }
-  return synthesizePackageDigestFromEntries(entries, maxChars);
+  return synthesizePackageDigestFromEntries(
+    packageDigestEntriesFromOkfDir(okfDir),
+    maxChars,
+  );
 }
 
 /**
  * Same synthesizer for in-archive OKF files (update path).
  * `files` names are relative to the OKF root (e.g. `index.md`, `note.md`).
  */
-export function synthesizePackageDigestFromOkfFiles(
+export function packageDigestEntriesFromOkfFiles(
   files: Array<{ name: string; data: string }>,
-  maxChars = PACKAGE_DIGEST_MAX_CHARS,
-): string | undefined {
+): OkfIndexEntry[] {
   const byName = new Map(
     files.map((f) => [f.name.replace(/\\/g, "/"), f.data] as const),
   );
   const indexData = byName.get(OKF_INDEX_NAME);
-  let entries: OkfIndexEntry[] = [];
   if (indexData) {
-    entries = parseOkfIndexFileEntries(indexData);
+    const fromIndex = parseOkfIndexFileEntries(indexData);
+    if (fromIndex.length > 0) return fromIndex;
   }
-  if (entries.length === 0) {
-    for (const [name, data] of [...byName.entries()].sort(([a], [b]) =>
-      a.localeCompare(b, "en"),
-    )) {
-      if (!name.endsWith(".md")) continue;
-      if (name === OKF_INDEX_NAME || name === OKF_LOG_NAME) continue;
-      if (name.startsWith(`${OKF_TOPICS_DIR}/`) || name.includes("/")) continue;
-      entries.push(indexEntryFromConceptMarkdown(name, data));
-    }
+  const entries: OkfIndexEntry[] = [];
+  for (const [name, data] of [...byName.entries()].sort(([a], [b]) =>
+    a.localeCompare(b, "en"),
+  )) {
+    if (!name.endsWith(".md")) continue;
+    if (name === OKF_INDEX_NAME || name === OKF_LOG_NAME) continue;
+    if (name.startsWith(`${OKF_TOPICS_DIR}/`) || name.includes("/")) continue;
+    entries.push(indexEntryFromConceptMarkdown(name, data));
   }
-  return synthesizePackageDigestFromEntries(entries, maxChars);
+  return entries;
+}
+
+export function synthesizePackageDigestFromOkfFiles(
+  files: Array<{ name: string; data: string }>,
+  maxChars = PACKAGE_DIGEST_MAX_CHARS,
+): string | undefined {
+  return synthesizePackageDigestFromEntries(
+    packageDigestEntriesFromOkfFiles(files),
+    maxChars,
+  );
 }

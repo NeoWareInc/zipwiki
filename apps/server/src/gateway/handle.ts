@@ -1,5 +1,6 @@
 import {
   invokeAnthropic,
+  invokePackageDigest,
   invokeQueryTurn,
   type OkfRequest,
   type QueryTranscriptTurn,
@@ -209,6 +210,84 @@ export async function handleOkf(
   }
 
   return { status: 200, body: completion.enrichment };
+}
+
+export async function handlePackageDigest(
+  deps: GatewayDeps,
+  args: {
+    token: string;
+    catalog: string;
+    count: number;
+    bodyBudget?: number;
+    model?: string;
+    createId?: string;
+  },
+): Promise<GatewayResponse> {
+  const env = deps.env ?? process.env;
+  const fetchImpl = deps.fetchImpl ?? fetch;
+  let validated;
+  try {
+    validated = await deps.convex.validateKey(args.token, "okf");
+  } catch {
+    return { status: 503, body: { error: "convex_unavailable" } };
+  }
+  if (!validated.ok) {
+    return { status: validated.status, body: { error: validated.error } };
+  }
+  if (!validated.billable || validated.fallback) {
+    return {
+      status: 402,
+      body: {
+        code: "okf_fallback_host_llm",
+        error:
+          "ZipWiki OKF unavailable (credits exhausted). Use host-LLM enrichment.",
+      },
+    };
+  }
+  const apiKey = masterKey(env, "ANTHROPIC_API_KEY");
+  if (!apiKey) return { status: 503, body: { error: "anthropic_not_configured" } };
+  const catalog = args.catalog.trim();
+  if (!catalog) return { status: 400, body: { error: "invalid_request" } };
+
+  let completion;
+  try {
+    completion = await invokePackageDigest(
+      {
+        catalog,
+        count: args.count,
+        bodyBudget: args.bodyBudget ?? 480,
+      },
+      apiKey,
+      fetchImpl,
+      args.model,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "okf_digest_failed";
+    console.error(`[zipwiki] error OKF package digest: ${message}`);
+    return { status: 502, body: { error: message } };
+  }
+
+  try {
+    await deps.convex.recordUsage({
+      accountId: validated.accountId,
+      kind: "okf",
+      billable: true,
+      usage: {
+        provider: "anthropic",
+        model: completion.model,
+        engine: "anthropic",
+        inputTokens: completion.inputTokens,
+        outputTokens: completion.outputTokens,
+        ...(args.createId ? { createId: args.createId } : {}),
+      },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "record_usage_failed";
+    console.error(`[zipwiki] error OKF package digest: ${message}`);
+    return { status: 502, body: { error: message } };
+  }
+
+  return { status: 200, body: { summary: completion.summary } };
 }
 
 const QUERY_BODY_CHARS = 12_000;

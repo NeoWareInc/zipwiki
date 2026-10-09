@@ -104,4 +104,72 @@ export class RemoteOkfAdapter {
 
     return body as OkfEnrichment;
   }
+
+  /** One package summary from concept titles and descriptions. */
+  async digest(input: {
+    count: number;
+    catalog: string;
+    bodyBudget: number;
+  }): Promise<string> {
+    const base = this.api.url?.replace(/\/+$/, "");
+    if (!base) {
+      throw new Error(
+        "ZIPWIKI_API_URL is not set (required for remote OKF mode)",
+      );
+    }
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (this.api.key) {
+      headers.Authorization = `Bearer ${this.api.key}`;
+    }
+    const createId = getCreateId();
+    const response = await this.fetchImpl(`${base}/api/okf/digest`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        catalog: input.catalog,
+        count: input.count,
+        bodyBudget: input.bodyBudget,
+        ...(createId ? { createId } : {}),
+      }),
+    });
+    const text = await response.text();
+    let body: unknown;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new Error(
+        `ZipWiki OKF digest API error (${response.status}): ${text.slice(0, 500)}`,
+      );
+    }
+    if (!response.ok) {
+      const err =
+        typeof body === "object" &&
+        body !== null &&
+        "error" in body &&
+        typeof (body as { error: unknown }).error === "string"
+          ? (body as { error: string }).error
+          : text.slice(0, 500);
+      const error = new Error(`ZipWiki OKF digest API ${response.status}: ${err}`);
+      if (
+        typeof body === "object" &&
+        body !== null &&
+        "code" in body &&
+        typeof (body as { code: unknown }).code === "string"
+      ) {
+        (error as Error & { code?: string }).code = (body as { code: string }).code;
+      }
+      throw error;
+    }
+    const summary =
+      typeof body === "object" &&
+      body !== null &&
+      "summary" in body &&
+      typeof (body as { summary: unknown }).summary === "string"
+        ? (body as { summary: string }).summary.trim()
+        : "";
+    if (!summary) throw new Error("ZipWiki OKF digest API returned an empty summary");
+    return summary;
+  }
 }

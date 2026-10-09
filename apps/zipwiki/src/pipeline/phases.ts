@@ -37,7 +37,8 @@ import {
   conceptFileNameFor,
   finalizeOkfDirectory,
   resolveOkfProfile,
-  synthesizePackageDigestFromOkfDir,
+  packageDigestEntriesFromOkfDir,
+  resolvePackageDigest,
   type OkfProfile,
 } from "../lib/okf/index.js";
 import {
@@ -742,7 +743,7 @@ export function parserUseForEngine(
   };
 }
 
-export function runCompressPhase(input: {
+export async function runCompressPhase(input: {
   members: StageMember[];
   stageDir: string;
   outputPath: string;
@@ -753,7 +754,7 @@ export function runCompressPhase(input: {
   title: string;
   /** Absolute pack input roots (rules do not leak across). */
   inputRoots?: string[];
-}): string {
+}): Promise<string> {
   // Pack every member whose primary file exists on the source path (m.abs).
   // Primaries are not staged under stageDir — compress reads them in-place.
   // Parse failures still include the original at zip root; omit-original only
@@ -804,8 +805,27 @@ export function runCompressPhase(input: {
 
   const packageDigest =
     input.opts.noOkf !== true && okfFiles.length > 0
-      ? synthesizePackageDigestFromOkfDir(okfDir)
+      ? await resolvePackageDigest({
+          entries: packageDigestEntriesFromOkfDir(okfDir),
+          useAi: input.opts.noAiOkf !== true,
+        })
       : undefined;
+  if (packageDigest) {
+    const manifestPath = join(input.stageDir, "META-INF", "manifest.json");
+    if (existsSync(manifestPath)) {
+      try {
+        const staged = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+          ai?: { digest?: string };
+        };
+        if (staged.ai) {
+          staged.ai.digest = packageDigest;
+          writeFileSync(manifestPath, `${JSON.stringify(staged, null, 2)}\n`);
+        }
+      } catch {
+        // The archive manifest is the copy readers open.
+      }
+    }
+  }
 
   const written = writeNzipCollectionBundle({
     outputPath: input.outputPath,

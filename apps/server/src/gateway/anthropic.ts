@@ -699,3 +699,63 @@ export async function invokeAnthropic(
     outputTokens: body.usage?.output_tokens,
   };
 }
+
+export async function invokePackageDigest(
+  input: { catalog: string; count: number; bodyBudget: number },
+  apiKey: string,
+  fetchImpl: typeof fetch,
+  model?: string | null,
+): Promise<{
+  summary: string;
+  model: string;
+  inputTokens?: number;
+  outputTokens?: number;
+}> {
+  const resolved = resolveHostedOkfModel(model);
+  const count = Number.isFinite(input.count) ? Math.max(1, Math.floor(input.count)) : 1;
+  const bodyBudget = Math.min(500, Math.max(32, Math.floor(input.bodyBudget) || 480));
+  const catalog = input.catalog.slice(0, 60_000);
+  const prompt = [
+    "You write one package summary for a ZipWiki archive.",
+    "Each line is a concept card: a title and a description. Those cards already summarize the files.",
+    `Write one plain-text summary of the collection, at most ${bodyBudget} characters.`,
+    "Cover the subjects and document kinds that matter across the set, including cards later in the list.",
+    "Do not list every file. Do not start with a count of documents. No markdown.",
+    "",
+    `${count} concept cards:`,
+    catalog,
+  ].join("\n");
+  const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: resolved,
+      max_tokens: 512,
+      ...haiku55Body(resolved),
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Anthropic failed (${res.status})`);
+  const body = (await res.json()) as {
+    model?: string;
+    content?: Array<{ type?: string; text?: string }>;
+    usage?: { input_tokens?: number; output_tokens?: number };
+  };
+  const summary = (body.content ?? [])
+    .filter((block) => block.type === "text" && block.text)
+    .map((block) => block.text)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!summary) throw new Error("Claude returned an empty package digest");
+  return {
+    summary,
+    model: body.model ?? resolved,
+    inputTokens: body.usage?.input_tokens,
+    outputTokens: body.usage?.output_tokens,
+  };
+}

@@ -944,6 +944,13 @@ export default function KnowledgePage() {
           </div>
 
           <dl className="grid gap-3 rounded-xl border border-(--border) bg-white p-5 text-sm sm:grid-cols-2">
+            {summary.digest ? (
+              <OverviewRow
+                className="sm:col-span-2"
+                label="AI digest"
+                value={summary.digest}
+              />
+            ) : null}
             <OverviewRow
               label="Spec"
               value={
@@ -1569,9 +1576,17 @@ function ViewIcon() {
   );
 }
 
-function OverviewRow({ label, value }: { label: string; value: string }) {
+function OverviewRow({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
   return (
-    <div>
+    <div className={className}>
       <dt className="text-(--muted)">{label}</dt>
       <dd className="mt-0.5 font-medium text-(--ink)">{value}</dd>
     </div>

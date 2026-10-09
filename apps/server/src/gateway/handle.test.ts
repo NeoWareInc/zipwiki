@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildApp } from "../app.js";
 import { promptFor } from "./anthropic.js";
-import { handleOkf, handleParse, handleQueryAnswer } from "./handle.js";
+import { handleOkf, handlePackageDigest, handleParse, handleQueryAnswer } from "./handle.js";
 import type { ConvexGateway } from "./types.js";
 
 function convex(partial: Partial<ConvexGateway> & Pick<ConvexGateway, "validateKey">): ConvexGateway {
@@ -256,6 +256,73 @@ describe("hosted gateway", () => {
     const body = result.body as { title: string };
     assert.equal(body.title, "Warranty deed");
     assert.deepEqual(recorded, ["anthropic"]);
+  });
+
+  it("bills one package digest from the concept catalog", async () => {
+    const recorded: string[] = [];
+    const result = await handlePackageDigest(
+      {
+        convex: convex({
+          async validateKey() {
+            return { ok: true, accountId: "acc", billable: true, fallback: false };
+          },
+          async recordUsage(args) {
+            recorded.push(args.kind);
+            return { creditsRemaining: 4, lowCredits: false, autoReload: false };
+          },
+        }),
+        env: { ANTHROPIC_API_KEY: "master" },
+        fetchImpl: async () =>
+          json({
+            model: "claude-haiku-5-5",
+            content: [
+              {
+                type: "text",
+                text: "Deeds, leases, and zoning memos for one parcel.",
+              },
+            ],
+            usage: { input_tokens: 80, output_tokens: 18 },
+          }),
+      },
+      {
+        token: "zw",
+        catalog: "- Deed: warranty\n- Lease: warehouse",
+        count: 2,
+        bodyBudget: 480,
+      },
+    );
+    assert.equal(result.status, 200);
+    const body = result.body as { summary: string };
+    assert.equal(body.summary, "Deeds, leases, and zoning memos for one parcel.");
+    assert.deepEqual(recorded, ["okf"]);
+  });
+
+  it("does not call Claude for a package digest when credits are exhausted", async () => {
+    const app = await buildApp({
+      convex: convex({
+        async validateKey() {
+          return { ok: true, accountId: "acc", billable: false, fallback: true };
+        },
+        async recordUsage() {
+          throw new Error("should not debit");
+        },
+      }),
+      fetchImpl: async () => {
+        throw new Error("should not call Claude");
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/okf/digest",
+      headers: {
+        authorization: "Bearer test-key",
+        "content-type": "application/json",
+      },
+      payload: { catalog: "- Deed: warranty", count: 1 },
+    });
+    assert.equal(res.statusCode, 402);
+    assert.equal(res.json().code, "okf_fallback_host_llm");
+    await app.close();
   });
 });
 

@@ -44,11 +44,18 @@ export {
 export {
   PACKAGE_DIGEST_MAX_CHARS,
   loadOkfConceptEntriesFromDir,
+  packageDigestEntriesFromOkfDir,
+  packageDigestEntriesFromOkfFiles,
   parseOkfIndexFileEntries,
   synthesizePackageDigestFromEntries,
   synthesizePackageDigestFromOkfDir,
   synthesizePackageDigestFromOkfFiles,
 } from "./package-digest.js";
+export {
+  clampPackageDigest,
+  packageDigestCatalog,
+  resolvePackageDigest,
+} from "./package-digest-ai.js";
 export {
   DEFAULT_OKF_PROVIDER,
   OKF_PROVIDERS,

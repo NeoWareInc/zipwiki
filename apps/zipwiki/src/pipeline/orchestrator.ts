@@ -555,7 +555,7 @@ export async function runStage(
           onboarding,
           pack: project.pack,
         });
-        runCompressPhase({
+        await runCompressPhase({
           members,
           stageDir,
           outputPath,
@@ -603,7 +603,7 @@ export async function runStage(
             onboarding,
             pack: project.pack,
           });
-          runCompressPhase({
+          await runCompressPhase({
             members,
             stageDir,
             outputPath,
