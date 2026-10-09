@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { readZipEntry } from "../lib/archive/index.js";
 import {
   ensureStageDirs,
   writeParsedFile,
@@ -78,5 +79,33 @@ describe("stage phases (smoke)", () => {
     assert.ok(existsSync(join(stageDir, "wiki", "parsed", "a.pdf.md")));
     assert.ok(!existsSync(join(stageDir, "wiki", "parsed", "a.md")));
     assert.equal(stagePaths(stageDir).stageDir, stageDir);
+  });
+
+  it("pack seals ai.digest from OKF descriptions", async () => {
+    const docs = mkdtempSync(join(tmpdir(), "zipwiki-docs-"));
+    const a = join(docs, "alpha.txt");
+    const b = join(docs, "beta.txt");
+    writeFileSync(a, "Alpha note about packing invoices.\n");
+    writeFileSync(b, "Beta note about reading statutes.\n");
+    const stageDir = mkdtempSync(join(tmpdir(), "zipwiki-stage-"));
+    const output = join(stageDir, "digest-pack.zipwiki");
+    const r = await runStage([a, b], {
+      phase: "all",
+      stageDir,
+      output,
+      quiet: true,
+      noAiOkf: true,
+      yes: true,
+      skipAccountSync: true,
+      concurrency: 1,
+    });
+    assert.ok(r.outputPath);
+    assert.ok(existsSync(r.outputPath!));
+    const manifest = JSON.parse(
+      readZipEntry(r.outputPath!, "META-INF/manifest.json").toString("utf-8"),
+    );
+    assert.equal(typeof manifest.ai?.digest, "string");
+    assert.match(manifest.ai.digest, /^2 documents: /);
+    assert.ok(manifest.ai.digest.length <= 280);
   });
 });

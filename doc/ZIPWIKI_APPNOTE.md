@@ -340,7 +340,7 @@ itself stays sparse.
 | `parsedCount` | number | RECOMMENDED | Count of files under `R/parsed/**` that end in `.md` and are not under `.assets/` |
 | `originalBytes` | number | OPTIONAL | Sum of original file sizes, in bytes, measured at pack time |
 | `assetEntryCount` | number | OPTIONAL | Count of zip entries under any `R/parsed/**/**.assets/` |
-| `digest` | string | OPTIONAL | Package-level one-line summary |
+| `digest` | string | OPTIONAL | Package-level one-line summary (~280 chars). ZipWiki **SHOULD** set this after OKF finalize from `wiki/okf/index.md` `# Files` descriptions (fallback: each concept’s frontmatter `description`, then `title`). Omit when there are no OKF concepts. |
 | `okf` | object | OPTIONAL | OKF availability (§5.2) |
 | `parser` | object | OPTIONAL | Default parse engine (§5.3) |
 | `primaries` | array | OPTIONAL | Advisory per-primary summary (§5.1). **Not** an inventory — ZIP central directory + Extra Field `0x014E` remain authoritative |
@@ -868,6 +868,11 @@ ZipWiki writers **SHOULD** emit:
 | `wiki/okf/document.md` | Legacy package-level concept; accepted, not preferred for new multi-primary packs |
 | `wiki/okf/log.md` | Not written. OKF allows an optional log; ZipWiki does not emit one |
 
+After concept cards and `index.md` are written, ZipWiki **SHOULD** synthesize
+`ai.digest` (§5) from the `# Files` list (or concept frontmatter when the
+index is absent) so agents can judge package relevance before opening OKF or
+parses. Updates that rebuild OKF **SHOULD** refresh `ai.digest` the same way.
+
 Consumers **MUST NOT** reject a bundle for missing `index.md` (OKF §11).
 
 The entire `okf/` tree is **optional**. Packages **MAY** ship `parsed/`
@@ -1002,7 +1007,8 @@ sources
   → parse (LiteParse default; LlamaParse escalate or hosted)
   → optional omit-original for omittable types
   → optional OKF (hosted, BYO, or skip)
-  → build META-INF/manifest.json (ai registry)
+  → rebuild wiki/okf/index.md (+ topics); synthesize ai.digest from OKF
+  → build META-INF/manifest.json (ai registry, including ai.digest when OKF present)
   → ZIP: manifest (package compression) → wiki tree → included primaries
   → ZIP CRC-32 on every member (APPNOTE local + central headers)
   → Extra Field 0x014E on members only when requested (`--sha256`)
@@ -1166,4 +1172,5 @@ Archives declare `specVersion` in `META-INF/manifest.json`. Readers
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
+| 2026-10-09 | **0.2.0-draft** | Producers **SHOULD** set `ai.digest` after OKF finalize from `wiki/okf/index.md` `# Files` descriptions (fallback: concept frontmatter); refresh on `update` when OKF changes; omit when no OKF concepts. One-line, ~280 characters. |
 | 2026-09-16 | **0.2.0-draft** | Initial ZipWiki Application Note: AI-root rules (`wiki/` default, `parsed/`, per-primary OKF, `ai` registry, omit-original, L4) plus producer detail (`.zipwiki` filename, `"zipwiki"` profile, collision rewrite `content/N/`, omittable extension set, stage tree, parser extra fields, pack / enrich pipeline, parsed origins Extra Field `0x014F` v1 TLV with optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes (tag `0x05`); field version stays 1 until first release). Default integrity is ZIP CRC-32; Extra Field `0x014E` and origin SHA-256 are opt-in; Merkle v1 root is computed only for blockchain sidecars. |

@@ -305,6 +305,90 @@ describe("updatePackage", () => {
     assert.deepEqual(findOrphanParses(names), []);
   });
 
+  it("update refreshes ai.digest from remaining OKF descriptions", async () => {
+    const keep = join(dir, "digest-keep.txt");
+    const gone = join(dir, "digest-gone.txt");
+    writeFileSync(keep, "keep text\n");
+    writeFileSync(gone, "gone text\n");
+    const out = join(dir, "digest-refresh.zipwiki");
+    writeNzipCollectionBundle({
+      outputPath: out,
+      members: [
+        {
+          originalPath: keep,
+          originalName: "digest-keep.txt",
+          structuredMarkdown: "# keep\n",
+        },
+        {
+          originalPath: gone,
+          originalName: "digest-gone.txt",
+          structuredMarkdown: "# gone\n",
+        },
+      ],
+      digest: "stale package summary that must be replaced",
+      okf: {
+        files: [
+          {
+            name: "digest-keep.md",
+            data: [
+              "---",
+              "type: Document",
+              "title: Keep",
+              "description: keep concept summary",
+              "tags: []",
+              "---",
+              "",
+            ].join("\n"),
+          },
+          {
+            name: "digest-gone.md",
+            data: [
+              "---",
+              "type: Document",
+              "title: Gone",
+              "description: gone concept summary",
+              "tags: []",
+              "---",
+              "",
+            ].join("\n"),
+          },
+          {
+            name: "index.md",
+            data: [
+              "---",
+              'okf_version: "0.2"',
+              "---",
+              "",
+              "# Files",
+              "",
+              "* [Gone](digest-gone.md) - gone concept summary",
+              "* [Keep](digest-keep.md) - keep concept summary",
+              "",
+            ].join("\n"),
+          },
+        ],
+      },
+    });
+
+    await updatePackage({
+      package: out,
+      quiet: true,
+      del: ["digest-gone.txt"],
+      noAiOkf: true,
+    });
+
+    const after = loadCopyableArchive(out);
+    const man = JSON.parse(
+      after.entries
+        .find((e) => e.name === "META-INF/manifest.json")!
+        .data.toString("utf8"),
+    );
+    assert.equal(typeof man.ai?.digest, "string");
+    assert.match(man.ai.digest, /keep concept summary/);
+    assert.doesNotMatch(man.ai.digest, /gone concept summary/);
+    assert.doesNotMatch(man.ai.digest, /stale package summary/);
+  });
+
   it("delete omitted original by parse-member key", async () => {
     const pdf = join(dir, "deed.pdf");
     writeFileSync(pdf, Buffer.from("%PDF-deed\n"));

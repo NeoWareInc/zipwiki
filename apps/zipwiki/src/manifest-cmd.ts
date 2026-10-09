@@ -24,6 +24,7 @@ import {
   conceptFileNameFor,
   parseFrontmatterFields,
   splitFrontmatter,
+  synthesizePackageDigestFromOkfDir,
 } from "./lib/okf/index.js";
 import {
   SUPPORTED_EXTENSIONS,
@@ -224,11 +225,16 @@ export async function runManifestCommand(
         }
       : undefined;
 
+    const packageDigest = okfPresent
+      ? synthesizePackageDigestFromOkfDir(okfDir)
+      : undefined;
+
     const manifest = buildNeoZipManifest({
       aiRoot,
       parsedDir: DEFAULT_PARSED_DIR,
       primaries,
       okf: aiOkf,
+      ...(packageDigest ? { digest: packageDigest } : {}),
       parserEngine: opts.parserEngine ?? project.parser.engine,
       parser: {
         engine: opts.parserEngine ?? project.parser.engine,

@@ -37,6 +37,7 @@ import {
   conceptFileNameFor,
   finalizeOkfDirectory,
   resolveOkfProfile,
+  synthesizePackageDigestFromOkfDir,
   type OkfProfile,
 } from "../lib/okf/index.js";
 import {
@@ -761,6 +762,11 @@ export function runCompressPhase(input: {
     originFile: input.opts.originFile,
   });
 
+  const packageDigest =
+    input.opts.noOkf !== true && okfFiles.length > 0
+      ? synthesizePackageDigestFromOkfDir(okfDir)
+      : undefined;
+
   const written = writeNzipCollectionBundle({
     outputPath: input.outputPath,
     title: input.title,
@@ -790,6 +796,7 @@ export function runCompressPhase(input: {
       };
     }),
     ...(okfFiles.length > 0 ? { okf: { files: okfFiles } } : {}),
+    ...(packageDigest ? { digest: packageDigest } : {}),
     compression: compression as "zstd" | "deflate" | "store",
     level,
     storeSuffixes:

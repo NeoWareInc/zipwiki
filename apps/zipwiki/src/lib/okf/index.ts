@@ -42,6 +42,14 @@ export {
   type OkfMarkdownFile,
 } from "./bundle.js";
 export {
+  PACKAGE_DIGEST_MAX_CHARS,
+  loadOkfConceptEntriesFromDir,
+  parseOkfIndexFileEntries,
+  synthesizePackageDigestFromEntries,
+  synthesizePackageDigestFromOkfDir,
+  synthesizePackageDigestFromOkfFiles,
+} from "./package-digest.js";
+export {
   DEFAULT_OKF_PROVIDER,
   OKF_PROVIDERS,
   OKF_PROVIDER_CONFIGS,

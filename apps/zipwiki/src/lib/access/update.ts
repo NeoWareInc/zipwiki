@@ -57,6 +57,7 @@ import {
   splitFrontmatter,
 } from "../okf/frontmatter.js";
 import { syncOkfArchive } from "../okf/bundle.js";
+import { synthesizePackageDigestFromOkfFiles } from "../okf/package-digest.js";
 import { parseOneFile, okfOneFile, parserUseForEngine } from "../../pipeline/phases.js";
 import {
   loadZipwikiConfig,
@@ -507,12 +508,28 @@ function patchManifest(
     okf = { ...okf, present: false };
   }
   const originalBytes = measuredOriginalBytes(primaries, map, inventory);
+  const okfRoot = inventory.okfRoot.replace(/\\/g, "/").replace(/\/?$/, "/");
+  const packageDigest =
+    okfNames.length > 0 || hasIndex
+      ? synthesizePackageDigestFromOkfFiles(
+          [...map.values()]
+            .filter(
+              (e) =>
+                e.name.replace(/\\/g, "/").startsWith(okfRoot) &&
+                e.name.endsWith(".md"),
+            )
+            .map((e) => ({
+              name: e.name.replace(/\\/g, "/").slice(okfRoot.length),
+              data: e.data.toString("utf8"),
+            })),
+        )
+      : undefined;
   const built = buildNeoZipManifest({
     createdAt: man.createdAt,
     profiles: man.profiles,
     aiRoot: inventory.aiRoot,
     parsedDir: inventory.parsedDir,
-    digest: previous.digest,
+    ...(packageDigest ? { digest: packageDigest } : {}),
     primaries,
     ...(okf?.present ? { okf } : {}),
     parser: previous.parser,
@@ -524,6 +541,9 @@ function patchManifest(
     ...built.ai,
     ...(okf && !okf.present ? { okf } : {}),
   };
+  if (!packageDigest && man.ai && "digest" in man.ai) {
+    delete (man.ai as { digest?: string }).digest;
+  }
   map.set(BUNDLE_PATHS.manifest, {
     name: BUNDLE_PATHS.manifest,
     data: Buffer.from(serializeNeoZipManifest(man), "utf8"),
