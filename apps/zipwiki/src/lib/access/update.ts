@@ -523,10 +523,14 @@ async function patchManifest(
       name: e.name.replace(/\\/g, "/").slice(okfRoot.length),
       data: e.data.toString("utf8"),
     }));
+  const indexMarkdown = okfMarkdown.find(
+    (file) => file.name === "index.md" || file.name.endsWith("/index.md"),
+  )?.data;
   const packageDigest =
     okfNames.length > 0 || hasIndex
       ? await resolvePackageDigest({
           entries: packageDigestEntriesFromOkfFiles(okfMarkdown),
+          ...(indexMarkdown ? { indexMarkdown } : {}),
           useAi: !noAiOkf,
         })
       : undefined;

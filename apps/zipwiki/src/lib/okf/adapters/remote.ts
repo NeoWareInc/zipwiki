@@ -105,11 +105,12 @@ export class RemoteOkfAdapter {
     return body as OkfEnrichment;
   }
 
-  /** One package summary from concept titles and descriptions. */
+  /** One package summary from `wiki/okf/index.md`. */
   async digest(input: {
     count: number;
-    catalog: string;
+    index: string;
     bodyBudget: number;
+    missing?: string[];
   }): Promise<string> {
     const base = this.api.url?.replace(/\/+$/, "");
     if (!base) {
@@ -128,9 +129,12 @@ export class RemoteOkfAdapter {
       method: "POST",
       headers,
       body: JSON.stringify({
-        catalog: input.catalog,
+        index: input.index,
         count: input.count,
         bodyBudget: input.bodyBudget,
+        ...(input.missing && input.missing.length > 0
+          ? { missing: input.missing }
+          : {}),
         ...(createId ? { createId } : {}),
       }),
     });

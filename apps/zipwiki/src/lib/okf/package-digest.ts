@@ -14,7 +14,7 @@ import {
 } from "./render.js";
 
 /** Cap for `ai.digest` (APPNOTE §5). The model summary and the local join both stop here. */
-export const PACKAGE_DIGEST_MAX_CHARS = 500;
+export const PACKAGE_DIGEST_MAX_CHARS = 1000;
 
 const FILES_HEADING = /^#\s+Files\s*$/i;
 const TOPICS_HEADING = /^#\s+/;

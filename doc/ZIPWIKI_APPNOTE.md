@@ -340,7 +340,7 @@ itself stays sparse.
 | `parsedCount` | number | RECOMMENDED | Count of files under `R/parsed/**` that end in `.md` and are not under `.assets/` |
 | `originalBytes` | number | OPTIONAL | Sum of original file sizes, in bytes, measured at pack time |
 | `assetEntryCount` | number | OPTIONAL | Count of zip entries under any `R/parsed/**/**.assets/` |
-| `digest` | string | OPTIONAL | Package summary, at most 500 characters, starting with the document count (`N documents: `). When OKF used a model, ZipWiki asks that model once to summarize the concept titles and descriptions. Otherwise, and when that call fails, ZipWiki joins those descriptions in filename order. Omit when there are no OKF concepts. |
+| `digest` | string | OPTIONAL | Package summary, at most 1000 characters, starting with the document count (`N documents: `). When OKF used a model, ZipWiki sends `wiki/okf/index.md` and asks for one summary of the whole `# Files` list. Otherwise ZipWiki joins those descriptions in filename order. When the model call fails and that join would be cut off, the stored line still names every group. Omit when there are no OKF concepts. |
 | `okf` | object | OPTIONAL | OKF availability (§5.2) |
 | `parser` | object | OPTIONAL | Default parse engine (§5.3) |
 | `primaries` | array | OPTIONAL | Advisory per-primary summary (§5.1). **Not** an inventory — ZIP central directory + Extra Field `0x014E` remain authoritative |
@@ -870,11 +870,13 @@ ZipWiki writers **SHOULD** emit:
 
 After concept cards and `index.md` are written, ZipWiki **SHOULD** set
 `ai.digest` (§5). When the cards were written with a model, one more call
-summarizes their titles and descriptions into at most 500 characters and
-keeps the document count at the start. `--no-ai-okf`, a missing model, and a
-failed call join the `# Files` descriptions (or concept frontmatter when the
-index is absent) in filename order instead. Updates that rebuild OKF
-**SHOULD** refresh `ai.digest` the same way.
+reads `wiki/okf/index.md` and writes at most 1000 characters. The summary
+covers the whole `# Files` list. A draft that skips a repeated subject is
+rewritten once. The document count stays at the start. `--no-ai-okf` and a
+missing model join the `# Files` descriptions (or concept frontmatter when the
+index is absent) in filename order. A failed model call uses that join when it
+fits, and otherwise a shorter line that still names every group. Updates that
+rebuild OKF **SHOULD** refresh `ai.digest` the same way.
 
 Consumers **MUST NOT** reject a bundle for missing `index.md` (OKF §11).
 
@@ -1010,7 +1012,7 @@ sources
   → parse (LiteParse default; LlamaParse escalate or hosted)
   → optional omit-original for omittable types
   → optional OKF (hosted, BYO, or skip)
-  → rebuild wiki/okf/index.md (+ topics); set ai.digest (model summary, or joined descriptions)
+  → rebuild wiki/okf/index.md (+ topics); set ai.digest (model summary of index.md, or joined descriptions)
   → build META-INF/manifest.json (ai registry, including ai.digest when OKF present)
   → ZIP: manifest (package compression) → wiki tree → included primaries
   → ZIP CRC-32 on every member (APPNOTE local + central headers)
@@ -1175,5 +1177,5 @@ Archives declare `specVersion` in `META-INF/manifest.json`. Readers
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
-| 2026-10-09 | **0.2.0-draft** | `ai.digest` is at most 500 characters and starts with the document count. A model summarizes concept titles and descriptions when OKF used a model; otherwise the `# Files` descriptions are joined. Refresh on `update`. Omit when there are no OKF concepts. |
+| 2026-10-09 | **0.2.0-draft** | `ai.digest` is at most 1000 characters and starts with the document count. A model reads `wiki/okf/index.md` and summarizes the whole `# Files` list. Otherwise those descriptions are joined. A failed call that would cut that join still names every group. Refresh on `update`. Omit when there are no OKF concepts. |
 | 2026-09-16 | **0.2.0-draft** | Initial ZipWiki Application Note: AI-root rules (`wiki/` default, `parsed/`, per-primary OKF, `ai` registry, omit-original, L4) plus producer detail (`.zipwiki` filename, `"zipwiki"` profile, collision rewrite `content/N/`, omittable extension set, stage tree, parser extra fields, pack / enrich pipeline, parsed origins Extra Field `0x014F` v1 TLV with optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes (tag `0x05`); field version stays 1 until first release). Default integrity is ZIP CRC-32; Extra Field `0x014E` and origin SHA-256 are opt-in; Merkle v1 root is computed only for blockchain sidecars. |

@@ -17,8 +17,15 @@ node_modules
 **/.env.*
 
 artwork
-*.zipwiki
-*.nzip
+**/*.zipwiki
+**/*.nzip
+
+# Local data the API image never copies. `fly deploy .` still uploads it
+# unless it is listed here.
+knowledge
+.pack
+apps/web/public/releases
+apps/zipwiki/eng.traineddata
 
 .DS_Store
 **/.DS_Store

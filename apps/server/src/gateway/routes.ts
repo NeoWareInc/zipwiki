@@ -450,9 +450,13 @@ export async function registerGateway(
     }
     const raw = body as Record<string, unknown>;
     const catalog = typeof raw.catalog === "string" ? raw.catalog : "";
+    const index = typeof raw.index === "string" ? raw.index : "";
     const count = typeof raw.count === "number" ? raw.count : Number(raw.count);
     const bodyBudget =
       typeof raw.bodyBudget === "number" ? raw.bodyBudget : undefined;
+    const missing = Array.isArray(raw.missing)
+      ? raw.missing.filter((item): item is string => typeof item === "string")
+      : undefined;
     const model = typeof raw.model === "string" ? raw.model : undefined;
     const createId =
       typeof raw.createId === "string" && raw.createId.trim()
@@ -460,9 +464,11 @@ export async function registerGateway(
         : undefined;
     const result = await handlePackageDigest(deps, {
       token,
-      catalog,
+      ...(catalog ? { catalog } : {}),
+      ...(index ? { index } : {}),
       count: Number.isFinite(count) ? count : 0,
       ...(bodyBudget !== undefined ? { bodyBudget } : {}),
+      ...(missing && missing.length > 0 ? { missing } : {}),
       ...(model ? { model } : {}),
       ...(createId ? { createId } : {}),
     });

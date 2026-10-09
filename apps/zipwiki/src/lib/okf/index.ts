@@ -53,7 +53,7 @@ export {
 } from "./package-digest.js";
 export {
   clampPackageDigest,
-  packageDigestCatalog,
+  packageDigestIndexText,
   resolvePackageDigest,
 } from "./package-digest-ai.js";
 export {

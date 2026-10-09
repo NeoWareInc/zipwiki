@@ -701,7 +701,13 @@ export async function invokeAnthropic(
 }
 
 export async function invokePackageDigest(
-  input: { catalog: string; count: number; bodyBudget: number },
+  input: {
+    catalog?: string;
+    index?: string;
+    count: number;
+    bodyBudget: number;
+    missing?: string[];
+  },
   apiKey: string,
   fetchImpl: typeof fetch,
   model?: string | null,
@@ -712,18 +718,21 @@ export async function invokePackageDigest(
   outputTokens?: number;
 }> {
   const resolved = resolveHostedOkfModel(model);
-  const count = Number.isFinite(input.count) ? Math.max(1, Math.floor(input.count)) : 1;
-  const bodyBudget = Math.min(500, Math.max(32, Math.floor(input.bodyBudget) || 480));
-  const catalog = input.catalog.slice(0, 60_000);
+  const bodyBudget = Math.min(1000, Math.max(32, Math.floor(input.bodyBudget) || 980));
+  const index = (input.index?.trim() || input.catalog?.trim() || "").slice(0, 60_000);
+  const missing = (input.missing ?? []).filter((name) => name.trim());
+  const coverage = missing.length
+    ? `A previous draft omitted ${missing.join(", ")}. Name every omitted subject this time.`
+    : "Cover the whole # Files list. Do not stop after the first bullets.";
   const prompt = [
     "You write one package summary for a ZipWiki archive.",
-    "Each line is a concept card: a title and a description. Those cards already summarize the files.",
-    `Write one plain-text summary of the collection, at most ${bodyBudget} characters.`,
-    "Cover the subjects and document kinds that matter across the set, including cards later in the list.",
+    "The document below is wiki/okf/index.md. Each bullet under # Files is one record: a title and a description.",
+    "Read every # Files bullet before you write.",
+    `Write one plain-text summary of at most ${bodyBudget} characters.`,
+    coverage,
     "Do not list every file. Do not start with a count of documents. No markdown.",
     "",
-    `${count} concept cards:`,
-    catalog,
+    index,
   ].join("\n");
   const res = await fetchImpl("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -734,7 +743,7 @@ export async function invokePackageDigest(
     },
     body: JSON.stringify({
       model: resolved,
-      max_tokens: 512,
+      max_tokens: 8192,
       ...haiku55Body(resolved),
       messages: [{ role: "user", content: prompt }],
     }),
@@ -742,6 +751,7 @@ export async function invokePackageDigest(
   if (!res.ok) throw new Error(`Anthropic failed (${res.status})`);
   const body = (await res.json()) as {
     model?: string;
+    stop_reason?: string;
     content?: Array<{ type?: string; text?: string }>;
     usage?: { input_tokens?: number; output_tokens?: number };
   };
@@ -751,7 +761,14 @@ export async function invokePackageDigest(
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!summary) throw new Error("Claude returned an empty package digest");
+  if (!summary) {
+    const types =
+      (body.content ?? []).map((block) => block.type ?? "unknown").join(", ") ||
+      "none";
+    throw new Error(
+      `Claude returned an empty package digest (stop=${body.stop_reason ?? "unknown"}, blocks=${types})`,
+    );
+  }
   return {
     summary,
     model: body.model ?? resolved,

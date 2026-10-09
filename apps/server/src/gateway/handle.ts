@@ -216,9 +216,11 @@ export async function handlePackageDigest(
   deps: GatewayDeps,
   args: {
     token: string;
-    catalog: string;
+    catalog?: string;
+    index?: string;
     count: number;
     bodyBudget?: number;
+    missing?: string[];
     model?: string;
     createId?: string;
   },
@@ -246,16 +248,19 @@ export async function handlePackageDigest(
   }
   const apiKey = masterKey(env, "ANTHROPIC_API_KEY");
   if (!apiKey) return { status: 503, body: { error: "anthropic_not_configured" } };
-  const catalog = args.catalog.trim();
-  if (!catalog) return { status: 400, body: { error: "invalid_request" } };
+  const index = args.index?.trim() || args.catalog?.trim() || "";
+  if (!index) return { status: 400, body: { error: "invalid_request" } };
 
   let completion;
   try {
     completion = await invokePackageDigest(
       {
-        catalog,
+        index,
         count: args.count,
-        bodyBudget: args.bodyBudget ?? 480,
+        bodyBudget: args.bodyBudget ?? 980,
+        ...(args.missing && args.missing.length > 0
+          ? { missing: args.missing }
+          : {}),
       },
       apiKey,
       fetchImpl,

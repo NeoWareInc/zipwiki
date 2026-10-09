@@ -803,10 +803,14 @@ export async function runCompressPhase(input: {
     originFile: input.opts.originFile,
   });
 
+  const indexPath = join(okfDir, "index.md");
   const packageDigest =
     input.opts.noOkf !== true && okfFiles.length > 0
       ? await resolvePackageDigest({
           entries: packageDigestEntriesFromOkfDir(okfDir),
+          ...(existsSync(indexPath)
+            ? { indexMarkdown: readFileSync(indexPath, "utf8") }
+            : {}),
           useAi: input.opts.noAiOkf !== true,
         })
       : undefined;

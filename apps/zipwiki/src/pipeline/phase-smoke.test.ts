@@ -106,6 +106,6 @@ describe("stage phases (smoke)", () => {
     );
     assert.equal(typeof manifest.ai?.digest, "string");
     assert.match(manifest.ai.digest, /^2 documents: /);
-    assert.ok(manifest.ai.digest.length <= 500);
+    assert.ok(manifest.ai.digest.length <= 1000);
   });
 });
