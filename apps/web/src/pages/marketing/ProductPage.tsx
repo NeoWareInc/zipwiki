@@ -98,10 +98,9 @@ export default function ProductPage() {
               </div>
             ))}
           </div>
-          <div className="mt-10 flex flex-wrap gap-4 text-sm font-semibold">
-            <SecondaryCta to="/mcp">MCP for agents</SecondaryCta>
-            <SecondaryCta to="/cli">CLI for scripts</SecondaryCta>
-            <SecondaryCta to="/install">Install</SecondaryCta>
+          <div className="mt-10 flex flex-wrap gap-3">
+            <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
+            <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
           </div>
         </Section>
       </section>

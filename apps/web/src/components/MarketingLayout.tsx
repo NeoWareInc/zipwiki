@@ -153,12 +153,6 @@ export function MarketingLayout() {
             <Link to="/how-it-works" className="hover:text-(--accent)">
               How it works
             </Link>
-            <Link to="/install" className="hover:text-(--accent)">
-              Install
-            </Link>
-            <Link to="/pricing" className="hover:text-(--accent)">
-              Pricing
-            </Link>
             <Link to="/terms" className="hover:text-(--accent)">
               Terms
             </Link>

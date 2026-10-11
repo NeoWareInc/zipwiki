@@ -32,7 +32,7 @@ export default function McpPage() {
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
           <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
-          <SecondaryCta to="/cli">CLI parity</SecondaryCta>
+          <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
         </div>
       </Section>
 

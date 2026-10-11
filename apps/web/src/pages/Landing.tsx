@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import UserFlow from "../UserFlow";
 import {
   HOME_OUTCOMES,
@@ -86,12 +85,6 @@ export default function Landing() {
               <p className="text-sm leading-relaxed text-(--muted)">
                 {surface.body}
               </p>
-              <Link
-                to={surface.to}
-                className="inline-block text-sm font-semibold text-(--accent) underline-offset-4 hover:underline"
-              >
-                {surface.cta} →
-              </Link>
             </div>
           ))}
         </div>

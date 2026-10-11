@@ -12,11 +12,6 @@ export const SALES_HREF =
 export const NAV = [
   { to: "/product", label: "Product" },
   { to: "/how-it-works", label: "How it works" },
-  { to: "/mcp", label: "MCP" },
-  { to: "/cli", label: "CLI" },
-  { to: "/install", label: "Install" },
-  { to: "/pricing", label: "Pricing" },
-  { to: "/roadmap", label: "Roadmap" },
 ] as const;
 
 export const PAGE_TITLES: Record<string, string> = {
@@ -64,20 +59,14 @@ export const HOME_SURFACES = [
   {
     title: "MCP / agents",
     body: "Stdio tools so Cursor, Claude, and other hosts search and read a local .zipwiki without uploading it.",
-    to: "/mcp",
-    cta: "MCP",
   },
   {
     title: "CLI",
     body: "The same engine for pack, open, search, and scripts—local-first, account optional.",
-    to: "/cli",
-    cta: "CLI",
   },
   {
     title: "Web portal",
     body: "Account, credits, and human-friendly query. Control plane—not a replacement for the portable file.",
-    to: "/product",
-    cta: "Product",
   },
 ] as const;
 

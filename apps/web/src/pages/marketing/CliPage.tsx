@@ -25,8 +25,8 @@ export default function CliPage() {
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
           <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
-          <SecondaryCta to="/install">Install status</SecondaryCta>
-          <SecondaryCta to="/mcp">MCP for agents</SecondaryCta>
+          <SecondaryCta to="/product">Product</SecondaryCta>
+          <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
         </div>
       </Section>
 

@@ -125,7 +125,7 @@ Not another cloud drive. Not generic RAG. ZipWiki keeps a portable archive as th
 5. **Smaller when it matters** — Omit bulky originals; keep origin links and checksums. Text knowledge from bloated documents often shrinks upwards of 99%—about 1/100th the original size.  
 6. **Evidence stays grounded** — Answers cite the OKF index and extracted markdown inside the package—not a hosted black box.
 
-Reserve `wiki/` path details for How it works. Primary nav: Product, How it works, MCP, CLI, Install, Pricing, Roadmap. Install page has no public installer link until Beta. Home CTA: Explore product capabilities → `/product`.
+Reserve `wiki/` path details for How it works. Primary nav (visible): Product and How it works only. MCP, CLI, Install, Pricing, and Roadmap pages stay reachable by URL. Install page has no public installer link until Beta. Home CTA: Explore product capabilities → `/product`.
 
 ---
 
