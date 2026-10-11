@@ -7,7 +7,7 @@ const FILES = [
 const LOOP = [
   { step: "Catalog", detail: "What’s inside the package" },
   { step: "Search", detail: "“homestead exemption”" },
-  { step: "Read", detail: "OKF first, then parsed" },
+  { step: "Read", detail: "OKF first, then .md text" },
   { step: "Origin", detail: "laws.flrules.org/2025/1" },
 ] as const;
 
@@ -51,13 +51,13 @@ export default function UserFlow() {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-(--ink)">
-              wiki/okf/
+              OKF index
             </span>
             <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-(--ink)">
-              wiki/parsed/
+              Extracted markdown
             </span>
             <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-(--ink)">
-              origin 0x014F
+              Origin links
             </span>
           </div>
         </div>

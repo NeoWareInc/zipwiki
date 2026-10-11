@@ -49,7 +49,7 @@ export function MarketingLayout() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-5 text-sm lg:flex">
+          <nav className="hidden items-center gap-3.5 text-sm xl:gap-5 lg:flex">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
@@ -139,7 +139,7 @@ export function MarketingLayout() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-(--muted) sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-medium text-(--ink)">
-              ZipWiki — install the plugin, keep a .zipwiki
+              ZipWiki — portable document memory with an embedded AI index
             </p>
             <p className="mt-1">© 2026 NeoWare Inc.</p>
           </div>
@@ -147,11 +147,11 @@ export function MarketingLayout() {
             <Link to="/login" className="hover:text-(--accent)">
               Sign in
             </Link>
-            <Link to="/#plugin" className="hover:text-(--accent)">
-              Plugin
+            <Link to="/product" className="hover:text-(--accent)">
+              Product
             </Link>
-            <Link to="/pricing" className="hover:text-(--accent)">
-              Pricing
+            <Link to="/how-it-works" className="hover:text-(--accent)">
+              How it works
             </Link>
             <Link to="/terms" className="hover:text-(--accent)">
               Terms

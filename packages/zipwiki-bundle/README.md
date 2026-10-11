@@ -10,7 +10,7 @@ zipwiki --help
 zipwiki login
 ```
 
-Pick the tarball that matches your OS and CPU. The install page lists them: https://zipwiki.ai/install
+Pick the tarball that matches your OS and CPU. The download page lists them when public: https://zipwiki.ai/download
 
 Hosted questions (`zipwiki ask` and the MCP `ask` tool) use the account from `zipwiki login`. Local pack with LiteParse does not.
 
