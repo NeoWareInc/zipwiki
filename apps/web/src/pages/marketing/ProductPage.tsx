@@ -1,6 +1,9 @@
 import {
-  PRODUCT_PILLARS,
+  CLASSIC_ZIP_PROBLEM,
+  HOME_OUTCOMES,
+  PRODUCT_CAPABILITIES,
   TRUST_BULLETS,
+  WAITLIST_HREF,
 } from "../../lib/marketing-copy";
 import {
   FeatureGrid,
@@ -16,15 +19,61 @@ export default function ProductPage() {
       <Section>
         <PageHero
           kicker="Product"
-          title="Ask your agent. Keep a file."
-          lead="ZipWiki is not three CLIs to memorize. Install the plugin, then say what you want packed or found. Hosted parse is optional."
+          title="Archival optimized for understanding"
+          lead="Pack once → extract document text into compact markdown plus an OKF index inside the package → agents open, search, and read only what they need. Models consume extracted markdown, not binaries."
         />
-        <div className="mt-10">
-          <FeatureGrid items={PRODUCT_PILLARS} />
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          {CLASSIC_ZIP_PROBLEM.map((col) => (
+            <div key={col.title} className="space-y-2">
+              <h2 className="font-display text-xl font-semibold text-(--ink)">
+                {col.title}
+              </h2>
+              <p className="text-sm leading-relaxed text-(--muted)">{col.body}</p>
+            </div>
+          ))}
         </div>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <PrimaryCta to="/#plugin">Install the plugin</PrimaryCta>
-          <SecondaryCta to="/how-it-works">See the loop</SecondaryCta>
+      </Section>
+
+      <section className="border-t border-(--line) bg-white/50">
+        <Section>
+          <h2 className="font-display text-3xl font-semibold text-(--ink)">
+            Differentiating capabilities
+          </h2>
+          <p className="mt-3 max-w-2xl text-(--muted)">
+            What ships today—extracted markdown for AI speedup, an embedded
+            index, and selective access without a private server just to
+            understand what you hold.
+          </p>
+          <div className="mt-10">
+            <FeatureGrid items={PRODUCT_CAPABILITIES} columns={2} />
+          </div>
+        </Section>
+      </section>
+
+      <Section>
+        <h2 className="font-display text-3xl font-semibold tracking-tight text-(--ink)">
+          Portable document memory with an embedded AI index
+        </h2>
+        <p className="mt-3 max-w-2xl text-(--muted)">
+          Not another cloud drive. Not generic RAG. ZipWiki keeps a portable
+          archive as the distribution unit, then adds extracted markdown and an
+          OKF index inside the same file.
+        </p>
+        <ul className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {HOME_OUTCOMES.map((item) => (
+            <li key={item.title} className="space-y-2">
+              <h3 className="font-display text-lg font-semibold text-(--ink)">
+                {item.title}
+              </h3>
+              <p className="text-sm leading-relaxed text-(--muted)">
+                {item.body}
+              </p>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-10 flex flex-wrap gap-3">
+          <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
+          <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
         </div>
       </Section>
 
@@ -35,21 +84,24 @@ export default function ProductPage() {
           </h2>
           <p className="mt-3 max-w-2xl text-(--muted)">
             Integrity and layout are properties of the{" "}
-            <code className="text-sm">.zipwiki</code>—not a tutorial for a
-            terminal.
+            <code className="text-sm">.zipwiki</code>. The portal is control
+            plane and human Q&A—credits buy hosted intelligence; the file remains
+            portable.
           </p>
           <div className="mt-8 grid gap-6 md:grid-cols-3">
             {TRUST_BULLETS.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-xl border border-(--border) bg-white/80 p-6 shadow-soft"
-              >
+              <div key={item.title} className="space-y-2">
                 <h3 className="font-semibold text-(--ink)">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-(--muted)">
+                <p className="text-sm leading-relaxed text-(--muted)">
                   {item.body}
                 </p>
               </div>
             ))}
+          </div>
+          <div className="mt-10 flex flex-wrap gap-4 text-sm font-semibold">
+            <SecondaryCta to="/mcp">MCP for agents</SecondaryCta>
+            <SecondaryCta to="/cli">CLI for scripts</SecondaryCta>
+            <SecondaryCta to="/install">Install</SecondaryCta>
           </div>
         </Section>
       </section>
