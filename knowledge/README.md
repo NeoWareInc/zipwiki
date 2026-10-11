@@ -1,60 +1,32 @@
 # knowledge/
 
-Source corpora for pack / query smoke.
+Source corpora and packed `.zipwiki` examples for pack / query smoke.
 
-| Path | What |
+Digests below come from each package’s `ai.digest` (via ZipWiki MCP `open`).
+**Originals in package** means primary bytes are stored in the ZIP
+(`hasOriginal` / not `sourceIncluded: false`). **Parse-only** packages omit
+those bytes and keep Extra Field `0x014F` origin metadata when present.
+**org/cmp** is PKZIP-style original / compressed (`ai.originalBytes` / package
+file size). The **%** is PKZIP’s compression ratio:
+`(1 − cmp/org) × 100` (space saved vs the source corpus).
+
+## Packages
+
+| Package | Docs | Originals in package | org/cmp |
+| --- | ---: | --- | ---: |
+| [`florida-laws-2025.zipwiki`](florida-laws-2025.zipwiki) | 253 / 253 parsed | No (origins → laws.flrules.org) | 18.0 MB/2.3 MB (87%) |
+| [`charles-dickens.zipwiki`](charles-dickens.zipwiki) | 67 / 67 parsed | No (origins → gutenberg.org) | 19.6 MB/12.4 MB (37%) |
+| [`medical-pdfs.zipwiki`](medical-pdfs.zipwiki) | 60 / 60 parsed | **Yes** (`--include-original`) | 19.7 MB/19.8 MB (0%) |
+
+| Package | Digest |
 | --- | --- |
-| `test1/` | Office docs (docx / odt / pptx / xlsx) — Gettysburg + Bill of Rights |
-| `test1-update/` | Replacement `gettysburg-address.docx` for `update:test1:update` |
-| `test1.zipwiki` | Packed test1 example (`pnpm sample-zipwiki:test1`, gitignored) |
-| `test2/` | Mixed PDFs, ODT, DOCX, fax images (includes `property-deed.pdf`) |
-| `sample-docs.zipwiki` | Packed test2 example (`pnpm sample-zipwiki`, gitignored) |
-| `fax/` | Extra junk-fax images |
-| `florida-laws.zipwiki-origins.json` | Origin pattern for the Florida Laws pack |
-| `florida-laws-2025.zipwiki` | Packed Laws of Florida 2025 (`pnpm archive:florida-laws`, gitignored) |
-| `.stage/{test1,test2,florida-laws}/` | Pack staging (gitignored) |
-| `.output/{test1,test2,florida-laws}/` | Packed archives + extract / origin fetch (gitignored) |
+| [`florida-laws-2025.zipwiki`](florida-laws-2025.zipwiki) | 253 documents: Florida session laws 2025, chapters 2025-1 through 2025-253. Covers immigration enforcement, Gulf of America renaming, statute adoption/reviser’s bills, elections/petitions, education and school safety, insurance and health, criminal law and corrections, firearms and drones, landlord/housing, budget/appropriations (198–201), plus local special acts (e.g. Leon County). |
+| [`charles-dickens.zipwiki`](charles-dickens.zipwiki) | 67 documents: Project Gutenberg Charles Dickens — novels, Christmas/holiday tales, sketches, speeches, letters, and poems (Bleak House, David Copperfield, Great Expectations, Hard Times, Little Dorrit, Nickleby, Oliver Twist, Pickwick, unfinished Edwin Drood, co-writes with Collins, etc.). |
+| [`medical-pdfs.zipwiki`](medical-pdfs.zipwiki) | 59 documents: Clinical records for two patients who transitioned to home hospice (Sep 2026) — Leland T. Marchetti (Cheyenne Bluffs; metastatic pancreatic cancer / cholangitis) and Marguerite L. Ostrander (Boulder Valley; stage IVB lung adenocarcinoma with brain mets), including H&Ps, imaging, consults, discharge, and hospice notes. |
 
-Phase 2 smoke (no login, LiteParse):
+### Originals vs parse-only
 
-```bash
-pnpm sample-zipwiki
-pnpm sample-zipwiki:test1
-pnpm smoke:zipwiki
-```
-
-Stage / pack (writes `.output/test1/test1.zipwiki` + extract):
-
-```bash
-pnpm archive:test1
-pnpm archive:test2
-pnpm archive              # test1 and test2
-```
-
-Query a packed sample:
-
-```bash
-pnpm list:test1
-pnpm test:test1
-pnpm read:test1
-pnpm origin:test2
-```
-
-Laws of Florida 2025 — package is `knowledge/florida-laws-2025.zipwiki`
-(not committed). Source PDFs live at `$HOME/Documents/florida-laws/2025-pdf`
-(253 `Ch_2025-*.pdf` files). `pnpm archive:florida-laws` packs them with
-originals omitted, stage tree `knowledge/.stage/florida-laws`, and the origin
-rule from `florida-laws.zipwiki-origins.json` (`Ch_2025-001.pdf` →
-`https://laws.flrules.org/2025/1`, CRC-32 of the original). Parser and OKF
-follow the saved settings. The pack prints the plan and waits before it
-writes. `-T` runs the integrity test when the archive is written. Extracts
-go to `.output/florida-laws/`.
-
-```bash
-pnpm archive:florida-laws
-pnpm archive:florida-laws-failed   # five largest chapters from the missed-parse batch
-pnpm test:florida-laws
-pnpm list:florida-laws
-pnpm verify:florida-laws-origins   # origin URL, or the original PDF stored in the archive
-pnpm origin:florida-laws:fetch
-```
+| Mode | Packages | Notes |
+| --- | --- | --- |
+| **Originals in ZIP** | `medical-pdfs.zipwiki` | Packed with `--include-original`. Package size ≈ source corpus. |
+| **Parse + OKF only** | `florida-laws-2025`, `charles-dickens` | Primaries omitted; fetch via `origin` / Extra Field `0x014F`. Best compression on large PDFs (`florida-laws-2025`). |
