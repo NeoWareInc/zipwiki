@@ -113,7 +113,7 @@ ZipWiki is built for the pack → open → search → read loop:
 
 ## What to emphasize on the website
 
-Lead with outcomes, not ZIP trivia. Use this section on the home and product pages (not “Create / Query / Keep it local” pillars):
+Lead with outcomes, not ZIP trivia. Use this section on the home page (the Product page at `/`—not “Create / Query / Keep it local” pillars):
 
 **Portable document memory with an embedded AI index**  
 Not another cloud drive. Not generic RAG. ZipWiki keeps a portable archive as the distribution unit, then adds extracted markdown and an OKF index inside the same file.
@@ -125,7 +125,7 @@ Not another cloud drive. Not generic RAG. ZipWiki keeps a portable archive as th
 5. **Smaller when it matters** — Omit bulky originals; keep origin links and checksums. Text knowledge from bloated documents often shrinks upwards of 99%—about 1/100th the original size.  
 6. **Evidence stays grounded** — Answers cite the OKF index and extracted markdown inside the package—not a hosted black box.
 
-Reserve `wiki/` path details for How it works. Primary nav: Product and How it works only (MCP, CLI, Download, Pricing, Roadmap pages stay reachable by URL). Home CTA: Explore product capabilities → `/product`.
+Reserve `wiki/` path details for How it works. The Product page is the front page (`/`). Primary nav: Product (`/`) and How it works, plus MCP, CLI, Download, Pricing, and Roadmap.
 
 ---
 

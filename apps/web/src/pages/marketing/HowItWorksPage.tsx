@@ -17,7 +17,7 @@ export default function HowItWorksPage() {
         <PageHero
           kicker="How it works"
           title="Turn files an AI cannot read into a catalog it can search"
-          lead="Pack parses hard documents into markdown, writes an OKF index the agent can skim, then searches that index before opening a full parse. You talk to the agent. The .zipwiki stays on disk."
+          lead="Pack extracts the text of hard documents into compact markdown, writes an OKF index the agent can skim, then searches that index before opening the full extracted markdown. You talk to the agent. The .zipwiki stays on disk."
         />
       </Section>
 
@@ -35,14 +35,16 @@ export default function HowItWorksPage() {
 
       <Section>
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
-          Parse: make a markdown the agent can actually read
+          Parsed means extracted markdown for AI
         </h2>
         <p className="mt-3 max-w-3xl text-(--muted)">
           ZipWiki does not upload your folder to a hosted vector store. It
-          converts each document into whole-document markdown under{" "}
-          <code className="text-sm">wiki/parsed/</code> and keeps the original
-          in the same archive. The agent streams that markdown when it needs
-          evidence—not the binary Word file.
+          extracts the text documentation of each document into whole-document
+          markdown under <code className="text-sm">wiki/parsed/</code>—fast,
+          compact, and easy for a model to consume—and can keep the original in
+          the same archive. The agent streams that markdown when it needs
+          evidence, not the binary Word file, which is an extreme speedup over
+          feeding PDFs or Office files to the model.
         </p>
         <div className="mt-10">
           <FeatureGrid items={PARSE_ENGINES} />
@@ -75,7 +77,7 @@ export default function HowItWorksPage() {
             </pre>
           </div>
           <p className="mt-6 max-w-3xl text-sm leading-relaxed text-(--muted)">
-            Search looks at those fields first, then optionally scans parsed
+            Search looks at those fields first, then optionally scans extracted
             markdown at a lower weight. That is why “find homestead exemption”
             works without loading every chapter into the chat. OKF is markdown
             you can open in any editor—the same files live at{" "}
@@ -89,7 +91,8 @@ export default function HowItWorksPage() {
           Pack, catalog, search, read, origin
         </h2>
         <p className="mt-3 max-w-2xl text-(--muted)">
-          Same loop every time. Prefer OKF skims before dumping full parses.
+          Same loop every time. Prefer OKF skims before dumping full extracted
+          markdown.
         </p>
         <ol className="mt-12 grid gap-8 md:grid-cols-2">
           {HOW_STEPS.map((step, i) => (
@@ -124,8 +127,8 @@ export default function HowItWorksPage() {
             session-laws sample: <code className="text-xs">Ch_YYYY-NNN.pdf</code>{" "}
             maps to{" "}
             <code className="text-xs">https://laws.flrules.org/{"{year}/{chapter}"}</code>.
-            Unparsed scans still appear so you can see what needs a better parse
-            or a hosted pass.
+            Scans without extracted markdown still appear so you can see what
+            needs a better extraction or a hosted pass.
           </p>
           <div className="mt-8 overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
             <table className="w-full min-w-[40rem] text-left text-sm">
@@ -134,7 +137,7 @@ export default function HowItWorksPage() {
                   <th className="px-4 py-3 font-medium">Title</th>
                   <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium">OKF</th>
-                  <th className="px-4 py-3 font-medium">Parsed</th>
+                  <th className="px-4 py-3 font-medium">Markdown</th>
                   <th className="px-4 py-3 font-medium">Read next</th>
                 </tr>
               </thead>
