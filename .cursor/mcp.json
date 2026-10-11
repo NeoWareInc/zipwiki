@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ZipWiki": {
+      "command": "node",
+      "args": ["${workspaceFolder}/apps/mcp/dist/stdio.js"]
+    }
+  }
+}
