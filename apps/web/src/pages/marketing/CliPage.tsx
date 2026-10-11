@@ -7,7 +7,6 @@ import {
   FeatureGrid,
   PageHero,
   PrimaryCta,
-  SecondaryCta,
   Section,
 } from "./MarketingUi";
 
@@ -25,8 +24,6 @@ export default function CliPage() {
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
           <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
-          <SecondaryCta to="/download">Download status</SecondaryCta>
-          <SecondaryCta to="/mcp">MCP for agents</SecondaryCta>
         </div>
       </Section>
 

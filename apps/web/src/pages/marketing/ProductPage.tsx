@@ -98,11 +98,6 @@ export default function ProductPage() {
               </div>
             ))}
           </div>
-          <div className="mt-10 flex flex-wrap gap-4">
-            <SecondaryCta to="/mcp">MCP for agents</SecondaryCta>
-            <SecondaryCta to="/cli">CLI for scripts</SecondaryCta>
-            <SecondaryCta to="/download">Download</SecondaryCta>
-          </div>
         </Section>
       </section>
     </main>

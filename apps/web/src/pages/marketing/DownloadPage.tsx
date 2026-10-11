@@ -12,8 +12,6 @@ export default function DownloadPage() {
         />
         <div className="mt-8 flex flex-wrap gap-3">
           <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
-          <SecondaryCta to="/mcp">MCP overview</SecondaryCta>
-          <SecondaryCta to="/cli">CLI overview</SecondaryCta>
         </div>
       </Section>
 

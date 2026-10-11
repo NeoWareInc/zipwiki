@@ -49,7 +49,7 @@ export function MarketingLayout() {
             />
           </Link>
 
-          <nav className="hidden items-center gap-4 text-sm lg:flex xl:gap-5">
+          <nav className="hidden items-center gap-5 text-sm lg:flex">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
@@ -148,18 +148,6 @@ export function MarketingLayout() {
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link to="/login" className="hover:text-(--accent)">
               Sign in
-            </Link>
-            <Link to="/mcp" className="hover:text-(--accent)">
-              MCP
-            </Link>
-            <Link to="/cli" className="hover:text-(--accent)">
-              CLI
-            </Link>
-            <Link to="/download" className="hover:text-(--accent)">
-              Download
-            </Link>
-            <Link to="/pricing" className="hover:text-(--accent)">
-              Pricing
             </Link>
             <Link to="/terms" className="hover:text-(--accent)">
               Terms

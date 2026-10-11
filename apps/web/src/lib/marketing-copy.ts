@@ -12,11 +12,6 @@ export const SALES_HREF =
 export const NAV = [
   { to: "/", label: "Product" },
   { to: "/how-it-works", label: "How it works" },
-  { to: "/mcp", label: "MCP" },
-  { to: "/cli", label: "CLI" },
-  { to: "/download", label: "Download" },
-  { to: "/pricing", label: "Pricing" },
-  { to: "/roadmap", label: "Roadmap" },
 ] as const;
 
 export const PAGE_TITLES: Record<string, string> = {
