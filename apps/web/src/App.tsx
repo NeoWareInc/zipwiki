@@ -9,7 +9,9 @@ import ProductPage from "./pages/marketing/ProductPage";
 import HowItWorksPage from "./pages/marketing/HowItWorksPage";
 import PricingPage from "./pages/marketing/PricingPage";
 import RoadmapPage from "./pages/marketing/RoadmapPage";
-import InstallPage from "./pages/marketing/InstallPage";
+import McpPage from "./pages/marketing/McpPage";
+import CliPage from "./pages/marketing/CliPage";
+import DownloadPage from "./pages/marketing/DownloadPage";
 import DashboardPage from "./pages/DashboardPage";
 import KeysPage from "./pages/KeysPage";
 import BillingPage from "./pages/BillingPage";
@@ -39,11 +41,14 @@ export default function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/product" element={<ProductPage />} />
             <Route path="/how-it-works" element={<HowItWorksPage />} />
-            <Route path="/plugin" element={<Navigate to="/#plugin" replace />} />
+            <Route path="/mcp" element={<McpPage />} />
+            <Route path="/cli" element={<CliPage />} />
+            <Route path="/download" element={<DownloadPage />} />
+            <Route path="/plugin" element={<Navigate to="/mcp" replace />} />
+            <Route path="/install" element={<Navigate to="/download" replace />} />
             <Route path="/format" element={<Navigate to="/how-it-works" replace />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
-            <Route path="/install" element={<InstallPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
           </Route>
