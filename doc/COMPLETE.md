@@ -2,7 +2,8 @@
 
 Product: **ZipWiki** · Domain: **zipwiki.ai** · File: **`.zipwiki`**
 
-This is the public-repo gate, not a lab workplan.
+This is the public-repo gate, not a lab workplan. The first beta
+(CLI, MCP, website, portal, billing, admin) is [BETA.md](BETA.md).
 
 ## Phase 1 + 1b
 
