@@ -13,14 +13,14 @@ export default function AdminAccountPage() {
     api.admin.accountDetail,
     id ? { id: id as Id<"accounts"> } : "skip",
   );
-  const grantCredits = useMutation(api.admin.grantCredits);
+  const adjustCredits = useMutation(api.admin.adjustCredits);
   const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
   const setRole = useMutation(api.admin.setRole);
   const setDisabled = useMutation(api.admin.setDisabled);
   const setCreditsLocked = useMutation(api.admin.setCreditsLocked);
   const revokeKeys = useMutation(api.admin.revokeKeys);
   const remove = useMutation(api.admin.deleteAccount);
-  const [grantAmount, setGrantAmount] = useState("1000");
+  const [creditAmount, setCreditAmount] = useState("100");
 
   if (data === undefined) return <p className="text-(--muted)">Loading…</p>;
   if (data === null) {
@@ -69,30 +69,58 @@ export default function AdminAccountPage() {
             </p>
           )}
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Grant credits</span>
-            <div className="flex gap-2">
+            <span className="font-medium">Adjust credits</span>
+            <div className="flex flex-wrap gap-2">
               <input
                 type="number"
                 min={1}
-                value={grantAmount}
-                onChange={(e) => setGrantAmount(e.target.value)}
-                className="w-full rounded-md border border-(--border) bg-white px-3 py-2 text-sm"
+                step={1}
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+                className="min-w-0 flex-1 rounded-md border border-(--border) bg-white px-3 py-2 text-sm"
               />
               <button
                 type="button"
-                className="rounded-md border border-(--border) px-3 py-2 text-xs font-semibold"
-                onClick={() =>
+                className="rounded-md bg-(--accent) px-3 py-2 text-xs font-semibold text-white hover:bg-(--accent-bright)"
+                onClick={() => {
+                  const n = Number(creditAmount);
+                  if (!Number.isFinite(n) || n <= 0) {
+                    setError("Enter a positive credit amount");
+                    return;
+                  }
                   void run(() =>
-                    grantCredits({
+                    adjustCredits({
                       id: a.id as Id<"accounts">,
-                      credits: Number(grantAmount),
+                      credits: n,
                     }),
-                  )
-                }
+                  );
+                }}
               >
-                Grant
+                Add
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-(--border) px-3 py-2 text-xs font-semibold"
+                onClick={() => {
+                  const n = Number(creditAmount);
+                  if (!Number.isFinite(n) || n <= 0) {
+                    setError("Enter a positive credit amount");
+                    return;
+                  }
+                  void run(() =>
+                    adjustCredits({
+                      id: a.id as Id<"accounts">,
+                      credits: -n,
+                    }),
+                  );
+                }}
+              >
+                Subtract
               </button>
             </div>
+            <p className="text-xs text-(--muted)">
+              Subtract is limited to the account’s remaining balance.
+            </p>
           </label>
           <button
             type="button"

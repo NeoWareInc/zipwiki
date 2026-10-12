@@ -1,11 +1,11 @@
 import { paginationOptsValidator } from "convex/server";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { requireAdmin } from "./lib/admin";
 import { globalCreditsLocked } from "./lib/creditLock";
 import { startOfMonthMs } from "./lib/crypto";
-import { creditSnapshot } from "./lib/credits";
+import { creditSnapshot, LOW_CREDITS_THRESHOLD } from "./lib/credits";
 import { revokeLoginSessions } from "./lib/loginSessions";
 
 export const summary = query({
@@ -604,6 +604,72 @@ export const setDisabled = mutation({
   },
 });
 
+async function applyCreditAdjustment(
+  ctx: MutationCtx,
+  id: Id<"accounts">,
+  credits: number,
+) {
+  if (!Number.isFinite(credits) || credits === 0) {
+    throw new Error("credits must be a non-zero number");
+  }
+  const delta = Math.trunc(credits);
+  if (delta === 0) {
+    throw new Error("credits must be a non-zero whole number");
+  }
+  const account = await ctx.db.get(id);
+  if (!account) throw new Error("Not found");
+
+  const purchased = account.creditsPurchased ?? 0;
+  const spent = account.creditsSpent ?? 0;
+  const remaining = Math.max(0, purchased - spent);
+
+  let applied = delta;
+  if (delta < 0) {
+    const want = Math.abs(delta);
+    if (remaining <= 0) {
+      throw new Error("No credits remaining to subtract");
+    }
+    applied = -Math.min(want, remaining);
+  }
+
+  const nextPurchased = purchased + applied;
+  const nextRemaining = Math.max(0, nextPurchased - spent);
+  await ctx.db.patch(id, {
+    creditsPurchased: nextPurchased,
+    ...(applied > 0 && nextRemaining > LOW_CREDITS_THRESHOLD
+      ? { lowCreditNotifiedAt: 0 }
+      : {}),
+  });
+  await ctx.db.insert("creditLedger", {
+    accountId: id,
+    kind: "grant",
+    credits: applied,
+  });
+  return {
+    ok: true as const,
+    delta: applied,
+    creditsPurchased: nextPurchased,
+    creditsRemaining: nextRemaining,
+  };
+}
+
+/**
+ * Admin credit adjustment. Positive credits add balance; negative subtract
+ * (clamped so remaining never goes below zero). Ledger kind stays `grant`
+ * with a signed amount.
+ */
+export const adjustCredits = mutation({
+  args: {
+    id: v.id("accounts"),
+    credits: v.number(),
+  },
+  handler: async (ctx, { id, credits }) => {
+    await requireAdmin(ctx);
+    return await applyCreditAdjustment(ctx, id, credits);
+  },
+});
+
+/** Positive-only alias used by older admin clients. */
 export const grantCredits = mutation({
   args: {
     id: v.id("accounts"),
@@ -614,19 +680,10 @@ export const grantCredits = mutation({
     if (!Number.isFinite(credits) || credits <= 0) {
       throw new Error("credits must be a positive number");
     }
-    const account = await ctx.db.get(id);
-    if (!account) throw new Error("Not found");
-    await ctx.db.patch(id, {
-      creditsPurchased: (account.creditsPurchased ?? 0) + credits,
-    });
-    await ctx.db.insert("creditLedger", {
-      accountId: id,
-      kind: "grant",
-      credits,
-    });
+    const result = await applyCreditAdjustment(ctx, id, credits);
     return {
-      ok: true,
-      creditsPurchased: (account.creditsPurchased ?? 0) + credits,
+      ok: true as const,
+      creditsPurchased: result.creditsPurchased,
     };
   },
 });

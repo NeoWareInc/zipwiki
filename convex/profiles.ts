@@ -12,7 +12,30 @@ import {
   isBootstrapAdminEmail,
 } from "./lib/adminEmails";
 import { creditsLockedFor } from "./lib/creditLock";
-import { creditSnapshot } from "./lib/credits";
+import { creditSnapshot, WELCOME_CREDITS } from "./lib/credits";
+
+/** Create an account and record the welcome credit grant in the ledger. */
+async function createAccountWithWelcomeCredits(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  name: string,
+) {
+  const accountId = await ctx.db.insert("accounts", {
+    userId,
+    name,
+    status: "active",
+    disabled: false,
+    creditsPurchased: WELCOME_CREDITS,
+    creditsSpent: 0,
+    creditsUnlimited: false,
+  });
+  await ctx.db.insert("creditLedger", {
+    accountId,
+    kind: "grant",
+    credits: WELCOME_CREDITS,
+  });
+  return accountId;
+}
 
 /** Ensure profile + free account exist for the signed-in auth user. */
 export const ensureProfileAndAccount = mutation({
@@ -54,15 +77,11 @@ export const ensureProfileAndAccount = mutation({
       .unique();
 
     if (!account) {
-      const accountId = await ctx.db.insert("accounts", {
+      const accountId = await createAccountWithWelcomeCredits(
+        ctx,
         userId,
-        name: email.split("@")[0] || "My account",
-        status: "active",
-        disabled: false,
-        creditsPurchased: 0,
-        creditsSpent: 0,
-        creditsUnlimited: false,
-      });
+        email.split("@")[0] || "My account",
+      );
       account = (await ctx.db.get(accountId))!;
     }
 
@@ -195,15 +214,11 @@ async function grantAdminForEmail(
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .unique();
     if (!account) {
-      await ctx.db.insert("accounts", {
-        userId: user._id,
-        name: email.split("@")[0] || "My account",
-        status: "active",
-        disabled: false,
-        creditsPurchased: 0,
-        creditsSpent: 0,
-        creditsUnlimited: false,
-      });
+      await createAccountWithWelcomeCredits(
+        ctx,
+        user._id,
+        email.split("@")[0] || "My account",
+      );
     }
     return { email, ok: true, profileId: profile!._id };
   }

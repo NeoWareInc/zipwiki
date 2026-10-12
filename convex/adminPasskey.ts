@@ -151,3 +151,45 @@ export const touchPasskey = internalMutation({
     });
   },
 });
+
+/**
+ * Ops escape hatch: delete stored admin passkeys for an email and grant
+ * step-up so the admin panel opens. Re-register a passkey afterward.
+ */
+export const unlockAdminByEmail = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = email.trim().toLowerCase();
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .unique();
+    if (!profile) throw new Error(`No profile for ${normalized}`);
+    if (profile.role !== "admin") {
+      throw new Error(`${normalized} is not an admin`);
+    }
+
+    const keys = await ctx.db
+      .query("adminPasskeys")
+      .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
+      .collect();
+    for (const key of keys) await ctx.db.delete(key._id);
+
+    const challenges = await ctx.db
+      .query("adminPasskeyChallenges")
+      .withIndex("by_userId", (q) => q.eq("userId", profile.userId))
+      .collect();
+    for (const row of challenges) await ctx.db.delete(row._id);
+
+    await ctx.db.patch(profile._id, {
+      adminStepUpExpiresAt: Date.now() + STEP_UP_MS,
+    });
+
+    return {
+      ok: true as const,
+      email: normalized,
+      deletedPasskeys: keys.length,
+      stepUpHours: STEP_UP_MS / (60 * 60 * 1000),
+    };
+  },
+});

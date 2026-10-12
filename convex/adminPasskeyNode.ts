@@ -13,6 +13,21 @@ import {
   type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
 
+/** Apex ↔ www twin so Vercel’s redirect host still matches SITE_URL / WEB_ORIGIN. */
+function withWwwTwin(origin: string): string[] {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    if (host === "localhost" || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+      return [origin];
+    }
+    url.hostname = host.startsWith("www.") ? host.slice(4) : `www.${host}`;
+    return [origin, url.origin];
+  } catch {
+    return [origin];
+  }
+}
+
 function allowedOrigins(): string[] {
   const raw = [
     process.env.SITE_URL ?? "",
@@ -21,7 +36,8 @@ function allowedOrigins(): string[] {
   const out = new Set<string>();
   for (const item of raw) {
     const trimmed = item.trim().replace(/\/+$/, "");
-    if (trimmed) out.add(trimmed);
+    if (!trimmed) continue;
+    for (const variant of withWwwTwin(trimmed)) out.add(variant);
   }
   if (out.size === 0) out.add("http://localhost:5173");
   return [...out];

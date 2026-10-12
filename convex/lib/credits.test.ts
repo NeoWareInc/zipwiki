@@ -22,10 +22,16 @@ import {
   MIN_USD_CENTS,
   MAX_USD_CENTS,
   LOW_CREDITS_THRESHOLD,
+  WELCOME_CREDITS,
   CREDIT_COST_LLM,
 } from "./credits.js";
 
 describe("credits", () => {
+  it("grants 100 welcome credits to new accounts", () => {
+    assert.equal(WELCOME_CREDITS, 100);
+    assert.equal(remainingCredits({ creditsPurchased: WELCOME_CREDITS }), 100);
+  });
+
   it("clamps to $5–$10,000", () => {
     assert.equal(clampUsdCents(100), MIN_USD_CENTS);
     assert.equal(clampUsdCents(DEFAULT_USD_CENTS), DEFAULT_USD_CENTS);

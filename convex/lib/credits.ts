@@ -4,6 +4,8 @@ export const CREDITS_PER_DOLLAR = 100;
 export const MIN_USD_CENTS = 500; // $5.00
 export const MAX_USD_CENTS = 1_000_000; // $10,000.00
 export const DEFAULT_USD_CENTS = 1_000; // $10.00
+/** Prepaid credits granted when a new account is created. */
+export const WELCOME_CREDITS = 100;
 export const LOW_CREDITS_THRESHOLD = 500; // $5 equivalent
 export const CREDIT_COST_PARSE = 1;
 /** Fallback hosted OKF debit when token counts are missing. */
