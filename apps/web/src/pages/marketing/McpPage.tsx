@@ -11,6 +11,7 @@ import {
   PageHero,
   PrimaryCta,
   PromptCard,
+  SecondaryCta,
   Section,
 } from "./MarketingUi";
 
@@ -30,7 +31,8 @@ export default function McpPage() {
           <FeatureGrid items={PLUGIN_BUNDLE} />
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
-          <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
+          <PrimaryCta to="/install#agents">Connect your agent</PrimaryCta>
+          <SecondaryCta to={WAITLIST_HREF}>Join waitlist</SecondaryCta>
         </div>
       </Section>
 

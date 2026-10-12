@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MCP_INSTALL_BLOCKS } from "../../../../mcp/src/mcp-clients";
 import { DOWNLOAD_PREREQS } from "../../lib/marketing-copy";
 import { PageHero, SecondaryCta, Section } from "./MarketingUi";
 
@@ -251,20 +252,45 @@ export default function InstallPage() {
             questions. Packing with LiteParse stays on this machine and does not
             need an account.
           </p>
-          <p className="mt-6 max-w-3xl text-(--muted)">
-            Claude or Cursor, once <code className="text-xs">zipwiki-mcp</code>{" "}
-            is on your PATH:
-          </p>
-          <ScriptBlock
-            value={`{
-  "mcpServers": {
-    "zipwiki": {
-      "command": "zipwiki-mcp"
-    }
-  }
-}`}
-            label="Copy MCP config"
-          />
+          <div id="agents" className="mt-10 space-y-10">
+            <div>
+              <h3 className="font-display text-2xl font-semibold text-(--ink)">
+                Connect zipwiki-mcp
+              </h3>
+              <p className="mt-3 max-w-3xl text-(--muted)">
+                After <code className="text-xs">zipwiki-mcp</code> is on your
+                PATH, add it to the agent you use. Most agents share one JSON
+                file. Visual Studio Code, Codex, Zed, Continue, Goose, and
+                OpenCode use their own shape.
+              </p>
+            </div>
+            {MCP_INSTALL_BLOCKS.map((block) => (
+              <div key={block.id}>
+                <h3 className="font-display text-xl font-semibold text-(--ink)">
+                  {block.title}
+                </h3>
+                <ul className="mt-3 max-w-3xl space-y-2 text-sm text-(--muted)">
+                  {block.places.map((place) => (
+                    <li key={place.name}>
+                      <span className="font-medium text-(--ink)">
+                        {place.name}.
+                      </span>{" "}
+                      {place.path}
+                    </li>
+                  ))}
+                </ul>
+                {block.note ? (
+                  <p className="mt-3 max-w-3xl text-sm text-(--muted)">
+                    {block.note}
+                  </p>
+                ) : null}
+                <ScriptBlock
+                  value={block.config}
+                  label={`Copy ${block.title} config`}
+                />
+              </div>
+            ))}
+          </div>
         </Section>
       </section>
     </main>

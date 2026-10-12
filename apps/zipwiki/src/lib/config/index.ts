@@ -141,6 +141,11 @@ export {
   readZipwikiPackageVersion,
 } from "./update-check.js";
 export {
+  formatZipwikiBanner,
+  formatZipwikiVersion,
+  printZipwikiBanner,
+} from "../cli/banner.js";
+export {
   CLI_PREFERENCES_FILENAME,
   isLibreOfficeMissingIgnored,
   loadCliPreferences,

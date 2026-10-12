@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { DOCUMENT_TYPES } from "./lib/archive/index.js";
+import { formatZipwikiVersion, printZipwikiBanner } from "./lib/cli/banner.js";
 import {
   loadEnvFiles,
   loadRepoLlamaCloudKey,
   loadZipwikiHomeEnv,
   maybeCheckForUpdate,
+  readZipwikiPackageVersion,
 } from "./lib/config/index.js";
 import {
   runIsComplex,
@@ -60,6 +62,7 @@ import {
 loadEnvFiles(REPO_ROOT);
 loadZipwikiHomeEnv();
 loadRepoLlamaCloudKey(REPO_ROOT);
+printZipwikiBanner();
 void maybeCheckForUpdate();
 const CATEGORY_LIST = DOCUMENT_TYPES.join("|");
 
@@ -70,7 +73,7 @@ program
   .description(
     "ZipWiki — create a .zipwiki knowledge base, then open, search, and read it",
   )
-  .version("0.1.0");
+  .version(formatZipwikiVersion(readZipwikiPackageVersion()));
 
 
 /** Shared pack/stage pipeline flags (compression, credentials, stage, …). */

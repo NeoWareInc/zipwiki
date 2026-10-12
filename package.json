@@ -39,6 +39,7 @@
     "test:zipwiki": "pnpm --filter @zipwiki/zipwiki test",
     "okf:tokens": "bash scripts/okf-zipwiki-tokens.sh",
     "smoke:zipwiki": "pnpm zipwiki -- open knowledge/sample-docs.zipwiki && pnpm zipwiki -- search knowledge/sample-docs.zipwiki deed",
+    "smoke:mcp": "pnpm build:zipwiki && pnpm --filter @zipwiki/mcp smoke",
     "archive:test1": "pnpm zipwiki -- stage knowledge/test1 --phase all -o knowledge/test1.zipwiki --stage-dir knowledge/.stage/test1 -sf -T",
     "archive:source1": "pnpm zipwiki -- stage knowledge/test1 --phase all -o knowledge/source1.zipwiki --stage-dir knowledge/.stage/source1 --include-original -sf -T",
     "archive:test2": "pnpm zipwiki -- stage knowledge/test2 --phase all -o knowledge/test2.zipwiki --stage-dir knowledge/.stage/test2 -sf -T",

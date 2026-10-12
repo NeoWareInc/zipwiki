@@ -5,8 +5,20 @@
  */
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { maybeCheckForUpdate } from "@zipwiki/zipwiki/config";
+import {
+  maybeCheckForUpdate,
+  printZipwikiBanner,
+} from "@zipwiki/zipwiki/config";
 import { registerTools } from "./register-tools.js";
+import { formatMcpInstallHelp, shouldShowMcpInstallHelp } from "./stdio-help.js";
+
+const args = process.argv.slice(2);
+if (shouldShowMcpInstallHelp(args, process.stdin.isTTY === true)) {
+  printZipwikiBanner(process.argv, console.log, undefined, "ZipWiki MCP");
+  console.log("");
+  console.log(formatMcpInstallHelp().trimEnd());
+  process.exit(0);
+}
 
 void maybeCheckForUpdate();
 

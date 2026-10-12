@@ -24,6 +24,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/stdio.js",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "smoke": "node --import tsx scripts/smoke-help.mjs",
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
