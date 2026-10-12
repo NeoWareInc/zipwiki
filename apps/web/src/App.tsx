@@ -10,7 +10,7 @@ import PricingPage from "./pages/marketing/PricingPage";
 import RoadmapPage from "./pages/marketing/RoadmapPage";
 import McpPage from "./pages/marketing/McpPage";
 import CliPage from "./pages/marketing/CliPage";
-import DownloadPage from "./pages/marketing/DownloadPage";
+import InstallPage from "./pages/marketing/InstallPage";
 import DashboardPage from "./pages/DashboardPage";
 import KeysPage from "./pages/KeysPage";
 import BillingPage from "./pages/BillingPage";
@@ -42,9 +42,9 @@ export default function App() {
             <Route path="/how-it-works" element={<HowItWorksPage />} />
             <Route path="/mcp" element={<McpPage />} />
             <Route path="/cli" element={<CliPage />} />
-            <Route path="/download" element={<DownloadPage />} />
+            <Route path="/install" element={<InstallPage />} />
+            <Route path="/download" element={<Navigate to="/install" replace />} />
             <Route path="/plugin" element={<Navigate to="/mcp" replace />} />
-            <Route path="/install" element={<Navigate to="/download" replace />} />
             <Route path="/format" element={<Navigate to="/how-it-works" replace />} />
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
