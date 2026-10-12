@@ -1,8 +1,8 @@
 export const SITE_NAME = "ZipWiki";
 export const SITE_TAGLINE =
-  "A ZIP you can think with—source text as compact markdown for models, indexed for search, readable by the slice.";
+  "AI Searchable Archives";
 export const SITE_DESCRIPTION =
-  "ZipWiki extracts document text into fast, compact markdown inside a portable .zipwiki so AI can catalog, search, and read selectively—without unpacking binaries or dumping every file into context.";
+  "Archival data has to stay small enough to keep and still open when needed. That reader is increasingly an AI agent. A .zipwiki holds compact extracted markdown and an OKF index so an agent can search and read the records a question requires.";
 
 export const WAITLIST_HREF =
   "mailto:hello@zipwiki.ai?subject=ZipWiki%20waitlist";
@@ -58,11 +58,11 @@ export const HOME_OUTCOMES = [
 export const CLASSIC_ZIP_PROBLEM = [
   {
     title: "Classic ZIP",
-    body: "Opaque members, find by filename, extract everything to use anything, originals always inflate the package.",
+    body: "Every original stays in the package. The way in is a filename, then a full extract, so the archive grows with the binaries and still has to be unpacked to read.",
   },
   {
     title: "What agents need",
-    body: "Skimmable descriptions, find by meaning, stream compact extracted markdown, optional remote originals when fidelity matters.",
+    body: "A compact text record of each document, search by meaning, and the original only when that record is not enough.",
   },
 ] as const;
 

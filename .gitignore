@@ -20,6 +20,7 @@ out/
 *.local
 .pack/
 *.tgz
+!apps/web/public/releases/*.tgz
 
 # Environment & secrets
 .env

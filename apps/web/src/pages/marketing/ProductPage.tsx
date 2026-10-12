@@ -19,8 +19,16 @@ export default function ProductPage() {
       <Section>
         <PageHero
           kicker="Product"
-          title="Archival optimized for understanding"
-          lead="Pack once → extract document text into compact markdown plus an OKF index inside the package → agents open, search, and read only what they need. Models consume extracted markdown, not binaries. The .zipwiki stays yours to copy and open offline."
+          titleClassName="max-w-none text-[clamp(1.15rem,5.4vw,3rem)]"
+          title={
+            <>
+              <span className="block whitespace-nowrap">Compact when stored.</span>
+              <span className="block whitespace-nowrap">
+                Efficiently retrieved when needed.
+              </span>
+            </>
+          }
+          lead="Long-term archives must balance minimal storage footprints with long-term accessibility. Designed for AI-driven retrieval, ZipWiki pairs compressed document storage with pre-indexed Markdown—allowing agents to query and inspect historical records instantly."
         />
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           {CLASSIC_ZIP_PROBLEM.map((col) => (

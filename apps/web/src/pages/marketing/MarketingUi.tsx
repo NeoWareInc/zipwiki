@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { AgentPrompt, RoadmapStatus } from "../../lib/marketing-copy";
 
@@ -6,22 +6,28 @@ export function PageHero({
   kicker,
   title,
   lead,
+  titleClassName = "max-w-2xl text-4xl md:text-5xl",
 }: {
   kicker?: string;
-  title: string;
+  title: ReactNode;
   lead: string;
+  titleClassName?: string;
 }) {
   return (
-    <div className="max-w-2xl space-y-4">
+    <div className="space-y-4">
       {kicker && (
         <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
           {kicker}
         </p>
       )}
-      <h1 className="font-display text-4xl font-semibold tracking-tight text-(--ink) md:text-5xl">
+      <h1
+        className={`font-display font-semibold tracking-tight text-(--ink) ${titleClassName}`}
+      >
         {title}
       </h1>
-      <p className="text-base leading-relaxed text-(--muted) md:text-lg">{lead}</p>
+      <p className="max-w-2xl text-base leading-relaxed text-(--muted) md:text-lg">
+        {lead}
+      </p>
     </div>
   );
 }

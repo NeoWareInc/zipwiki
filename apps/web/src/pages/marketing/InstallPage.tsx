@@ -33,6 +33,90 @@ const BUILDS = [
 
 type ReleaseIndex = { version?: string; files?: string[] };
 
+function ScriptBlock({
+  value,
+  label,
+  className = "mt-3",
+}: {
+  value: string;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div className={`relative ${className}`}>
+      <pre className="overflow-x-auto rounded-md bg-(--paper) py-2 pr-12 pl-3 text-xs leading-relaxed text-(--ink)">
+        {value}
+      </pre>
+      <div className="absolute top-1.5 right-1.5">
+        <CopyIconButton value={value} label={label} />
+      </div>
+    </div>
+  );
+}
+
+function CopyIconButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      title={copied ? "Copied" : label}
+      aria-label={copied ? "Copied" : label}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-(--muted) hover:bg-white hover:text-(--ink)"
+    >
+      {copied ? <CheckIcon /> : <ClipboardIcon />}
+    </button>
+  );
+}
+
+function ClipboardIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 function tarballName(version: string, platform: string, arch: string): string {
   return `zipwiki-${version}-${platform}-${arch}.tgz`;
 }
@@ -132,9 +216,10 @@ export default function InstallPage() {
                     </span>
                   )}
                 </div>
-                <pre className="mt-3 overflow-x-auto rounded-md bg-(--paper) px-3 py-2 text-xs leading-relaxed text-(--ink)">
-                  {command}
-                </pre>
+                <ScriptBlock
+                  value={command}
+                  label={`Copy ${build.label} install command`}
+                />
               </article>
             );
           })}
@@ -156,10 +241,11 @@ export default function InstallPage() {
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             After install
           </h2>
-          <pre className="mt-4 overflow-x-auto rounded-md bg-(--paper) px-3 py-2 text-xs leading-relaxed text-(--ink)">
-            {`zipwiki --help
-zipwiki login`}
-          </pre>
+          <ScriptBlock
+            className="mt-4"
+            value={"zipwiki --help\nzipwiki login"}
+            label="Copy post-install commands"
+          />
           <p className="mt-4 max-w-3xl text-(--muted)">
             <code className="text-xs">zipwiki login</code> is for hosted
             questions. Packing with LiteParse stays on this machine and does not
@@ -169,15 +255,16 @@ zipwiki login`}
             Claude or Cursor, once <code className="text-xs">zipwiki-mcp</code>{" "}
             is on your PATH:
           </p>
-          <pre className="mt-3 overflow-x-auto rounded-md bg-(--paper) px-3 py-2 text-xs leading-relaxed text-(--ink)">
-            {`{
+          <ScriptBlock
+            value={`{
   "mcpServers": {
     "zipwiki": {
       "command": "zipwiki-mcp"
     }
   }
 }`}
-          </pre>
+            label="Copy MCP config"
+          />
         </Section>
       </section>
     </main>

@@ -15,6 +15,30 @@ else
 fi
 
 cd "$root"
+
+releases="$root/apps/web/public/releases"
+if [[ -f "$releases/index.json" ]]; then
+  node --input-type=module -e '
+    import { existsSync, readFileSync } from "node:fs";
+    import { join } from "node:path";
+    const dir = process.argv[1];
+    const index = JSON.parse(readFileSync(join(dir, "index.json"), "utf8"));
+    const missing = (index.files ?? []).filter(
+      (name) => typeof name !== "string" || !existsSync(join(dir, name)),
+    );
+    if (missing.length > 0) {
+      console.error(
+        "vercel-build-web: index.json lists release files that are not in apps/web/public/releases:",
+      );
+      for (const name of missing) console.error(`  ${name}`);
+      console.error(
+        "npm i -g https://zipwiki.ai/releases/<file> would download the website HTML.",
+      );
+      process.exit(1);
+    }
+  ' "$releases"
+fi
+
 pnpm exec turbo run build --filter=@zipwiki/web
 
 if [[ ! -f apps/web/dist/index.html ]]; then
