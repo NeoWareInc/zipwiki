@@ -8,6 +8,7 @@ import { AdminCreditsLock } from "../components/AdminCreditsLock";
 export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [actionError, setActionError] = useState("");
+  const [creditDrafts, setCreditDrafts] = useState<Record<string, string>>({});
   const accounts = useQuery(api.admin.listAccounts, {
     search: search || undefined,
   });
@@ -16,6 +17,7 @@ export default function AdminPage() {
   const setRole = useMutation(api.admin.setRole);
   const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
   const setCreditsLocked = useMutation(api.admin.setCreditsLocked);
+  const adjustCredits = useMutation(api.admin.adjustCredits);
 
   const list = (accounts ?? []) as Array<{
     id: string;
@@ -74,6 +76,26 @@ export default function AdminPage() {
     }
   }
 
+  async function adjustAccountCredits(accountId: string, sign: 1 | -1) {
+    setActionError("");
+    const raw = creditDrafts[accountId] ?? "100";
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n <= 0) {
+      setActionError("Enter a positive credit amount");
+      return;
+    }
+    try {
+      await adjustCredits({
+        id: accountId as Id<"accounts">,
+        credits: sign * n,
+      });
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to adjust credits",
+      );
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -109,6 +131,11 @@ export default function AdminPage() {
         title="Admins"
         rows={admins}
         emptyLabel="No admins found."
+        creditDrafts={creditDrafts}
+        onCreditDraftChange={(id, value) =>
+          setCreditDrafts((prev) => ({ ...prev, [id]: value }))
+        }
+        onAdjustCredits={(id, sign) => void adjustAccountCredits(id, sign)}
         onDisable={(id, disabled) => void toggleDisabled(id, disabled)}
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
@@ -120,6 +147,11 @@ export default function AdminPage() {
         title="Customers"
         rows={customers}
         emptyLabel="No customers found."
+        creditDrafts={creditDrafts}
+        onCreditDraftChange={(id, value) =>
+          setCreditDrafts((prev) => ({ ...prev, [id]: value }))
+        }
+        onAdjustCredits={(id, sign) => void adjustAccountCredits(id, sign)}
         onDisable={(id, disabled) => void toggleDisabled(id, disabled)}
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
@@ -144,6 +176,9 @@ function AccountTable({
   title,
   rows,
   emptyLabel,
+  creditDrafts,
+  onCreditDraftChange,
+  onAdjustCredits,
   onDisable,
   onSetRole,
   onSetUnlimited,
@@ -163,6 +198,9 @@ function AccountTable({
     creditsUnlimited?: boolean;
   }>;
   emptyLabel: string;
+  creditDrafts: Record<string, string>;
+  onCreditDraftChange: (id: string, value: string) => void;
+  onAdjustCredits: (id: string, sign: 1 | -1) => void;
   onDisable: (id: string, disabled: boolean) => void;
   onSetRole: (id: string, role: "admin" | "customer") => void;
   onSetUnlimited: (id: string, unlimited: boolean) => void;
@@ -207,7 +245,36 @@ function AccountTable({
                         : (a.creditsRemaining ?? 0).toLocaleString()}
                     </span>
                   </label>
-                  <div className="text-xs">
+                  {!a.creditsUnlimited && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={creditDrafts[a.id] ?? "100"}
+                        onChange={(e) =>
+                          onCreditDraftChange(a.id, e.target.value)
+                        }
+                        aria-label={`Credit amount for ${a.email}`}
+                        className="w-20 rounded-md border border-(--border) bg-white px-2 py-1 text-xs text-(--ink)"
+                      />
+                      <button
+                        type="button"
+                        className="rounded-md bg-(--accent) px-2 py-1 text-xs font-semibold text-white hover:bg-(--accent-bright)"
+                        onClick={() => onAdjustCredits(a.id, 1)}
+                      >
+                        Add
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-md border border-(--border) px-2 py-1 text-xs font-semibold text-(--ink)"
+                        onClick={() => onAdjustCredits(a.id, -1)}
+                      >
+                        Subtract
+                      </button>
+                    </div>
+                  )}
+                  <div className="mt-1 text-xs">
                     {a.usage.parseCount}p / {a.usage.okfCount}okf
                   </div>
                 </td>
