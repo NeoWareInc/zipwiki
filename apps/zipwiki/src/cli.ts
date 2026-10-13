@@ -32,7 +32,8 @@ import {
   runConfigSetCommand,
   runConfigShowCommand,
 } from "./config-cmd.js";
-import { runMainMenu } from "./interactive/menu.js";
+import { runGuidedAdd, runGuidedPack, runMainMenu } from "./interactive/menu.js";
+import { isInteractiveTty } from "./interactive/tty.js";
 import {
   commandNames,
   commandSkipsLoginPrompt,
@@ -40,6 +41,7 @@ import {
 } from "./interactive/resume-login.js";
 import {
   runAuthLogin,
+  runAuthReset,
   runAuthStatus,
 } from "./auth-cmd.js";
 import {
@@ -62,7 +64,6 @@ import {
 loadEnvFiles(REPO_ROOT);
 loadZipwikiHomeEnv();
 loadRepoLlamaCloudKey(REPO_ROOT);
-printZipwikiBanner();
 void maybeCheckForUpdate();
 const CATEGORY_LIST = DOCUMENT_TYPES.join("|");
 
@@ -150,7 +151,7 @@ function withPipelineFlags(cmd: Command): Command {
     )
     .option(
       "--parser <engine>",
-      "Document parser: liteparse|llamaparse (default: llamaparse)",
+      "Document parser: liteparse|llamaparse (default: liteparse)",
     )
     .option(
       "--parser-mode <mode>",
@@ -377,14 +378,25 @@ withPipelineFlags(
     .description(
       "Alias for `stage --phase all`: parse → per-file OKF → manifest → .zipwiki",
     )
-    .argument("<files...>", "Documents or directories to pack"),
-).action(async (files: string[], opts) => {
+    .argument("[files...]", "Documents or directories to pack"),
+).action(async (files: string[] | undefined, opts) => {
+  const list = files ?? [];
+  const stageOpts = stageOptionsFromCli(opts, {
+    phase: "all",
+    wikiDir: opts.wikiDir ?? opts.stageDir,
+  });
+  if (list.length === 0) {
+    if (!isInteractiveTty() || opts.quiet === true) {
+      throw new Error(
+        "zipwiki pack needs a file or directory. Run `zipwiki` to choose one.",
+      );
+    }
+    await runGuidedPack(stageOpts);
+    return;
+  }
   await runPack(
-    files.map((f) => resolveRepoPath(f)),
-    stageOptionsFromCli(opts, {
-      phase: "all",
-      wikiDir: opts.wikiDir ?? opts.stageDir,
-    }),
+    list.map((f) => resolveRepoPath(f)),
+    stageOpts,
   );
 });
 
@@ -400,7 +412,7 @@ withDocParse(
     .option("-o, --output <file>", "Output file path")
     .option(
       "--parser <engine>",
-      "Document parser: liteparse|llamaparse (default: llamaparse)",
+      "Document parser: liteparse|llamaparse (default: liteparse)",
     )
     .option(
       "--parser-mode <mode>",
@@ -498,7 +510,7 @@ program
   .option("--complexity", "Include per-page complexity signals in JSON output")
   .option(
     "--parser <engine>",
-    "Document parser: liteparse|llamaparse (default: llamaparse → LiteParse fallback)",
+    "Document parser: liteparse|llamaparse (default: liteparse)",
   )
   .option(
     "--parser-mode <mode>",
@@ -685,6 +697,14 @@ program
     await runAuthStatus();
   });
 
+program
+  .command("reset")
+  .helpGroup("Account")
+  .description("Forget the saved login so the next sign-in starts as a new account")
+  .action(() => {
+    runAuthReset();
+  });
+
 const configCmd = program
   .command("config")
   .helpGroup("Account")
@@ -756,7 +776,7 @@ program
   .description(
     "Add, update, or delete documents in a .zipwiki (full rewrite; copies unchanged compressed members)",
   )
-  .argument("<archive>", "Existing .zipwiki / .nzip")
+  .argument("[archive]", "Existing .zipwiki / .nzip")
   .option("-o, --output <file>", "Output path (default: replace archive in place)")
   .option(
     "--add <file>",
@@ -835,13 +855,14 @@ program
   )
   .option("-j, --json", "JSON output")
   .option("-q, --quiet", "Quiet")
-  .action(async (archive: string, opts) => {
-    await runUpdateCommand(archive, {
+  .action(async (archive: string | undefined, opts) => {
+    const updateOpts = {
       output: opts.output,
       add: opts.add,
       del: opts.del,
       update: opts.update,
-      noAiOkf: opts.noAiOkf === true || opts.aiOkf === false,
+      noAiOkf:
+        opts.noAiOkf === true || opts.aiOkf === false ? true : undefined,
       okfProfile: opts.okfProfile,
       noOkf: opts.noOkf === true || opts.okf === false,
       omitOriginal: opts.omitOriginal === true,
@@ -867,7 +888,20 @@ program
       extractImages: opts.extractImages === true,
       stageDir: opts.stageDir,
       wikiDir: opts.wikiDir,
-    });
+    };
+    const hasWork =
+      (updateOpts.add?.length ?? 0) > 0 ||
+      (updateOpts.del?.length ?? 0) > 0 ||
+      (updateOpts.update?.length ?? 0) > 0;
+    if (!archive || !hasWork) {
+      if (!isInteractiveTty() || opts.quiet === true || opts.json === true) {
+        await runUpdateCommand(archive ?? "", updateOpts);
+        return;
+      }
+      await runGuidedAdd({ ...updateOpts, archive });
+      return;
+    }
+    await runUpdateCommand(archive, updateOpts);
   });
 
 program
@@ -938,5 +972,6 @@ const argv = process.argv.filter((arg, index) => !(index >= 2 && arg === "--"));
 if (argv.slice(2).length === 0) {
   await runMainMenu();
 } else {
+  printZipwikiBanner();
   await program.parseAsync(argv);
 }

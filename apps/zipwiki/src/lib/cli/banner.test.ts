@@ -4,6 +4,7 @@ import {
   ZIPWIKI_VERSION_DATE,
   cliQuietRequested,
   formatZipwikiBanner,
+  formatZipwikiMenuIntro,
   printZipwikiBanner,
 } from "./banner.js";
 
@@ -17,6 +18,10 @@ describe("startup banner", () => {
     assert.equal(
       formatZipwikiBanner("0.1.0", ZIPWIKI_VERSION_DATE, "ZipWiki MCP"),
       `ZipWiki MCP Version: 0.1.0 beta (${ZIPWIKI_VERSION_DATE})\nCopyright © 2026 by NeoWare Inc, All rights reserved.\n`,
+    );
+    assert.equal(
+      formatZipwikiMenuIntro("0.1.0"),
+      `ZipWiki Version: 0.1.0 beta (${ZIPWIKI_VERSION_DATE})\n│  Copyright © 2026 by NeoWare Inc, All rights reserved.`,
     );
   });
 

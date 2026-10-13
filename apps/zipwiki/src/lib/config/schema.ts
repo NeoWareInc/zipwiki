@@ -140,8 +140,8 @@ export type ResolvedZipwikiConfig = {
 
 export const DEFAULT_ZIPWIKI_CONFIG: ResolvedZipwikiConfig = {
   parser: {
-    // LlamaParse when a key or hosted account is available. Fixed mode does not switch to LiteParse.
-    engine: "llamaparse",
+    // Unsigned packs stay on local LiteParse. A signed-in account or --parser selects LlamaParse.
+    engine: "liteparse",
     mode: "fixed",
     liteparse: {
       ocrEnabled: true,

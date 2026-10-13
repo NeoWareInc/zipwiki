@@ -27,6 +27,8 @@ export {
 export {
   activateCliAccount,
   activeCliAccountFromEnv,
+  clearCliLogin,
+  CLI_LOGIN_ENV_KEYS,
   loadCliAccounts,
   normalizeAccountEmail,
   rememberCliAccount,

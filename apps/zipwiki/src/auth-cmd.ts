@@ -11,6 +11,7 @@ import {
 } from "@zipwiki/api-client";
 import {
   activateCliAccount,
+  clearCliLogin,
   rememberCliAccount,
   seedCliAccountsFromEnv,
   type SavedCliAccount,
@@ -296,6 +297,15 @@ export async function runAuthLogin(opts: {
       console.error(`[zipwiki] Connected, but client-config failed: ${msg}`);
     }
   }
+}
+
+/** Drop the saved login so the next `zipwiki login` starts with no account. */
+export function runAuthReset(): void {
+  clearCliLogin();
+  console.error(
+    "[zipwiki] Saved login removed. This CLI has no ZipWiki account.",
+  );
+  console.error("[zipwiki] Run: zipwiki login");
 }
 
 export async function runAuthStatus(): Promise<void> {

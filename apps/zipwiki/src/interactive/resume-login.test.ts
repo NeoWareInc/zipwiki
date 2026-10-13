@@ -192,6 +192,7 @@ describe("resume login when saved portal settings exist", () => {
 
   it("leaves auth, config, and archive reads alone", () => {
     assert.equal(commandSkipsLoginPrompt(["login", "zipwiki"]), true);
+    assert.equal(commandSkipsLoginPrompt(["reset", "zipwiki"]), true);
     assert.equal(commandSkipsLoginPrompt(["auth", "zipwiki"]), true);
     assert.equal(commandSkipsLoginPrompt(["api-key", "config", "zipwiki"]), true);
     assert.equal(commandSkipsLoginPrompt(["catalog", "zipwiki"]), true);

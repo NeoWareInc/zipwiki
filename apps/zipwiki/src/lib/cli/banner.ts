@@ -21,6 +21,13 @@ export function formatZipwikiBanner(
   return `${product} Version: ${label} (${date})\nCopyright © 2026 by NeoWare Inc, All rights reserved.\n`;
 }
 
+/** Two-line title for the interactive menu frame. */
+export function formatZipwikiMenuIntro(version?: string): string {
+  const shown = version && version.length > 0 ? version : readZipwikiPackageVersion();
+  const [versionLine, copyrightLine] = formatZipwikiBanner(shown).trimEnd().split("\n");
+  return `${versionLine}\n│  ${copyrightLine}`;
+}
+
 export function cliQuietRequested(argv: string[]): boolean {
   return argv.some((arg) => arg === "-q" || arg === "--quiet");
 }

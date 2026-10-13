@@ -16,6 +16,13 @@ describe("zipwiki config", () => {
     assert.equal(cfg.okf, undefined);
   });
 
+  it("uses LiteParse when no account or parser flag is set", () => {
+    const dir = mkdtempSync(join(tmpdir(), "zc-cfg-default-"));
+    const { config } = loadZipwikiConfig({}, dir);
+    assert.equal(config.parser.engine, "liteparse");
+    assert.equal(config.parser.mode, "fixed");
+  });
+
   it("does not load a zipwiki.config.json unless --config points at it", () => {
     const dir = mkdtempSync(join(tmpdir(), "zc-cfg-skip-"));
     writeFileSync(

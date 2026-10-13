@@ -4,11 +4,23 @@ import {
   mkdirSync,
   readFileSync,
   renameSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { discardCachedAccountSettings } from "./account-settings-cache.js";
 import { saveZipwikiHomeEnv, zipwikiHomeDir } from "./home.js";
+
+/** Account connection written by `zipwiki login`. Reset clears these and leaves BYO keys. */
+export const CLI_LOGIN_ENV_KEYS = [
+  "ZIPWIKI_API_URL",
+  "ZIPWIKI_API_KEY",
+  "ZIPWIKI_ACCOUNT_EMAIL",
+  "ZIPWIKI_ACCOUNT_ID",
+  "ZIPWIKI_PARSE_CREDENTIAL",
+  "ZIPWIKI_OKF_CREDENTIAL",
+  "ZIPWIKI_HOSTED_MODE",
+] as const;
 
 /** One browser login this CLI can switch back to. The API key stays on disk. */
 export type SavedCliAccount = {
@@ -177,4 +189,19 @@ export function activateCliAccount(email: string): SavedCliAccount {
     discardCachedAccountSettings();
   }
   return found;
+}
+
+/**
+ * Forget every saved login and the active account.
+ * Removes `accounts.json`, the settings cache, and the account keys in
+ * `~/.zipwiki/.env`. Local BYO keys stay.
+ */
+export function clearCliLogin(): void {
+  const accountsPath = zipwikiAccountsPath();
+  if (existsSync(accountsPath)) unlinkSync(accountsPath);
+  discardCachedAccountSettings();
+  const updates: Record<string, string> = {};
+  for (const key of CLI_LOGIN_ENV_KEYS) updates[key] = "";
+  saveZipwikiHomeEnv(updates);
+  for (const key of CLI_LOGIN_ENV_KEYS) delete process.env[key];
 }

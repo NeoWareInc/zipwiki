@@ -15,6 +15,7 @@ import { isInteractiveTty } from "./tty.js";
 const SKIP_LOGIN_PROMPT = new Set([
   "auth",
   "login",
+  "reset",
   "config",
   "list",
   "catalog",

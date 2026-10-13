@@ -11,11 +11,13 @@ import {
 } from "./account-settings-cache.js";
 import {
   activateCliAccount,
+  clearCliLogin,
   loadCliAccounts,
   rememberCliAccount,
   seedCliAccountsFromEnv,
+  zipwikiAccountsPath,
 } from "./accounts.js";
-import { ZIPWIKI_HOME_ENV, loadZipwikiHomeEnv } from "./home.js";
+import { ZIPWIKI_HOME_ENV, loadZipwikiHomeEnv, saveZipwikiHomeEnv } from "./home.js";
 
 describe("cli accounts", () => {
   const dirs: string[] = [];
@@ -27,6 +29,8 @@ describe("cli accounts", () => {
     "ZIPWIKI_ACCOUNT_ID",
     "ZIPWIKI_PARSE_CREDENTIAL",
     "ZIPWIKI_OKF_CREDENTIAL",
+    "ZIPWIKI_HOSTED_MODE",
+    "ANTHROPIC_API_KEY",
   ] as const;
   const saved = new Map<string, string | undefined>();
   for (const key of envKeys) saved.set(key, process.env[key]);
@@ -154,5 +158,53 @@ describe("cli accounts", () => {
     });
     assert.equal(applyCachedAccountSettingsToEnv({ persist: false }), null);
     assert.equal(process.env.ZIPWIKI_PARSE_CREDENTIAL, "sentinel");
+  });
+
+  it("clears saved logins and account env while keeping a local BYO key", () => {
+    useHome();
+    rememberCliAccount({
+      email: "steve@neoware.io",
+      accountId: "acct_neo",
+      apiUrl: "https://zipwiki-api-dev.fly.dev",
+      apiKey: "zw_neo",
+    });
+    saveZipwikiHomeEnv({
+      ZIPWIKI_API_URL: "https://zipwiki-api-dev.fly.dev",
+      ZIPWIKI_API_KEY: "zw_neo",
+      ZIPWIKI_ACCOUNT_EMAIL: "steve@neoware.io",
+      ZIPWIKI_ACCOUNT_ID: "acct_neo",
+      ZIPWIKI_PARSE_CREDENTIAL: "zipwiki",
+      ZIPWIKI_OKF_CREDENTIAL: "zipwiki",
+      ZIPWIKI_HOSTED_MODE: "1",
+      ANTHROPIC_API_KEY: "sk-ant-local",
+    });
+    process.env.ZIPWIKI_API_KEY = "zw_neo";
+    process.env.ZIPWIKI_ACCOUNT_EMAIL = "steve@neoware.io";
+    process.env.ANTHROPIC_API_KEY = "sk-ant-local";
+    saveCachedAccountSettings({
+      settings: DEFAULT_ACCOUNT_SETTINGS,
+      setupComplete: true,
+      setupCompletedAt: "2026-09-28T00:00:00.000Z",
+      updatedAt: "2026-09-28T00:00:00.000Z",
+      setupUrl: null,
+      accountId: "acct_neo",
+      email: "steve@neoware.io",
+    });
+
+    clearCliLogin();
+
+    assert.equal(existsSync(zipwikiAccountsPath()), false);
+    assert.equal(existsSync(zipwikiSettingsCachePath()), false);
+    assert.equal(loadCliAccounts().length, 0);
+    assert.equal(process.env.ZIPWIKI_API_KEY, undefined);
+    assert.equal(process.env.ZIPWIKI_ACCOUNT_EMAIL, undefined);
+    assert.equal(process.env.ZIPWIKI_PARSE_CREDENTIAL, undefined);
+    assert.equal(process.env.ANTHROPIC_API_KEY, "sk-ant-local");
+
+    delete process.env.ANTHROPIC_API_KEY;
+    loadZipwikiHomeEnv();
+    assert.equal(process.env.ZIPWIKI_API_KEY, undefined);
+    assert.equal(process.env.ZIPWIKI_ACCOUNT_EMAIL, undefined);
+    assert.equal(process.env.ANTHROPIC_API_KEY, "sk-ant-local");
   });
 });
