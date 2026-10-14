@@ -395,7 +395,7 @@ export default function CreateKnowledgePage() {
           <p className="text-sm text-(--muted)">
             <Link
               to="/dashboard/settings"
-              className="text-(--accent) hover:underline"
+              className="font-semibold text-(--accent) underline"
             >
               Edit default settings
             </Link>
