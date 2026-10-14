@@ -3,8 +3,6 @@ import { MCP_INSTALL_BLOCKS } from "../../../../mcp/src/mcp-clients";
 import { DOWNLOAD_PREREQS } from "../../lib/marketing-copy";
 import { PageHero, SecondaryCta, Section } from "./MarketingUi";
 
-const SITE = "https://zipwiki.ai";
-
 const BUILDS = [
   {
     id: "darwin-arm64",
@@ -20,9 +18,15 @@ const BUILDS = [
   },
   {
     id: "linux-x64",
-    label: "Linux x64",
+    label: "Linux x64 (glibc)",
     platform: "linux",
     arch: "x64",
+  },
+  {
+    id: "linux-arm64",
+    label: "Linux ARM64 (glibc)",
+    platform: "linux",
+    arch: "arm64",
   },
   {
     id: "win32-x64",
@@ -122,11 +126,27 @@ function tarballName(version: string, platform: string, arch: string): string {
   return `zipwiki-${version}-${platform}-${arch}.tgz`;
 }
 
+function isDevHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return (
+    host === "dev.zipwiki.ai" ||
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    /^zipwiki-web(?:[.-][a-z0-9-]+)?\.vercel\.app$/.test(host)
+  );
+}
+
 export default function InstallPage() {
   const [version, setVersion] = useState("0.1.0");
   const [published, setPublished] = useState<Set<string>>(new Set());
+  const [siteOrigin, setSiteOrigin] = useState("https://zipwiki.ai");
+  const [devHost, setDevHost] = useState(false);
 
   useEffect(() => {
+    const origin = window.location.origin.replace(/\/$/, "");
+    setSiteOrigin(origin);
+    setDevHost(isDevHost(window.location.hostname));
+
     let cancelled = false;
     void fetch("/releases/index.json")
       .then((response) => (response.ok ? response.json() : null))
@@ -161,6 +181,13 @@ export default function InstallPage() {
           title="Install ZipWiki on this machine"
           lead="One package includes the zipwiki command, LiteParse, and the zipwiki-mcp server. Download the release tarball for your OS, or install it globally with npm from this site."
         />
+        {devHost ? (
+          <p className="mt-4 max-w-3xl rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted)">
+            Dev rehearsal host — install commands use{" "}
+            <code className="text-xs">{siteOrigin}</code> so the tarball comes
+            from this site, not production.
+          </p>
+        ) : null}
         <div className="mt-8 flex flex-wrap gap-3">
           <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
         </div>
@@ -185,7 +212,8 @@ export default function InstallPage() {
         </h2>
         <p className="mt-3 max-w-3xl text-(--muted)">
           Choose the zipwiki-bundle build for this computer. Each file is version{" "}
-          {version}. After download, install with{" "}
+          {version} and includes the matching LiteParse native library. After
+          download, install with{" "}
           <code className="text-sm">npm i -g ./zipwiki-….tgz</code>, or use the
           one-liner below (npm fetches the same file from this site).
         </p>
@@ -193,7 +221,7 @@ export default function InstallPage() {
           {BUILDS.map((build) => {
             const file = tarballName(version, build.platform, build.arch);
             const href = `/releases/${file}`;
-            const command = `npm i -g ${SITE}${href}`;
+            const command = `npm i -g ${siteOrigin}${href}`;
             const ready = published.has(file);
             return (
               <article
@@ -217,10 +245,16 @@ export default function InstallPage() {
                     </span>
                   )}
                 </div>
-                <ScriptBlock
-                  value={command}
-                  label={`Copy ${build.label} install command`}
-                />
+                {ready ? (
+                  <ScriptBlock
+                    value={command}
+                    label={`Copy ${build.label} install command`}
+                  />
+                ) : (
+                  <p className="mt-3 text-sm text-(--muted)">
+                    No install URL until this platform’s tarball is published.
+                  </p>
+                )}
               </article>
             );
           })}
@@ -233,7 +267,8 @@ export default function InstallPage() {
           >
             THIRD_PARTY_NOTICES
           </a>
-          .
+          . Linux builds need glibc (Debian/Ubuntu/RHEL). Alpine musl is not
+          published on this page yet.
         </p>
       </Section>
 
