@@ -7,6 +7,10 @@ import { MarkdownViewDialog } from "../components/MarkdownViewDialog";
 import { PromptSection } from "../components/ZipWikiPrompts";
 import { QUERY_PROMPTS } from "../lib/create-kb-prompts";
 import {
+  EXAMPLE_PACKAGES,
+  examplePackageForFilename,
+} from "../lib/example-packages";
+import {
   openNzip,
   formatFollowWindow,
   formatPhraseHits,
@@ -479,6 +483,27 @@ export default function KnowledgePage() {
     void loadFile(file);
   }
 
+  async function openExample(name: string) {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch(`/examples/${encodeURIComponent(name)}`);
+      const buf = await res.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      const zip = bytes.length > 3 && bytes[0] === 0x50 && bytes[1] === 0x4b;
+      if (!res.ok || !zip) {
+        throw new Error(
+          `${name} could not be opened. The example package is not available from this site.`,
+        );
+      }
+      const file = new File([buf], name, { type: "application/zip" });
+      await loadFile(file);
+    } catch (err) {
+      setLoading(false);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   function clear() {
     setSummary(null);
     setError("");
@@ -550,9 +575,10 @@ export default function KnowledgePage() {
     setAskSources([]);
   }
 
-  async function askPackage() {
+  async function askPackage(text?: string) {
     const buf = archiveRef.current;
-    const q = question.trim();
+    const q = (text ?? question).trim();
+    if (text) setQuestion(text);
     if (!buf || !summary || !q || asking || outOfCredits || creditsLocked) return;
     setAskError("");
     setAnswer(null);
@@ -819,6 +845,9 @@ export default function KnowledgePage() {
     : [];
 
   const viewingEntry = viewing ? entryNamed(viewing) : null;
+  const openedExample = summary
+    ? examplePackageForFilename(summary.filename)
+    : undefined;
   const openArchive = archiveRef.current;
 
   return (
@@ -846,14 +875,6 @@ export default function KnowledgePage() {
           </div>
 
           <div
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                inputRef.current?.click();
-              }
-            }}
             onDragEnter={(e) => {
               e.preventDefault();
               setDragging(true);
@@ -877,27 +898,62 @@ export default function KnowledgePage() {
                 : "border-(--border) bg-white"
             }`}
           >
-            <p className="text-sm text-(--ink)">
-              Drop a <strong>.zipwiki</strong> or <strong>.nzip</strong> here, or
-            </p>
-            <label
-              htmlFor={inputId}
-              className="mt-3 inline-block cursor-pointer rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white"
+            <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  inputRef.current?.click();
+                }
+              }}
             >
-              {loading ? "Opening…" : "Choose file"}
-            </label>
-            <input
-              ref={inputRef}
-              id={inputId}
-              type="file"
-              accept=".zipwiki,.nzip,application/zip"
-              className="sr-only"
-              disabled={loading}
-              onChange={(e) => onFiles(e.target.files)}
-            />
-            <p className="mt-3 text-xs text-(--muted)">
-              Stays in your browser — nothing is uploaded for this preview.
-            </p>
+              <p className="text-sm text-(--ink)">
+                Drop a <strong>.zipwiki</strong> or <strong>.nzip</strong> here, or
+              </p>
+              <label
+                htmlFor={inputId}
+                className="mt-3 inline-block cursor-pointer rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white"
+              >
+                {loading ? "Opening…" : "Choose file"}
+              </label>
+              <input
+                ref={inputRef}
+                id={inputId}
+                type="file"
+                accept=".zipwiki,.nzip,application/zip"
+                className="sr-only"
+                disabled={loading}
+                onChange={(e) => onFiles(e.target.files)}
+              />
+              <p className="mt-3 text-xs text-(--muted)">
+                Stays in your browser — nothing is uploaded for this preview.
+              </p>
+            </div>
+            <div className="mt-6 border-t border-(--border) pt-4">
+              <p className="text-xs font-medium text-(--ink)">
+                Example packages
+              </p>
+              <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+                {EXAMPLE_PACKAGES.map((example) => (
+                  <li key={example.name}>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      className="flex h-full w-full flex-col items-center gap-2 rounded-lg border border-(--border) bg-white px-4 py-5 text-center hover:border-(--accent) disabled:opacity-60"
+                      onClick={() => void openExample(example.name)}
+                    >
+                      <span className="font-display text-lg font-semibold text-(--ink)">
+                        {example.title}
+                      </span>
+                      <span className="line-clamp-2 text-sm leading-snug text-(--muted)">
+                        {example.description}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
 
           <PromptSection title="Query examples" prompts={QUERY_PROMPTS} />
@@ -997,6 +1053,25 @@ export default function KnowledgePage() {
               locally, including cited text, then sent to answer the question.
               A file with no extract stored at pack time cannot be read.
             </p>
+            {openedExample && openedExample.queries.length > 0 ? (
+              <div className="mt-4">
+                <h3 className="text-sm font-semibold">{openedExample.title}</h3>
+                <ul className="mt-2 space-y-2">
+                  {openedExample.queries.map((query) => (
+                    <li key={query}>
+                      <button
+                        type="button"
+                        disabled={asking !== null || outOfCredits || creditsLocked}
+                        className="text-left text-sm text-(--accent) hover:underline disabled:opacity-60"
+                        onClick={() => void askPackage(query)}
+                      >
+                        {query}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <form
               className="mt-3 flex flex-col gap-2 sm:flex-row"
               onSubmit={(event) => {
