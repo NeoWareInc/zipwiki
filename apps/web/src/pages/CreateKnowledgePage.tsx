@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import type { AccountSettingsBody } from "@zipwiki/api-client";
@@ -21,14 +21,20 @@ import {
 export default function CreateKnowledgePage() {
   const settingsData = useQuery(api.settings.mine);
   const [state, setState] = useState<PackBuilderState>(defaultPackBuilderState);
-  const [defaultsMsg, setDefaultsMsg] = useState("");
+  const appliedSettings = useRef(false);
 
   const mcpPrompt = useMemo(() => buildMcpPackPrompt(state), [state]);
   const cliCommand = useMemo(() => buildCliPackCommand(state), [state]);
 
+  useEffect(() => {
+    if (appliedSettings.current || settingsData === undefined) return;
+    appliedSettings.current = true;
+    const settings = settingsData?.settings as AccountSettingsBody | undefined;
+    setState((s) => applyAccountSettingsToPackBuilder(s, settings));
+  }, [settingsData]);
+
   function patch(partial: Partial<PackBuilderState>) {
     setState((s) => ({ ...s, ...partial }));
-    setDefaultsMsg("");
   }
 
   function setSourceAt(index: number, value: string) {
@@ -37,12 +43,10 @@ export default function CreateKnowledgePage() {
       sourcePaths[index] = value;
       return { ...s, sourcePaths };
     });
-    setDefaultsMsg("");
   }
 
   function addSourcePath() {
     setState((s) => ({ ...s, sourcePaths: [...s.sourcePaths, ""] }));
-    setDefaultsMsg("");
   }
 
   function removeSourcePath(index: number) {
@@ -53,13 +57,6 @@ export default function CreateKnowledgePage() {
         sourcePaths: s.sourcePaths.filter((_, i) => i !== index),
       };
     });
-    setDefaultsMsg("");
-  }
-
-  function loadDefaults() {
-    const settings = settingsData?.settings as AccountSettingsBody | undefined;
-    setState((s) => applyAccountSettingsToPackBuilder(s, settings));
-    setDefaultsMsg("Loaded from your Knowledge Archive settings");
   }
 
   return (
@@ -78,27 +75,8 @@ export default function CreateKnowledgePage() {
           >
             Query ZipWiki
           </Link>
-          .
+          . Values here override your account defaults for this command.
         </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={loadDefaults}
-          className="rounded-md border border-(--border) bg-white px-3 py-1.5 text-sm font-semibold text-(--ink) hover:bg-(--paper)"
-        >
-          Use default settings
-        </button>
-        <Link
-          to="/dashboard/settings#packing"
-          className="text-sm text-(--accent) hover:underline"
-        >
-          Edit defaults
-        </Link>
-        {defaultsMsg ? (
-          <span className="text-xs text-(--muted)">{defaultsMsg}</span>
-        ) : null}
       </div>
 
       <section className="space-y-5">
@@ -413,6 +391,17 @@ export default function CreateKnowledgePage() {
               </select>
             </label>
           </div>
+
+          <p className="text-sm text-(--muted)">
+            <Link
+              to="/dashboard/settings"
+              className="text-(--accent) hover:underline"
+            >
+              Edit default settings
+            </Link>
+            {" — "}
+            change the account defaults this page loads from.
+          </p>
         </div>
       </section>
 

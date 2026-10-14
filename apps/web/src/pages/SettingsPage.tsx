@@ -648,15 +648,6 @@ function hostedOkfModelLabel(model: string | undefined): string {
 }
 
 export default function SettingsPage() {
-  useEffect(() => {
-    if (window.location.hash !== "#packing") return;
-    // Wait a tick so the packing section is in the DOM.
-    const id = window.setTimeout(() => {
-      document.getElementById("packing")?.scrollIntoView({ behavior: "smooth" });
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, []);
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
