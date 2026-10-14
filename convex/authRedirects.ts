@@ -27,6 +27,7 @@ export function allowedAuthOrigins(): string[] {
 export function isTrustedZipWikiHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
   if (host === "zipwiki.ai" || host === "www.zipwiki.ai") return true;
+  if (host === "dev.zipwiki.ai") return true;
   if (/^zipwiki-web(?:[.-][a-z0-9-]+)?\.vercel\.app$/.test(host)) return true;
   if (/^zipwiki-[a-z0-9]+-neoware\.vercel\.app$/.test(host)) return true;
   return false;

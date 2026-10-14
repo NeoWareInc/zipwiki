@@ -175,7 +175,7 @@ describe("credential source resolution", () => {
         apiUrl: ZIPWIKI_DEV_API_URL,
         setupUrl: "https://zipwiki.ai/dashboard/settings",
       }),
-      "https://zipwiki-web-dev.vercel.app/dashboard/settings",
+      "https://dev.zipwiki.ai/dashboard/settings",
     );
     assert.equal(
       dashboardSettingsUrl({ apiUrl: "https://api.zipwiki.ai" }),

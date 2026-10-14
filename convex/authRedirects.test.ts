@@ -68,6 +68,16 @@ describe("authRedirects", () => {
     );
   });
 
+  it("allows the custom dev host without listing it in WEB_ORIGIN", () => {
+    process.env.SITE_URL = "https://zipwiki-web-dev.vercel.app";
+    process.env.WEB_ORIGIN =
+      "https://zipwiki-web-dev.vercel.app,http://localhost:5173";
+    assert.equal(
+      resolveAuthRedirect("https://dev.zipwiki.ai/signed-in"),
+      "https://dev.zipwiki.ai/signed-in",
+    );
+  });
+
   it("always includes localhost:5173 in the allowlist", () => {
     process.env.SITE_URL = "https://zipwiki.ai";
     delete process.env.WEB_ORIGIN;

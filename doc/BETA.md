@@ -1,23 +1,216 @@
 # First beta checklist
 
-Product: **ZipWiki** · File: **`.zipwiki`** · Runtime: **TypeScript** (Phase 3)
+Product: **ZipWiki** · File: `.zipwiki` · Runtime: **TypeScript** (Phase 3)
 
-A box is done only when a new user can do it on the **production** path below.
-A green dev site, a local `pnpm zipwiki`, or a Fly dev app does not check the box.
+Work in order:
+
+1. **Part A — Dev complete** — finish every checkbox against **local** tooling and the **dev** hosted stack (`https://dev.zipwiki.ai`). A box here is done when it works on that path.
+2. **Part B — Prepare production Beta** — cut the release and wire **zipwiki.ai** / production API / Convex / Stripe live.
+3. **Part C — Verify production Beta** — prove the same product works on the public production path. Do not check Part C boxes from a green dev site alone.
 
 Rust CLI is Phase 4 and is not part of this beta.
 
-| Surface | Production | Dev (rehearsal only) |
-| --- | --- | --- |
-| Website | `https://zipwiki.ai` (`main` → Vercel production) | `https://zipwiki-web-dev.vercel.app` (`dev` branch) |
-| API | `https://api.zipwiki.ai` (`zipwiki-api-prod`) | `https://zipwiki-api-dev.fly.dev` |
-| Accounts, credits, keys | Convex `festive-hare-381` | Convex `dashing-cod-224` |
-| Payments | Stripe live | Stripe test |
-| Install | `npm i -g https://zipwiki.ai/releases/…tgz` | same file on the dev host, for rehearsal |
 
-Related: [PHASES.md](../PHASES.md), [COMPLETE.md](COMPLETE.md), [CLI.md](CLI.md), [MCP.md](MCP.md), [HOSTED-API.md](HOSTED-API.md), [DISTRIBUTION.md](DISTRIBUTION.md), [CONVEX.md](CONVEX.md).
+| Surface                 | Dev (finish first)                                   | Production Beta                                        |
+| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
+| Website                 | `https://dev.zipwiki.ai` (`dev` branch → Vercel)     | `https://zipwiki.ai` (`main` → Vercel production)      |
+| Local site              | `http://localhost:5173` (`pnpm dev:web`)             | —                                                      |
+| API                     | `https://api-dev.zipwiki.ai` (`pnpm deploy:fly:dev`) | `https://api.zipwiki.ai` (`pnpm deploy:fly:prod`)      |
+| Accounts, credits, keys | Convex `dashing-cod-224` (`npx convex dev --once`)   | Convex `festive-hare-381` (`pnpm convex:deploy`)       |
+| Payments                | Stripe **test**                                      | Stripe **live**                                        |
+| Install rehearsal       | Tarball / `latest.json` on the **dev** host          | `npm i -g https://zipwiki.ai/releases/…tgz`            |
+| Local CLI               | `pnpm zipwiki -- …` from this repo                   | Published global `zipwiki` from the production tarball |
 
-## 1. Release cut
+
+Related: [PHASES.md](../PHASES.md), [COMPLETE.md](COMPLETE.md), [CLI.md](CLI.md), [MCP.md](MCP.md), [HOSTED-API.md](HOSTED-API.md), [DISTRIBUTION.md](DISTRIBUTION.md), [CONVEX.md](CONVEX.md), [AGENTS.md](../AGENTS.md).
+
+---
+
+
+
+# Part A — Dev complete (local + [https://dev.zipwiki.ai](https://dev.zipwiki.ai))
+
+A box in Part A is done when a person can do it on **local** and/or **dev** as written. Do not skip ahead to production until Part A is finished.
+
+## A1. Dev environments and secrets
+
+- [x] `pnpm dev:web` serves the portal against **dev** Convex (`dashing-cod-224`).
+- [x] `https://dev.zipwiki.ai` is the hosted website for the `dev` branch (DNS / Vercel custom domain). Localhost and that host both reach the same auth and dashboard flows.
+- [x] `npx convex dev --once` (or `convex dev`) updates **dev** Convex only — never treat `pnpm convex:deploy` as the dev push.
+- [x] `pnpm deploy:fly:dev` updates the API at `https://api-dev.zipwiki.ai` (not production Fly).
+- [x] Dev Fly secrets are set for the **dev** stack: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL` (dev), `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://dev.zipwiki.ai` and `http://localhost:5173`.
+- [x] Stripe **test** keys, webhook secret, and price/credit settings point at **dev** Convex. Live Stripe is not required for Part A.
+- [x] Admin allowlist works for operators on **dev** (email + passkey step-up on `https://dev.zipwiki.ai/admin`).
+- [x] No `.env`, API key, or Stripe secret is in git. `~/.zipwiki` is the only place a user key lives.
+- [x] Local CLI / login for rehearsal targets the **dev** API (`api-dev.zipwiki.ai` / `ZIPWIKI_API_URL` for that session), not production.
+
+
+
+## A2. zipwiki CLI (local + dev API)
+
+Install and identity:
+
+- [ ] From this repo, `pnpm zipwiki -- --help` lists pack, update, open, search, query, ask, read, origin, extract, login, and settings.
+- [ ] `pnpm zipwiki -- login` completes the device flow against **dev** (`dev.zipwiki.ai` / localhost device pages) and stores the key under `~/.zipwiki`. `pnpm zipwiki -- auth` shows the signed-in account. Logout or a bad key fails with a sentence a person can act on.
+- [ ] First run update-check behavior is acceptable on dev: silent when current; one stderr line when `latest.json` is newer; `ZIPWIKI_NO_UPDATE_CHECK=1` and `--quiet` stay silent; failures to reach the manifest stay silent.
+
+Pack and update:
+
+- [ ] `pnpm zipwiki -- pack` of a local PDF with `--parser liteparse --no-ai-okf` needs no account and writes a `.zipwiki` another machine can open.
+- [ ] Hosted pack against **dev** (`ZipWiki OKF`, and LlamaParse when selected) debits **dev** credits and records the model, tokens, and file name.
+- [ ] Out of credits on **dev**: parse falls back to LiteParse; OKF falls back with a clear message and does not call Claude.
+- [ ] `--include-original` stores the source bytes. `--omit-original` stores parsed markdown plus Extra Field `0x014F` and does not pretend a private folder URL is a public file.
+- [ ] OKF profiles used in beta (`auto`, and `book` / `legislation` / `invoice` if advertised) match the cards that land in the package.
+- [ ] `pnpm zipwiki -- update` adds, replaces, and deletes documents, refreshes `ai.digest`, and leaves untouched members intact.
+- [ ] The package does not contain `wiki/search.json`, `wiki/okf/log.md`, or `wiki/okf/topics/pdf.md`.
+
+Query:
+
+- [ ] `open` shows the catalog, digest, and whether each document has parsed text and original bytes.
+- [ ] `search` and `query` hit OKF first, then parsed markdown.
+- [ ] `ask` with no question prompts on a TTY, sends evidence to the **dev** answer route, and cites paths inside the package. No passages and no OKF hits does not call the model.
+- [ ] Credit errors from `ask` use the same sentences as the **dev** website.
+- [ ] `read` streams an entry and checks CRC-32. `origin --fetch` downloads an omitted original and checks the stored CRC. `extract` is only required when a filesystem path is required.
+- [ ] `pnpm zipwiki -- settings pull` matches `/dashboard/settings` on **dev** for the signed-in account (parser, OKF, omit-original).
+
+
+
+## A3. zipwiki-mcp (local)
+
+- [ ] `zipwiki-mcp` (from this repo / built package) speaks stdio MCP (`initialize` returns server name `zipwiki`).
+- [ ] Tools match the CLI open sequence: `open`, `search` or `query`, `read_okf_index`, `read_okf`, `read_parsed`, `read`, `origin`, `extract`, plus `pack`, `update`, `ask`, `list`, `read_entry`, `read_manifest`, `okf_enrich`.
+- [ ] Progress and the update check never write to stdout. Tool errors come back as tool results.
+- [ ] `ask` does not prompt (no TTY). It refuses an empty question and does not call the model when the package has no evidence.
+- [ ] Cursor (or another MCP host) starts with a local `mcp.json` pointing at this checkout’s `zipwiki-mcp`.
+- [ ] A cold agent can pack a local PDF with `--no-ai-okf`, then `open` → `search` → `read_okf` → `read_parsed` without dumping the whole archive.
+- [ ] Hosted `pack` / `okf_enrich` / `ask` from MCP debit the same **dev** account as the CLI.
+
+
+
+## A4. Package contents
+
+- [ ] `META-INF/manifest.json` lists primaries, parser, OKF presence, and `ai.digest` when concepts exist.
+- [ ] `ai.digest` is at most 1000 characters, starts with the document count, and was written from the whole `wiki/okf/index.md` (every `# Files` bullet), not from the first names in alphabetical order.
+- [ ] A package with more than one subject (two patients, two books) names each repeated subject in that digest.
+- [ ] Parsed markdown is what models read. Originals are present only when the pack asked for them.
+- [ ] Stock `unzip` can list the archive. Compression is zstd by default; deflate still opens in older tools when requested.
+- [ ] `THIRD_PARTY_NOTICES` in the built tarball names LiteParse, Tesseract, and PDFium with their license texts (rehearse with `pnpm build:dist` even before production publish).
+
+
+
+## A5. Distribution rehearsal on the dev host
+
+- [ ] Dev install page (on `https://dev.zipwiki.ai/install` or the equivalent) can point at tarballs served from the **dev** site for rehearsal.
+- [ ] `apps/web/public/releases/index.json` lists only files that exist under `public/releases/` after `pnpm build:dist`; the web build fails when the list and the files disagree.
+- [ ] `/releases/` is not rewritten to `index.html` on the **dev** deploy.
+- [ ] Copy icons on the install scripts copy the command that is on screen.
+- [ ] Platforms that are not published say so and do not offer a fake `npm i -g` URL.
+- [ ] Node `>= 22.13` is stated on `/install` and enforced by the package `engines` field.
+- [ ] LibreOffice is documented as a system requirement for Office files and is not bundled. EasyOCR and PaddleOCR are not implied.
+- [ ] A second machine can install from the **dev** tarball URL (or a copied `.tgz`) and run `zipwiki --help` before production publish.
+
+
+
+## A6. Hosted API (dev)
+
+- [ ] `GET /health` on `https://api-dev.zipwiki.ai` returns success, and the docs describe the routes that actually exist: `/api/parse`, `/api/okf/enrich`, `/api/okf/digest`, `/api/query/answer`, `/api/settings`, `/api/client-config`, usage and telemetry.
+- [ ] [HOSTED-API.md](HOSTED-API.md) matches that list (update the doc if it still omits digest and ask).
+- [ ] Dev Fly is running the image that contains those routes, with enough memory for a real PDF parse.
+- [ ] `api-dev.zipwiki.ai` has a valid certificate and DNS. Clients may still know `*.fly.dev` for ops, but product paths use the custom host.
+- [ ] Parse, OKF enrich, package digest, and ask each debit one credit on success and do not debit on vendor failure (**dev** ledger).
+- [ ] Haiku 5.5 (and any other allowed model) is on both allowlists (`convex/lib/credits.ts` and `apps/server/src/gateway/anthropic.ts`). A saved older model id does not 400.
+- [ ] Package digest reads the full OKF index the client sends and returns a summary; an empty Claude reply is visible in logs and the CLI keeps a digest that still names every group.
+- [ ] Fly build context does not upload `knowledge/`, `.pack/`, or the website tarball (`.dockerignore`).
+- [ ] `pnpm check:fly:dev` is clean.
+
+
+
+## A7. Website (dev.zipwiki.ai + local)
+
+- [ ] `https://dev.zipwiki.ai/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it (same for local after `pnpm dev:web`).
+- [ ] A visitor can reach Install, How it works, CLI, MCP, Pricing, Roadmap, Terms, and Privacy without guessing URLs. Nav may be Product + How it works; confirm the rest are linked from the pages a beta user sees.
+- [ ] Pricing copy matches the ledger: 100 credits per dollar, what a credit buys (hosted parse, hosted OKF, ask), and the LlamaParse tiers that are actually offered.
+- [ ] Waitlist and sales mail links reach a mailbox that is read.
+- [ ] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
+- [ ] `/install` on **dev.zipwiki.ai** offers a working download or a working `npm i -g` URL for rehearsal.
+- [ ] Mobile and desktop both show the install commands and the two-line header without a third wrapped line.
+- [ ] No beta CTA points at a page that redirects away or 404s (`/product`, `/download`, `/plugin` may redirect; the destination must be the intended page).
+- [ ] How it works and Knowledge Archive settings education (parse + OKF / ZipWiki LLM) are clear on **dev** before promoting copy to production.
+
+
+
+## A8. Portal (dev)
+
+Account:
+
+- [ ] Sign up, email code or the live auth method, and sign-in work on `https://dev.zipwiki.ai` (and localhost) against **dev** Convex.
+- [ ] CLI device approval (`/cli/device`, `/cli/setup`) issues a key the **dev** API accepts.
+- [ ] Sign out works. A second browser does not stay signed in as the first user.
+
+Knowledge:
+
+- [ ] `/dashboard/knowledge` opens a local or uploaded `.zipwiki`, shows the package overview including `ai.digest`, and can search and ask.
+- [ ] Ask on the website and `zipwiki ask` return the same kind of cited answer for the same package and question (**dev**).
+- [ ] Empty, missing-package, and credit-exhausted states are visible and do not spin.
+- [ ] Create ZipWiki loads account settings by default; page values override for the generated command; “Edit default settings” opens Settings at the top.
+
+Settings and keys:
+
+- [ ] `/dashboard/settings` saves parser, OKF, and pack options, and `zipwiki settings pull` sees them.
+- [ ] `/dashboard/keys` is reachable (e.g. from Settings), creates a key, shows it once, copies it, and revokes it. A revoked key is rejected by the **dev** API.
+- [ ] The dashboard home shows credit balance and recent usage that match the **dev** ledger.
+
+
+
+## A9. Billing (Stripe test on dev)
+
+- [ ] A Stripe **test** Checkout from `/dashboard/billing` on **dev** adds credits after the webhook. Cancel adds nothing. Refresh shows the new balance without a manual Convex edit.
+- [ ] The Stripe customer portal opens for a user who has paid (test mode).
+- [ ] Auto-reload charges the saved test card at the threshold and does not double-charge a single pack.
+- [ ] Low-credit email sends once per dip, not once per file (test/dev mail path).
+- [ ] One hosted parse, one OKF card, one package digest, and one ask each appear on the ledger with provider, model, and tokens or pages. The credit math matches the published formula (markup and 100 credits per dollar).
+- [ ] Spent credits cannot exceed purchased credits unless the account is marked unlimited.
+- [ ] A locked account cannot spend. A disabled account cannot sign in or call the API.
+- [ ] Receipts and the billing page agree on dollars and credits (test).
+
+
+
+## A10. Admin (dev)
+
+- [ ] `/admin` on **dev** requires an admin role and a current passkey step-up. A normal customer gets a refusal, not a half-loaded page.
+- [ ] Account search finds a user by email. Disable, role change, unlimited credits, credit lock, and **add/subtract credits** take effect on the next API call.
+- [ ] `/admin/accounts/:id` shows keys, usage, and the credit ledger for that account.
+- [ ] `/admin/usage` matches Fly and Convex for a known pack (same file count, same credit count).
+- [ ] `/admin/billing` shows vendor float for Anthropic and LlamaParse. Restock and low-float threshold save, and a low float is visible before the vendor key runs dry.
+- [ ] Granting or adjusting credits writes a ledger row and updates the balance the user sees.
+- [ ] Admin actions are attributable (who changed the account).
+
+
+
+## A11. Dev smokes (gate before Part B)
+
+Run these as a person who is not the author, on **local** and/or **dev**:
+
+- [ ] Sign up on `https://dev.zipwiki.ai`, finish settings, and connect CLI with `zipwiki login` to **dev**.
+- [ ] Pack a small PDF with `--no-ai-okf`. `open` lists it. `search` finds a word from the page. `read` returns markdown.
+- [ ] Buy the smallest **test** credit pack (or grant credits via admin), pack with hosted OKF, and see the balance drop on the **dev** website.
+- [ ] `zipwiki ask` and the knowledge page answer the same question from that package, with citations.
+- [ ] Point an AI agent at local `zipwiki-mcp` and run `open` then `search` then `read_okf`.
+- [ ] Pack with originals included and with originals omitted. Omitted originals still `origin --fetch` when a real public URL exists; included originals are in the zip.
+- [ ] Spend the **dev** account to zero and confirm the next hosted call falls back or stops with the documented message.
+- [ ] Confirm the **dev** `/releases/latest.json` (or install page) and a rehearsal tarball URL from a browser.
+
+**Part A gate:** all boxes above are checked. Only then start Part B.
+
+---
+
+
+
+# Part B — Prepare production Beta ([zipwiki.ai](http://zipwiki.ai))
+
+Cut and wire the public Beta. Do not mark Part C done until these are in place.
+
+## B1. Release cut
 
 - [ ] Write the beta scope in one paragraph: what a user can install, which OS/CPU builds exist, and what still waits (Rust, extra platforms).
 - [ ] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
@@ -25,144 +218,78 @@ Related: [PHASES.md](../PHASES.md), [COMPLETE.md](COMPLETE.md), [CLI.md](CLI.md)
 - [ ] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
 - [ ] Write a rollback: previous tarball URL, previous Fly image, previous Convex deploy, and who can promote `main`.
 
-## 2. Environments and secrets
 
-- [ ] Production website deploy comes from `main`. Pushing `dev` updates `zipwiki-web-dev.vercel.app` only.
+
+## B2. Production environments and secrets
+
+- [ ] Production website deploy comes from `main`. Pushing `dev` updates `https://dev.zipwiki.ai` only.
 - [ ] `pnpm deploy:fly:prod` is what updates the API users call. `pnpm deploy:fly:dev` does not.
 - [ ] `pnpm convex:deploy` is production Convex (`festive-hare-381`). `npx convex dev --once` is the dev deployment only.
-- [ ] Fly prod secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`.
-- [ ] Stripe live keys, webhook secret, and price/credit settings point at production Convex. Test-mode webhooks are not attached to the live site.
-- [ ] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal dev account left over from setup.
-- [ ] No `.env`, API key, or Stripe secret is in git. `~/.zipwiki` is the only place a user key lives.
-- [ ] `ZIPWIKI_API_URL` baked into the installed CLI and into the website client config is the production API.
+- [ ] Fly **prod** secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://www.zipwiki.ai` and `https://zipwiki.ai` as required.
+- [ ] Stripe **live** keys, webhook secret, and price/credit settings point at production Convex. Test-mode webhooks are not attached to the live site.
+- [ ] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
+- [ ] `ZIPWIKI_API_URL` baked into the installed CLI and into the website client config is the **production** API (`https://api.zipwiki.ai`).
+- [ ] `pnpm check:fly:prod` is clean.
 
-## 3. zipwiki CLI
 
-Install and identity:
+
+## B3. Distribution on [zipwiki.ai](http://zipwiki.ai)
+
+- [ ] `pnpm build:dist` produces the tarballs for every platform the beta claims.
+- [ ] Every `npm i -g https://zipwiki.ai/releases/<file>.tgz` command on `/install` downloads a real gzip tarball (`1f 8b`), not the website HTML.
+- [ ] Production deploy of `apps/web` contains those release files and `index.json` / `latest.json`.
+- [ ] `/releases/` is not rewritten to `index.html` on **zipwiki.ai**.
+- [ ] Platforms that are not published say so. Beta is explicit if it is macOS Apple silicon only.
+- [ ] `latest.json` `version` equals the installed CLI, and `url` points at a page that exists (`/install` or a real release note).
+- [ ] A second machine (not the build machine) installs from the **public** URL and runs `zipwiki --help`.
+
+
+
+## B4. Promote website, API, and Convex
+
+- [ ] Merge / promote the verified `dev` work to `main` (or the production deploy path) so `https://zipwiki.ai` matches the Part A product.
+- [ ] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse.
+- [ ] `api.zipwiki.ai` has a valid certificate and DNS. Clients do not depend on `*.fly.dev` hostnames for product use.
+- [ ] Production Convex functions match what the CLI and website call (including admin credit adjust, welcome credits, passkey origins for www/apex as needed).
+
+**Part B gate:** release artifacts and production wiring are ready. Proceed to Part C verification.
+
+---
+
+
+
+# Part C — Verify production Beta ([zipwiki.ai](http://zipwiki.ai))
+
+A box here is done only when a new user can do it on the **production** path. A green `dev.zipwiki.ai` or local `pnpm zipwiki` does not check these boxes.
+
+## C1. Production CLI and MCP
 
 - [ ] `npm i -g` of the published tarball puts `zipwiki` and `zipwiki-mcp` on `PATH`.
-- [ ] `zipwiki --version` matches `latest.json`.
-- [ ] `zipwiki --help` lists pack, update, open, search, query, ask, read, origin, extract, login, and settings.
-- [ ] First run prints nothing when already current. A newer `latest.json` prints one stderr line and continues. `ZIPWIKI_NO_UPDATE_CHECK=1` and `--quiet` stay silent. Failures to reach the manifest stay silent.
-- [ ] `zipwiki login` completes the device flow in the browser and stores the key under `~/.zipwiki`. `zipwiki auth` shows the signed-in account. Logout or a bad key fails with a sentence a person can act on.
-
-Pack and update:
-
-- [ ] `zipwiki pack` of a local PDF with `--parser liteparse --no-ai-okf` needs no account and writes a `.zipwiki` another machine can open.
-- [ ] Hosted pack (`ZipWiki OKF`, and LlamaParse when selected) debits production credits and records the model, tokens, and file name.
-- [ ] Out of credits: parse falls back to LiteParse; OKF falls back with a clear message and does not call Claude.
-- [ ] `--include-original` stores the source bytes. `--omit-original` stores parsed markdown plus Extra Field `0x014F` and does not pretend a private folder URL is a public file.
-- [ ] OKF profiles used in beta (`auto`, and `book` / `legislation` / `invoice` if advertised) match the cards that land in the package.
-- [ ] `zipwiki update` adds, replaces, and deletes documents, refreshes `ai.digest`, and leaves untouched members intact.
-- [ ] The package does not contain `wiki/search.json`, `wiki/okf/log.md`, or `wiki/okf/topics/pdf.md`.
-
-Query:
-
-- [ ] `open` shows the catalog, digest, and whether each document has parsed text and original bytes.
-- [ ] `search` and `query` hit OKF first, then parsed markdown.
-- [ ] `ask` with no question prompts on a TTY, sends evidence to the hosted answer route, and cites paths inside the package. No passages and no OKF hits does not call the model.
-- [ ] Credit errors from `ask` use the same sentences as the website.
-- [ ] `read` streams an entry and checks CRC-32. `origin --fetch` downloads an omitted original and checks the stored CRC. `extract` is only required when a filesystem path is required.
-- [ ] `zipwiki settings pull` matches `/dashboard/settings` for the signed-in account (parser, OKF, omit-original).
-
-## 4. zipwiki-mcp
-
-- [ ] `zipwiki-mcp` speaks stdio MCP (`initialize` returns server name `zipwiki` and the beta version).
-- [ ] Tools match the CLI open sequence: `open`, `search` or `query`, `read_okf_index`, `read_okf`, `read_parsed`, `read`, `origin`, `extract`, plus `pack`, `update`, `ask`, `list`, `read_entry`, `read_manifest`, `okf_enrich`.
-- [ ] Progress and the update check never write to stdout. Tool errors come back as tool results.
-- [ ] `ask` does not prompt (no TTY). It refuses an empty question and does not call the model when the package has no evidence.
-- [ ] Cursor and Claude both start with the published `mcp.json` snippet (`command`: `zipwiki-mcp`).
-- [ ] A cold agent can pack a local PDF with `--no-ai-okf`, then `open` → `search` → `read_okf` → `read_parsed` without dumping the whole archive.
+- [ ] `zipwiki --version` matches `https://zipwiki.ai/releases/latest.json`.
+- [ ] `zipwiki login` completes against **zipwiki.ai** and the production API accepts the key.
+- [ ] Local pack with LiteParse / `--no-ai-okf` still needs no account.
+- [ ] Hosted pack / OKF / ask debit **production** credits and match website ledger rows.
+- [ ] Out-of-credits behavior matches the documented messages on production.
+- [ ] Cursor and Claude (or any MCP host) start with the published `mcp.json` snippet (`command`: `zipwiki-mcp`).
 - [ ] Hosted `pack` / `okf_enrich` / `ask` from MCP debit the same production account as the CLI.
+- [ ] `zipwiki settings pull` matches `/dashboard/settings` on **zipwiki.ai**.
 
-## 5. Package contents
 
-- [ ] `META-INF/manifest.json` lists primaries, parser, OKF presence, and `ai.digest` when concepts exist.
-- [ ] `ai.digest` is at most 1000 characters, starts with the document count, and was written from the whole `wiki/okf/index.md` (every `# Files` bullet), not from the first names in alphabetical order.
-- [ ] A package with more than one subject (two patients, two books) names each repeated subject in that digest.
-- [ ] Parsed markdown is what models read. Originals are present only when the pack asked for them.
-- [ ] Stock `unzip` can list the archive. Compression is zstd by default; deflate still opens in older tools when requested.
-- [ ] `THIRD_PARTY_NOTICES` in the tarball names LiteParse, Tesseract, and PDFium with their license texts.
 
-## 6. Distribution and the install page
+## C2. Production website, portal, billing, admin
 
-- [ ] Every `npm i -g https://zipwiki.ai/releases/<file>.tgz` command on `/install` downloads a real gzip tarball (`1f 8b`), not the website HTML.
-- [ ] `apps/web/public/releases/index.json` lists only files that are in that directory, and the production deploy contains those files. The web build fails when the list and the files disagree.
-- [ ] `/releases/` is not rewritten to `index.html`.
-- [ ] Copy icons on the install scripts copy the command that is on screen.
-- [ ] Platforms that are not published say so and do not offer an `npm i -g` URL. Beta is explicit if it is macOS Apple silicon only.
-- [ ] `latest.json` `version` equals the installed CLI, and `url` points at a page that exists (`/install` or a real release note).
-- [ ] Node `>= 22.13` is stated on `/install` and enforced by the package `engines` field.
-- [ ] LibreOffice is documented as a system requirement for Office files and is not bundled. EasyOCR and PaddleOCR are not implied.
-- [ ] A second machine (not the build machine) installs from the public URL and runs `zipwiki --help`.
+- [ ] `https://zipwiki.ai/` (and www if used) shows the beta marketing and working nav destinations.
+- [ ] `/install` on **zipwiki.ai** offers a working download or `npm i -g` URL.
+- [ ] Sign up, device approval, settings, knowledge, keys, and billing work against production Convex and Stripe **live**.
+- [ ] A live Stripe Checkout from `/dashboard/billing` adds credits after the webhook.
+- [ ] `/admin` on production requires admin + passkey; add/subtract credits and account controls work for real operators.
+- [ ] Waitlist and sales mailboxes are monitored.
 
-## 7. Hosted API
 
-- [ ] `GET /health` on production returns success, and the docs describe the routes that actually exist: `/api/parse`, `/api/okf/enrich`, `/api/okf/digest`, `/api/query/answer`, `/api/settings`, `/api/client-config`, usage and telemetry.
-- [ ] [HOSTED-API.md](HOSTED-API.md) matches that list (it still omits digest and ask).
-- [ ] Production Fly is running the image that contains those routes, with enough memory for a real PDF parse (the Phase 1b note of 256MB is not the beta size until a large PDF succeeds).
-- [ ] `api.zipwiki.ai` and `api-dev.zipwiki.ai` have certificates and DNS. Clients do not depend on `*.fly.dev` hostnames.
-- [ ] Parse, OKF enrich, package digest, and ask each debit one credit on success and do not debit on vendor failure.
-- [ ] Haiku 5.5 (and any other allowed model) is on both allowlists (`convex/lib/credits.ts` and `apps/server/src/gateway/anthropic.ts`). A saved older model id does not 400.
-- [ ] Package digest reads the full OKF index the client sends and returns a summary; an empty Claude reply is visible in logs and the CLI keeps a digest that still names every group.
-- [ ] Fly build context does not upload `knowledge/`, `.pack/`, or the website tarball (`.dockerignore`).
-- [ ] `pnpm check:fly` is clean for prod.
 
-## 8. Website
+## C3. Production smokes before the tag
 
-- [ ] Production `/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it.
-- [ ] A visitor can reach Install, How it works, CLI, MCP, Pricing, Roadmap, Terms, and Privacy without guessing URLs. Nav today is only Product and How it works; confirm the rest are linked from the pages a beta user sees.
-- [ ] Pricing copy matches the ledger: 100 credits per dollar, what a credit buys (hosted parse, hosted OKF, ask), and the LlamaParse tiers that are actually offered.
-- [ ] Waitlist and sales mail links reach a mailbox that is read.
-- [ ] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
-- [ ] `/install` on **zipwiki.ai** (not only the dev host) offers a working download or a working `npm i -g` URL.
-- [ ] Mobile and desktop both show the install commands and the two-line header without a third wrapped line.
-- [ ] No beta CTA points at a page that redirects away or 404s (`/product`, `/download`, `/plugin` may redirect; the destination must be the intended page).
-
-## 9. Portal
-
-Account:
-
-- [ ] Sign up, email code or the live auth method, and sign-in work on zipwiki.ai against production Convex.
-- [ ] CLI device approval (`/cli/device`, `/cli/setup`) issues a key the production API accepts.
-- [ ] Sign out works. A second browser does not stay signed in as the first user.
-
-Knowledge:
-
-- [ ] `/dashboard/knowledge` opens a local or uploaded `.zipwiki`, shows the package overview including `ai.digest`, and can search and ask.
-- [ ] Ask on the website and `zipwiki ask` return the same kind of cited answer for the same package and question.
-- [ ] Empty, missing-package, and credit-exhausted states are visible and do not spin.
-
-Settings and keys:
-
-- [ ] `/dashboard/settings` saves parser, OKF, and pack options, and `zipwiki settings pull` sees them.
-- [ ] `/dashboard/keys` creates a key, shows it once, copies it, and revokes it. A revoked key is rejected by the API.
-- [ ] The dashboard home shows credit balance and recent usage that match the ledger.
-
-## 10. Billing
-
-- [ ] A live Stripe Checkout from `/dashboard/billing` adds credits after the webhook. Cancel adds nothing. Refresh shows the new balance without a manual Convex edit.
-- [ ] The Stripe customer portal opens for a user who has paid.
-- [ ] Auto-reload charges the saved card at the threshold and does not double-charge a single pack.
-- [ ] Low-credit email sends once per dip, not once per file.
-- [ ] One hosted parse, one OKF card, one package digest, and one ask each appear on the ledger with provider, model, and tokens or pages. The credit math matches the published formula (markup and 100 credits per dollar).
-- [ ] Spent credits cannot exceed purchased credits unless the account is marked unlimited.
-- [ ] A locked account cannot spend. A disabled account cannot sign in or call the API.
-- [ ] Receipts and the billing page agree on dollars and credits.
-
-## 11. Admin
-
-- [ ] `/admin` requires an admin role and a current passkey step-up. A normal customer gets a refusal, not a half-loaded page.
-- [ ] Account search finds a user by email. Disable, role change, unlimited credits, and credit lock take effect on the next API call.
-- [ ] `/admin/accounts/:id` shows keys, usage, and the credit ledger for that account.
-- [ ] `/admin/usage` matches Fly and Convex for a known pack (same file count, same credit count).
-- [ ] `/admin/billing` shows vendor float for Anthropic and LlamaParse. Restock and low-float threshold save, and a low float is visible before the vendor key runs dry.
-- [ ] Granting credits writes a `grant` ledger row and increases the balance the user sees.
-- [ ] Admin actions are attributable (who changed the account).
-
-## 12. Smokes before the tag
-
-Run these as a person who is not the author, on production:
+Run these as a person who is not the author, on **production**:
 
 - [ ] Install from `https://zipwiki.ai/install` on a clean macOS Apple silicon machine (and each other OS the beta claims).
 - [ ] Pack a small PDF with `--no-ai-okf`. `open` lists it. `search` finds a word from the page. `read` returns markdown.
@@ -173,7 +300,13 @@ Run these as a person who is not the author, on production:
 - [ ] Spend the account to zero and confirm the next hosted call falls back or stops with the documented message.
 - [ ] Confirm `https://zipwiki.ai/releases/latest.json` and the tarball URL from a browser and from `npm i -g`.
 
-## 13. After beta (do not block the tag)
+**Beta ready:** Part A, Part B, and Part C are all checked.
+
+---
+
+
+
+# After beta (do not block the tag)
 
 - [ ] Rust CLI for macOS arm64, then other machines.
 - [ ] `docs.zipwiki.ai` (GitHub `/doc` remains the beta docs host).

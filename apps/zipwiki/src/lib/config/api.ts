@@ -104,7 +104,7 @@ export function deviceApprovalPage(input: {
 
 const DASHBOARD_SETTINGS = {
   local: "http://localhost:5173/dashboard/settings",
-  dev: "https://zipwiki-web-dev.vercel.app/dashboard/settings",
+  dev: "https://dev.zipwiki.ai/dashboard/settings",
   production: "https://zipwiki.ai/dashboard/settings",
 } as const;
 
@@ -137,6 +137,7 @@ export function dashboardSettingsUrl(input?: {
     return page.startsWith("https://zipwiki.ai/") ? page : fallback;
   }
   if (
+    page.startsWith("https://dev.zipwiki.ai/") ||
     page.startsWith("https://zipwiki-web-dev.vercel.app/") ||
     page.startsWith("http://localhost") ||
     page.startsWith("http://127.0.0.1")
