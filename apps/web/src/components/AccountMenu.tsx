@@ -68,11 +68,6 @@ export function AccountMenu({ me, onNavigate }: Props) {
             onClick={() => go("/dashboard/settings")}
           />
           <MenuItem
-            icon={<KeyIcon />}
-            label="API keys"
-            onClick={() => go("/dashboard/keys")}
-          />
-          <MenuItem
             icon={<CardIcon />}
             label="Billing"
             onClick={() => go("/dashboard/billing")}
@@ -148,15 +143,6 @@ function GearIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function KeyIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-      <circle cx="8" cy="15" r="4" />
-      <path d="M11.5 12.5 20 4l2 2-2 2-2-1-3 3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

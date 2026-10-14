@@ -1,3 +1,7 @@
+import { OKF_SPEC_LINK_LABEL, OKF_SPEC_URL } from "./docs-urls";
+
+export { OKF_SPEC_LINK_LABEL, OKF_SPEC_URL };
+
 export const SITE_NAME = "ZipWiki";
 export const SITE_TAGLINE =
   "AI Searchable Archives";
@@ -109,9 +113,29 @@ export const TRUST_BULLETS = [
   },
 ] as const;
 
+export const HOW_IT_WORKS_HERO = {
+  title: "Turn files an AI cannot read into a catalog it can search",
+  lead: "Pack once: extract compact AI-ready markdown and write an OKF index inside a portable .zipwiki. After that, agents open, search, and read only what they need—without re-parsing binaries or dumping every file into chat. You talk to the agent. The archive stays on disk.",
+} as const;
+
+export const CREATE_PACKAGE = {
+  title: "When you create a .zipwiki",
+  lead: "Two jobs at pack time. Both travel inside the same file so the index cannot drift away from the data.",
+  jobs: [
+    {
+      title: "Extract (parse)",
+      body: "Chat models read text. PDFs, Office files, and scans are not. Parse converts each document into markdown under wiki/parsed/ once. Skip it and every chat re-pays binary decode—or the model guesses from filenames.",
+    },
+    {
+      title: "Index (OKF)",
+      body: "Parsed markdown is the evidence. Open Knowledge Format (OKF) cards are the index: title, type, tags, and key facts the agent can skim before opening a full chapter. That is indexing as content—not a sidecar vector database that drifts when you copy the file, and not a filename-only ZIP.",
+    },
+  ],
+} as const;
+
 export const PARSE_PROBLEM = {
-  title: "Agents cannot query a folder of real documents",
-  lead: "Chat models read text. Most business files are not text. A Florida session law is a multi-page PDF on laws.flrules.org. A deed is a scan. A lease is a Word file. Drop those into a chat and the model either skips them, hallucinates from the filename, or burns a context window on garbage. ZipWiki extracts the words into markdown once so every later read is fast and compact.",
+  title: "Why formats need parsing",
+  lead: "A Florida session law is a multi-page PDF. A deed is a scan. A lease is a Word file. Drop those into a chat and the model skips them, hallucinates from the filename, or burns context on garbage. ZipWiki extracts the words into markdown once so every later read is fast and compact.",
 } as const;
 
 export const PARSE_FAMILIES = [
@@ -148,9 +172,13 @@ export const PARSE_ENGINES = [
   },
 ] as const;
 
+/** Shown on How it Works near parse / AI sections. */
+export const HOW_COMING_SOON =
+  "More parsing options and AI options are coming soon.";
+
 export const OKF_INDEXING = {
   title: "OKF is the index. Extracted markdown is the evidence.",
-  lead: "Open Knowledge Format (OKF) is a small markdown file per document: YAML frontmatter plus a short body. It is not a vector database. Search ranks these skims first so the agent does not dump every extracted chapter into context.",
+  lead: "Open Knowledge Format (OKF) is a small markdown file per document: YAML frontmatter plus a short body. It is not a vector database. An LLM writes those semantic fields at pack time because filenames cannot. Search ranks these skims first so the agent does not dump every extracted chapter into context.",
 } as const;
 
 export const OKF_FIELDS = [
@@ -172,43 +200,69 @@ export const OKF_FIELDS = [
   },
 ] as const;
 
-export const HOW_STEPS = [
-  {
-    title: "Pack",
-    prompt:
-      "Using ZipWiki, pack ./florida-laws into ./knowledge/florida-laws.zipwiki, enrich every document with AI OKF, and map Ch_{year}-{chapter}.pdf origins to https://laws.flrules.org/{year}/{chapter}.",
-    detail:
-      "Each session-law PDF’s text is extracted into wiki/parsed/*.md when possible, then given an OKF skim (title, type, tags, key facts). Origin Extra Field 0x014F stores the official laws.flrules.org URL. Hosted OKF is off by default so your agent writes the concepts.",
-  },
-  {
-    title: "Catalog",
-    prompt:
-      "Open ./knowledge/florida-laws.zipwiki and tell me what’s inside—titles, types, OKF, extracted markdown files, and origin URLs.",
-    detail:
-      "Each document shows whether it has OKF and extracted markdown under wiki/parsed/, plus the path the agent will open. Scans without markdown still appear so nothing is silently dropped.",
-  },
-  {
-    title: "Search",
-    prompt:
-      'Search ./knowledge/florida-laws.zipwiki for "homestead exemption" and show the top hits with short snippets.',
-    detail:
-      "OKF titles, tags, and descriptions rank first. Extracted markdown is a lower-weight backup. Hits return paths and snippets—never full chapter bodies.",
-  },
-  {
-    title: "Read",
-    prompt:
-      "Read the OKF for Chapter 2025-1, then the extracted markdown only if you still need evidence.",
-    detail:
-      "Keep context small: stream compact .md, not the PDF. Extract to disk only when another tool needs a real path.",
-  },
-  {
-    title: "Origin",
-    prompt:
-      "On ./knowledge/florida-laws.zipwiki, show the origin URL for Ch_2025-001 and fetch it to verify CRC-32.",
-    detail:
-      "The markdown member can carry Extra Field 0x014F. Fetch downloads https://laws.flrules.org/2025/1 and checks CRC-32 (and size or SHA-256 when those tags were written).",
-  },
-] as const;
+/** Things you ask an AI agent (or CLI) to do on an existing .zipwiki — not a mandatory checklist. */
+export const PACKAGE_ACTIONS = {
+  title: "What you can do with a package",
+  lead: "Once a .zipwiki exists, you do not run a fixed sequence of steps. Ask your AI agent for what you need—or use the same operations from the CLI. Behind the scenes the tools open, search, and read selectively so the whole archive never lands in chat.",
+  items: [
+    {
+      title: "Search by subject or query",
+      detail:
+        "Find documents that match a topic, phrase, or question. Search prefers the OKF index, then extracted markdown, and returns short hits—not every chapter body.",
+      prompt:
+        'Using ZipWiki, search ./knowledge/florida-laws.zipwiki for "homestead exemption" and show the top hits with short snippets.',
+    },
+    {
+      title: "Ask a question",
+      detail:
+        "Get an answer grounded in the package. The agent uses the index and evidence inside the archive instead of guessing from filenames.",
+      prompt:
+        "Using ZipWiki on ./knowledge/florida-laws.zipwiki, what does Chapter 2025-1 cover? Cite the OKF and only open extracted markdown if you need a quote.",
+    },
+    {
+      title: "See what’s inside",
+      detail:
+        "Open a catalog of titles, types, whether OKF and extracted markdown exist, and origin links—not a raw zip file listing.",
+      prompt:
+        "Using ZipWiki, open ./knowledge/florida-laws.zipwiki and summarize what’s inside (titles, types, OKF index, extracted markdown, origin URLs).",
+    },
+    {
+      title: "Read a document’s summary or evidence",
+      detail:
+        "Skim the OKF card first; stream the compact extracted markdown only when you need detail. Prefer that over dumping the original PDF or Office file.",
+      prompt:
+        "Using ZipWiki on ./knowledge/florida-laws.zipwiki, read the OKF for Chapter 2025-1 and give a short summary. Read the extracted markdown only if you still need evidence.",
+    },
+    {
+      title: "Extract originals by subject",
+      detail:
+        "When you need real files on disk—for printing, another tool, or legal fidelity—extract the matching original(s) (or fetch omitted originals via origin) instead of unpacking the whole archive.",
+      prompt:
+        'Using ZipWiki on ./knowledge/florida-laws.zipwiki, find documents about homestead exemption and extract their original files (or fetch origins) to ./out/homestead/.',
+    },
+    {
+      title: "Verify integrity",
+      detail:
+        "Confirm the package is well-formed and members check out (ZIP CRC-32). Useful after copy, download, or before you rely on the archive.",
+      prompt:
+        "Using ZipWiki, test ./knowledge/florida-laws.zipwiki and tell me if the package integrity checks pass.",
+    },
+    {
+      title: "Fetch or verify an origin",
+      detail:
+        "When originals were omitted at pack time, Extra Field 0x014F can hold a URL. Fetch that origin and verify CRC so you know the remote file still matches.",
+      prompt:
+        "Using ZipWiki on ./knowledge/florida-laws.zipwiki, show the origin URL for Ch_2025-001 and fetch it to verify CRC-32.",
+    },
+    {
+      title: "Update the archive",
+      detail:
+        "Add, replace, or remove documents and refresh parse/OKF for what changed—without rebuilding from scratch when you do not need to.",
+      prompt:
+        "Using ZipWiki, update ./knowledge/florida-laws.zipwiki by adding ./new-laws/Ch_2025-099.pdf and refreshing OKF for that document.",
+    },
+  ],
+} as const;
 
 export const SAMPLE_CATALOG = [
   {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -45,6 +45,14 @@ export default function KeysPage() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <Link
+          to="/dashboard/settings"
+          className="text-sm text-(--muted) hover:underline"
+        >
+          ← Settings
+        </Link>
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="font-display text-3xl font-semibold">API keys</h1>
         <button

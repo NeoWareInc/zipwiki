@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   DEFAULT_ACCOUNT_SETTINGS,
   llamaParseTierSelectOptions,
@@ -9,6 +9,17 @@ import {
 } from "@zipwiki/api-client";
 import { api } from "@convex/_generated/api";
 import { FormError } from "../components/AuthChrome";
+import {
+  OKF_SPEC_LINK_LABEL,
+  OKF_SPEC_URL,
+  SETTINGS_LLM_SECTION,
+  SETTINGS_ONBOARDING_BANNER,
+  SETTINGS_PACK_SECTION,
+  SETTINGS_PAGE,
+  SETTINGS_PARSE_SECTION,
+  SETTINGS_WHY_LLM,
+  SETTINGS_WHY_PARSE,
+} from "../lib/settings-onboarding-copy";
 
 type Props = {
   /** Minimal chrome for /cli/setup */
@@ -114,26 +125,43 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8">
+    <form onSubmit={onSubmit} className="space-y-10">
       {onboarding && (
-        <p className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted)">
-          These choices apply when you create a ZipWiki Knowledge Archive. The CLI
-          downloads them when you pack. A key of your own stays on this machine
-          and is turned on under Advanced settings.
-        </p>
+        <div className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted) space-y-2">
+          <p>{SETTINGS_ONBOARDING_BANNER.body}</p>
+          {!embedded && (
+            <p>
+              <a
+                className="text-(--accent) hover:underline"
+                href={SETTINGS_ONBOARDING_BANNER.howItWorksHref}
+              >
+                {SETTINGS_ONBOARDING_BANNER.howItWorksLabel}
+              </a>
+              {" · "}
+              Keys of your own stay on this machine and are turned on under
+              Advanced settings.
+            </p>
+          )}
+        </div>
       )}
       {saveError && <FormError message={saveError} />}
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">
-          Parse sources into the Knowledge Archive
+          {SETTINGS_WHY_PARSE.title}
         </h2>
+        <p className="text-sm leading-relaxed text-(--muted)">
+          {SETTINGS_WHY_PARSE.body}
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">
+          {SETTINGS_PARSE_SECTION.title}
+        </h2>
+        <p className="text-sm text-(--muted)">{SETTINGS_PARSE_SECTION.intro}</p>
         <p className="text-sm text-(--muted)">
-          ZipWiki account uses LlamaParse and prepaid credits. Higher Parse
-          tiers cost more Llama credits per page (billed to your ZipWiki
-          balance with a 20% margin). Default is Cost Effective — the fastest
-          markdown tier. LlamaIndex Turbo is Extract-only and cannot produce
-          wiki markdown, so it is not offered here.
+          {SETTINGS_PARSE_SECTION.billingNote}
         </p>
         {isFreePlan && (
           <p className="rounded-lg border border-(--border) bg-(--paper) p-3 text-sm text-(--muted)">
@@ -248,19 +276,28 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
 
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">
-          ZipWiki LLM (Claude)
+          {SETTINGS_WHY_LLM.title}
         </h2>
-        <p className="text-sm text-(--muted)">
-          Used when you create or query knowledge from the ZipWiki CLI or
-          website with ZipWiki-hosted AI (after{" "}
-          <code className="text-xs">settings pull</code>). Billed from Anthropic
-          tokens plus a 20% margin. Default is Haiku (cheapest).
+        <p className="text-sm leading-relaxed text-(--muted)">
+          {SETTINGS_WHY_LLM.body}
         </p>
-        <p className="text-sm text-(--muted)">
-          Not used when using the MCP server — the agent’s own LLM handles OKF
-          and answers via <code className="text-xs">okf_enrich</code> and the
-          query tools, at no ZipWiki credit cost.
+        <p className="text-sm">
+          <a
+            className="text-(--accent) hover:underline"
+            href={OKF_SPEC_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {OKF_SPEC_LINK_LABEL}
+          </a>
         </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl font-semibold">
+          {SETTINGS_LLM_SECTION.title}
+        </h2>
+        <p className="text-sm text-(--muted)">{SETTINGS_LLM_SECTION.intro}</p>
         <Select
           label="OKF writer (CLI / website pack)"
           value={form.okfCredential}
@@ -323,11 +360,9 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
 
       <section id="packing" className="scroll-mt-24 space-y-3">
         <h2 className="font-display text-xl font-semibold">
-          Knowledge Archive packing
+          {SETTINGS_PACK_SECTION.title}
         </h2>
-        <p className="text-sm text-(--muted)">
-          How the .zipwiki is packed when you create a Knowledge Archive.
-        </p>
+        <p className="text-sm text-(--muted)">{SETTINGS_PACK_SECTION.intro}</p>
         <Select
           label="Compression"
           value={form.pack.compression ?? "zstd"}
@@ -623,19 +658,25 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="font-display text-3xl font-semibold">
-          Knowledge Archive settings
+          {SETTINGS_PAGE.title}
         </h1>
-        <p className="mt-1 text-(--muted)">
-          These settings are for creating a ZipWiki Knowledge Archive. The CLI
-          downloads them for each pack.
-        </p>
+        <p className="mt-2 max-w-2xl text-(--muted)">{SETTINGS_PAGE.lead}</p>
       </div>
-      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6">
+      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 md:p-8">
         <AccountSettingsForm />
       </div>
+      <p className="text-sm text-(--muted)">
+        Need a machine key for scripts or older clients?{" "}
+        <Link
+          to="/dashboard/keys"
+          className="text-(--accent) hover:underline"
+        >
+          Manage API keys
+        </Link>
+      </p>
     </div>
   );
 }

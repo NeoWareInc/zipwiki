@@ -1,7 +1,12 @@
 import {
-  HOW_STEPS,
+  CREATE_PACKAGE,
+  HOW_COMING_SOON,
+  HOW_IT_WORKS_HERO,
   OKF_FIELDS,
   OKF_INDEXING,
+  OKF_SPEC_LINK_LABEL,
+  OKF_SPEC_URL,
+  PACKAGE_ACTIONS,
   PARSE_ENGINES,
   PARSE_FAMILIES,
   PARSE_PROBLEM,
@@ -16,46 +21,51 @@ export default function HowItWorksPage() {
       <Section>
         <PageHero
           kicker="How it works"
-          title="Turn files an AI cannot read into a catalog it can search"
-          lead="Pack extracts the text of hard documents into compact markdown, writes an OKF index the agent can skim, then searches that index before opening the full extracted markdown. You talk to the agent. The .zipwiki stays on disk."
+          title={HOW_IT_WORKS_HERO.title}
+          lead={HOW_IT_WORKS_HERO.lead}
         />
       </Section>
 
       <section className="border-t border-(--line) bg-white/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
-            {PARSE_PROBLEM.title}
+            {CREATE_PACKAGE.title}
           </h2>
-          <p className="mt-3 max-w-3xl text-(--muted)">{PARSE_PROBLEM.lead}</p>
-          <div className="mt-10">
-            <FeatureGrid items={PARSE_FAMILIES} columns={2} />
+          <p className="mt-3 max-w-3xl text-(--muted)">{CREATE_PACKAGE.lead}</p>
+          <div className="mt-10 grid gap-8 md:grid-cols-2">
+            {CREATE_PACKAGE.jobs.map((job) => (
+              <div key={job.title} className="space-y-2">
+                <h3 className="font-display text-xl font-semibold text-(--ink)">
+                  {job.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-(--muted)">
+                  {job.body}
+                </p>
+              </div>
+            ))}
           </div>
         </Section>
       </section>
 
       <Section>
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
-          Parsed means extracted markdown for AI
+          {PARSE_PROBLEM.title}
         </h2>
-        <p className="mt-3 max-w-3xl text-(--muted)">
-          ZipWiki does not upload your folder to a hosted vector store. It
-          extracts the text documentation of each document into whole-document
-          markdown under <code className="text-sm">wiki/parsed/</code>—fast,
-          compact, and easy for a model to consume—and can keep the original in
-          the same archive. The agent streams that markdown when it needs
-          evidence, not the binary Word file, which is an extreme speedup over
-          feeding PDFs or Office files to the model.
-        </p>
+        <p className="mt-3 max-w-3xl text-(--muted)">{PARSE_PROBLEM.lead}</p>
         <div className="mt-10">
+          <FeatureGrid items={PARSE_FAMILIES} columns={2} />
+        </div>
+        <p className="mt-10 max-w-3xl text-sm leading-relaxed text-(--muted)">
+          Parsed means extracted markdown under{" "}
+          <code className="text-xs">wiki/parsed/</code>—evidence the agent
+          streams when needed, not the binary. ZipWiki does not upload your
+          folder to a hosted vector store.
+        </p>
+        <div className="mt-8">
           <FeatureGrid items={PARSE_ENGINES} />
         </div>
-        <p className="mt-8 max-w-3xl text-sm leading-relaxed text-(--muted)">
-          Plain <code className="text-xs">.txt</code> and markdown are already
-          readable; parse still copies them so every document has the same
-          path. Intermediate LibreOffice PDFs never enter the{" "}
-          <code className="text-xs">.zipwiki</code>. If a TIFF or Office file
-          cannot be parsed, it still appears in the catalog with OKF when the
-          agent can classify it from filename and any extracted scraps.
+        <p className="mt-8 max-w-3xl text-sm font-medium text-(--ink)">
+          {HOW_COMING_SOON}
         </p>
       </Section>
 
@@ -65,6 +75,16 @@ export default function HowItWorksPage() {
             {OKF_INDEXING.title}
           </h2>
           <p className="mt-3 max-w-3xl text-(--muted)">{OKF_INDEXING.lead}</p>
+          <p className="mt-4 text-sm">
+            <a
+              className="font-medium text-(--accent) hover:underline"
+              href={OKF_SPEC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {OKF_SPEC_LINK_LABEL}
+            </a>
+          </p>
           <div className="mt-10">
             <FeatureGrid items={OKF_FIELDS} columns={2} />
           </div>
@@ -88,33 +108,29 @@ export default function HowItWorksPage() {
 
       <Section>
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
-          Pack, catalog, search, read, origin
+          {PACKAGE_ACTIONS.title}
         </h2>
-        <p className="mt-3 max-w-2xl text-(--muted)">
-          Same loop every time. Prefer OKF skims before dumping full extracted
-          markdown.
-        </p>
-        <ol className="mt-12 grid gap-8 md:grid-cols-2">
-          {HOW_STEPS.map((step, i) => (
-            <li key={step.title} className="space-y-3">
-              <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
-                Step {i + 1}
-              </p>
+        <p className="mt-3 max-w-3xl text-(--muted)">{PACKAGE_ACTIONS.lead}</p>
+        <ul className="mt-12 grid gap-8 md:grid-cols-2">
+          {PACKAGE_ACTIONS.items.map((action) => (
+            <li key={action.title} className="space-y-3">
               <h3 className="font-display text-2xl font-semibold text-(--ink)">
-                {step.title}
+                {action.title}
               </h3>
-              <p className="text-sm leading-relaxed text-(--muted)">{step.detail}</p>
+              <p className="text-sm leading-relaxed text-(--muted)">
+                {action.detail}
+              </p>
               <PromptCard
                 item={{
-                  id: step.title.toLowerCase(),
-                  title: `Say this — ${step.title}`,
-                  description: "Copy into Cursor or Claude.",
-                  prompt: step.prompt,
+                  id: action.title.toLowerCase().replace(/\s+/g, "-"),
+                  title: `Say this — ${action.title}`,
+                  description: "Copy into your AI agent.",
+                  prompt: action.prompt,
                 }}
               />
             </li>
           ))}
-        </ol>
+        </ul>
       </Section>
 
       <section className="border-t border-(--line) bg-white/50">
@@ -124,10 +140,12 @@ export default function HowItWorksPage() {
           </h2>
           <p className="mt-3 max-w-2xl text-(--muted)">
             A catalog from OKF, not a raw zip listing. This is the Florida
-            session-laws sample: <code className="text-xs">Ch_YYYY-NNN.pdf</code>{" "}
-            maps to{" "}
-            <code className="text-xs">https://laws.flrules.org/{"{year}/{chapter}"}</code>.
-            Scans without extracted markdown still appear so you can see what
+            session-laws sample:{" "}
+            <code className="text-xs">Ch_YYYY-NNN.pdf</code> maps to{" "}
+            <code className="text-xs">
+              https://laws.flrules.org/{"{year}/{chapter}"}
+            </code>
+            . Scans without extracted markdown still appear so you can see what
             needs a better extraction or a hosted pass.
           </p>
           <div className="mt-8 overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
@@ -143,8 +161,13 @@ export default function HowItWorksPage() {
               </thead>
               <tbody>
                 {SAMPLE_CATALOG.map((row) => (
-                  <tr key={row.title} className="border-b border-(--line)/70 last:border-0">
-                    <td className="px-4 py-3 font-medium text-(--ink)">{row.title}</td>
+                  <tr
+                    key={row.title}
+                    className="border-b border-(--line)/70 last:border-0"
+                  >
+                    <td className="px-4 py-3 font-medium text-(--ink)">
+                      {row.title}
+                    </td>
                     <td className="px-4 py-3 text-(--muted)">{row.type}</td>
                     <td className="px-4 py-3">{row.okf ? "Yes" : "—"}</td>
                     <td className="px-4 py-3">{row.parsed ? "Yes" : "No"}</td>
