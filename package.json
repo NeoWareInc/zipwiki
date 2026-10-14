@@ -44,6 +44,7 @@
     "archive:test1": "pnpm zipwiki -- stage knowledge/test1 --phase all -o knowledge/test1.zipwiki --stage-dir knowledge/.stage/test1 -sf -T",
     "archive:source1": "pnpm zipwiki -- stage knowledge/test1 --phase all -o knowledge/source1.zipwiki --stage-dir knowledge/.stage/source1 --include-original -sf -T",
     "archive:test2": "pnpm zipwiki -- stage knowledge/test2 --phase all -o knowledge/test2.zipwiki --stage-dir knowledge/.stage/test2 -sf -T",
+    "pack:liteparse-local": "pnpm zipwiki -- pack knowledge/test2/property-deed.pdf --parser liteparse --no-ai-okf -o knowledge/liteparse-local.zipwiki --stage-dir knowledge/.stage/liteparse-local -sf -T",
     "archive:project": "node scripts/archive-project.mjs",
     "archive:charles-dickens": "pnpm archive:project charles-dickens",
     "fetch:xberg-wordperfect": "node scripts/archive-word-perfect.mjs --fetch-only",
