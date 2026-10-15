@@ -50,13 +50,13 @@ A box in Part A is done when a person can do it on **local** and/or **dev** as w
 
 Install and identity:
 
-- [ ] From this repo, `pnpm zipwiki -- --help` lists pack, update, open, search, query, ask, read, origin, extract, login, and settings.
-- [ ] `pnpm zipwiki -- login` completes the device flow against **dev** (`dev.zipwiki.ai` / localhost device pages) and stores the key under `~/.zipwiki`. `pnpm zipwiki -- auth` shows the signed-in account. Logout or a bad key fails with a sentence a person can act on.
-- [ ] First run update-check behavior is acceptable on dev: silent when current; one stderr line when `latest.json` is newer; `ZIPWIKI_NO_UPDATE_CHECK=1` and `--quiet` stay silent; failures to reach the manifest stay silent.
+- [x] From this repo, `pnpm zipwiki -- --help` lists pack, update, open, search, query, ask, read, origin, extract, login, and settings.
+- [x] `pnpm zipwiki -- login` completes the device flow against **dev** (`dev.zipwiki.ai` / localhost device pages) and stores the key under `~/.zipwiki`. `pnpm zipwiki -- auth` shows the signed-in account. Logout or a bad key fails with a sentence a person can act on.
+- [x] First run update-check behavior is acceptable on dev: silent when current; one stderr line when `latest.json` is newer; `ZIPWIKI_NO_UPDATE_CHECK=1` and `--quiet` stay silent; failures to reach the manifest stay silent.
 
 Pack and update:
 
-- [ ] `pnpm zipwiki -- pack` of a local PDF with `--parser liteparse --no-ai-okf` needs no account and writes a `.zipwiki` another machine can open.
+- [x] `pnpm zipwiki -- pack` of a local PDF with `--parser liteparse --no-ai-okf` needs no account and writes a `.zipwiki` another machine can open.
 - [ ] Hosted pack against **dev** (`ZipWiki OKF`, and LlamaParse when selected) debits **dev** credits and records the model, tokens, and file name.
 - [ ] Out of credits on **dev**: parse falls back to LiteParse; OKF falls back with a clear message and does not call Claude.
 - [ ] `--include-original` stores the source bytes. `--omit-original` stores parsed markdown plus Extra Field `0x014F` and does not pretend a private folder URL is a public file.
