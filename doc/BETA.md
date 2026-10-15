@@ -57,8 +57,8 @@ Install and identity:
 Pack and update:
 
 - [x] `pnpm zipwiki -- pack` of a local PDF with `--parser liteparse --no-ai-okf` needs no account and writes a `.zipwiki` another machine can open.
-- [ ] Hosted pack against **dev** (`ZipWiki OKF`, and LlamaParse when selected) debits **dev** credits and records the model, tokens, and file name.
-- [ ] Out of credits on **dev**: parse falls back to LiteParse; OKF falls back with a clear message and does not call Claude.
+- [x] Hosted pack against **dev** (`ZipWiki OKF`, and LlamaParse when selected) debits **dev** credits and records the model, tokens, and file name.
+- [x] Out of credits on **dev**: parse falls back to LiteParse; OKF falls back with a clear message and does not call Claude.
 - [ ] `--include-original` stores the source bytes. `--omit-original` stores parsed markdown plus Extra Field `0x014F` and does not pretend a private folder URL is a public file.
 - [ ] OKF profiles used in beta (`auto`, and `book` / `legislation` / `invoice` if advertised) match the cards that land in the package.
 - [ ] `pnpm zipwiki -- update` adds, replaces, and deletes documents, refreshes `ai.digest`, and leaves untouched members intact.
@@ -128,8 +128,7 @@ Query:
 ## A7. Website (dev.zipwiki.ai + local)
 
 - [ ] `https://dev.zipwiki.ai/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it (same for local after `pnpm dev:web`).
-- [ ] A visitor can reach Install, How it works, CLI, MCP, Pricing, Roadmap, Terms, and Privacy without guessing URLs. Nav may be Product + How it works; confirm the rest are linked from the pages a beta user sees.
-- [ ] Pricing copy matches the ledger: 100 credits per dollar, what a credit buys (hosted parse, hosted OKF, ask), and the LlamaParse tiers that are actually offered.
+- [ ] A visitor can reach Install, How it works, CLI, MCP, Roadmap, Terms, and Privacy without guessing URLs.
 - [ ] Waitlist and sales mail links reach a mailbox that is read.
 - [ ] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
 - [ ] `/install` on **dev.zipwiki.ai** offers a working download or a working `npm i -g` URL for rehearsal.

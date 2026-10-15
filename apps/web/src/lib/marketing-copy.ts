@@ -3,19 +3,17 @@ import { OKF_SPEC_LINK_LABEL, OKF_SPEC_URL } from "./docs-urls";
 export { OKF_SPEC_LINK_LABEL, OKF_SPEC_URL };
 
 export const SITE_NAME = "ZipWiki";
-export const SITE_TAGLINE =
-  "AI Searchable Archives";
+export const SITE_TAGLINE = "AI-Searchable Knowledge";
 export const SITE_DESCRIPTION =
   "Archival data has to stay small enough to keep and still open when needed. That reader is increasingly an AI agent. A .zipwiki holds compact extracted markdown and an OKF index so an agent can search and read the records a question requires.";
-
-export const WAITLIST_HREF =
-  "mailto:hello@zipwiki.ai?subject=ZipWiki%20waitlist";
-export const SALES_HREF =
-  "mailto:sales@zipwiki.ai?subject=ZipWiki%20Custom%20plan";
 
 export const NAV = [
   { to: "/", label: "Product" },
   { to: "/how-it-works", label: "How it works" },
+  { to: "/install", label: "Install" },
+  { to: "/mcp", label: "MCP" },
+  { to: "/cli", label: "CLI" },
+  { to: "/roadmap", label: "Roadmap" },
 ] as const;
 
 export const PAGE_TITLES: Record<string, string> = {
@@ -25,7 +23,6 @@ export const PAGE_TITLES: Record<string, string> = {
   "/cli": `CLI — ${SITE_NAME}`,
   "/install": `Install — ${SITE_NAME}`,
   "/download": `Install — ${SITE_NAME}`,
-  "/pricing": `Pricing — ${SITE_NAME}`,
   "/roadmap": `Roadmap — ${SITE_NAME}`,
   "/terms": `Terms — ${SITE_NAME}`,
   "/privacy": `Privacy — ${SITE_NAME}`,
@@ -339,7 +336,7 @@ export const PLUGIN_HOSTS = [
 ] as const;
 
 export const PLUGIN_STEPS = [
-  "Join the ZipWiki waitlist (downloads and marketplace listings ship when public).",
+  "Install the ZipWiki MCP server for your agent host.",
   "Install the MCP plugin when it is available, then ask your agent to pack a folder or open an existing .zipwiki.",
 ] as const;
 
@@ -406,27 +403,6 @@ export const AGENT_PROMPTS: AgentPrompt[] = [
   },
 ];
 
-export const PLANS = [
-  {
-    slug: "free",
-    name: "Free",
-    price: "$0",
-    blurb:
-      "Install the plugin. Pack and search locally with LiteParse. Your agent writes OKF with its own LLM. No account balance required.",
-    cta: "Get started",
-    href: "/signup",
-  },
-  {
-    slug: "credits",
-    name: "Credits",
-    price: "From $10",
-    blurb:
-      "Buy prepaid credits for hosted LlamaParse and ZipWiki OKF when you need more than the local path. Default Parse tier is Cost Effective (~2,100 pages per $10); Agentic is ~640; Agentic Plus costs more per page for harder docs. When the balance runs out, packs soft-fall back to Free.",
-    cta: "Buy credits",
-    href: "/dashboard/billing",
-  },
-] as const;
-
 export type RoadmapStatus = "Now" | "Next" | "Later";
 
 export const ROADMAP: Array<{
@@ -436,7 +412,7 @@ export const ROADMAP: Array<{
 }> = [
   {
     title: "Marketing site",
-    why: "zipwiki.ai product pages, waitlist, and pricing.",
+    why: "zipwiki.ai product pages, install, MCP, CLI, and roadmap.",
     status: "Now",
   },
   {

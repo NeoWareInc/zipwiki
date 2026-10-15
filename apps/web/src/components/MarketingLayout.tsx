@@ -5,7 +5,7 @@ import {
   PAGE_TITLES,
   SITE_DESCRIPTION,
   SITE_NAME,
-  WAITLIST_HREF,
+  SITE_TAGLINE,
 } from "../lib/marketing-copy";
 import { Logo } from "./Logo";
 
@@ -73,7 +73,12 @@ export function MarketingLayout() {
             >
               Sign in
             </Link>
-            <WaitlistLinks />
+            <Link
+              to="/signup"
+              className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--accent-bright)"
+            >
+              Sign up
+            </Link>
           </div>
 
           <button
@@ -128,7 +133,12 @@ export function MarketingLayout() {
                 >
                   Sign in
                 </Link>
-                <WaitlistLinks />
+                <Link
+                  to="/signup"
+                  className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Sign up
+                </Link>
               </div>
             </nav>
           </div>
@@ -141,11 +151,23 @@ export function MarketingLayout() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-(--muted) sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-medium text-(--ink)">
-              ZipWiki — portable document memory with an embedded AI index
+              {SITE_NAME} — {SITE_TAGLINE}
             </p>
             <p className="mt-1">© 2026 NeoWare Inc.</p>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link to="/install" className="hover:text-(--accent)">
+              Install
+            </Link>
+            <Link to="/mcp" className="hover:text-(--accent)">
+              MCP
+            </Link>
+            <Link to="/cli" className="hover:text-(--accent)">
+              CLI
+            </Link>
+            <Link to="/roadmap" className="hover:text-(--accent)">
+              Roadmap
+            </Link>
             <Link to="/login" className="hover:text-(--accent)">
               Sign in
             </Link>
@@ -162,16 +184,5 @@ export function MarketingLayout() {
         </div>
       </footer>
     </div>
-  );
-}
-
-function WaitlistLinks() {
-  return (
-    <a
-      href={WAITLIST_HREF}
-      className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--accent-bright)"
-    >
-      Join waitlist
-    </a>
   );
 }

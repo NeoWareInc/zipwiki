@@ -4,7 +4,6 @@ import {
   PLUGIN_BUNDLE,
   PLUGIN_HOSTS,
   PLUGIN_STEPS,
-  WAITLIST_HREF,
 } from "../../lib/marketing-copy";
 import {
   FeatureGrid,
@@ -32,14 +31,14 @@ export default function McpPage() {
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
           <PrimaryCta to="/install#agents">Connect your agent</PrimaryCta>
-          <SecondaryCta to={WAITLIST_HREF}>Join waitlist</SecondaryCta>
+          <SecondaryCta to="/cli">CLI</SecondaryCta>
         </div>
       </Section>
 
       <section className="border-t border-(--line) bg-white/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
-            Waitlist → plugin → ask
+            Install → connect → ask
           </h2>
           <ol className="mt-8 grid gap-4 md:grid-cols-2">
             {PLUGIN_STEPS.map((step, i) => (

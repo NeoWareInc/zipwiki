@@ -1,12 +1,12 @@
 import {
   ADVANCED_CLI,
   CLI_MODES,
-  WAITLIST_HREF,
 } from "../../lib/marketing-copy";
 import {
   FeatureGrid,
   PageHero,
   PrimaryCta,
+  SecondaryCta,
   Section,
 } from "./MarketingUi";
 
@@ -23,7 +23,8 @@ export default function CliPage() {
           <FeatureGrid items={CLI_MODES} />
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
-          <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
+          <PrimaryCta to="/install">Install</PrimaryCta>
+          <SecondaryCta to="/mcp">MCP</SecondaryCta>
         </div>
       </Section>
 

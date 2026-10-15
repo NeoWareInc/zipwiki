@@ -3,7 +3,6 @@ import {
   HOME_OUTCOMES,
   PRODUCT_CAPABILITIES,
   TRUST_BULLETS,
-  WAITLIST_HREF,
 } from "../../lib/marketing-copy";
 import {
   FeatureGrid,
@@ -80,7 +79,7 @@ export default function ProductPage() {
           ))}
         </ul>
         <div className="mt-10 flex flex-wrap gap-3">
-          <PrimaryCta to={WAITLIST_HREF}>Join waitlist</PrimaryCta>
+          <PrimaryCta to="/install">Install</PrimaryCta>
           <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
         </div>
       </Section>
