@@ -31,7 +31,10 @@ import {
   isZipwikiAccountConnected,
   requireAccountForHostedCredential,
 } from "../lib/config/account-settings-cache.js";
-import { DEFAULT_ACCOUNT_SETTINGS } from "@zipwiki/api-client";
+import {
+  DEFAULT_ACCOUNT_SETTINGS,
+  resolveLlamaParseTier,
+} from "@zipwiki/api-client";
 import type { AccountSettingsResponse } from "@zipwiki/api-client";
 import {
   printParseHeader,
@@ -45,6 +48,7 @@ import {
   fileBytes,
   formatPackPlan,
   packOkfMode,
+  resolvePackConfirmParseCredential,
   resolvePackUseAi,
   PackAbortedError,
   runPackConfirmLoop,
@@ -209,7 +213,7 @@ export async function runStage(
         ? undefined
         : accountSettingsToConfigInput(accountSettings.settings);
 
-    const parseCredential = resolveParseCredentialSource();
+    let parseCredential = resolveParseCredentialSource();
     const okfCredential = resolveOkfCredentialSource();
     requireAccountForHostedCredential({
       parseCredential,
@@ -443,15 +447,32 @@ export async function runStage(
           opts.omitOriginalDocuments = next.omitOriginalDocuments;
           opts.compression = next.compression;
           opts.parser = next.parser;
+          opts.parserMode = "fixed";
           project.parser.engine = next.parser;
+          project.parser.mode = "fixed";
+          project.parser.escalate.enabled = next.parser === "llamaparse"
+            ? false
+            : project.parser.escalate.enabled;
           if (next.parser === "llamaparse") {
-            const tier = next.llamaTier?.trim() || "cost_effective";
+            const tier = resolveLlamaParseTier(next.llamaTier);
             opts.llamaTier = tier;
+            next.llamaTier = tier;
             project.parser.llamaparse = {
               ...project.parser.llamaparse,
               tier,
             };
           }
+          parseCredential = resolvePackConfirmParseCredential({
+            parser: next.parser,
+            accountConnected: isZipwikiAccountConnected(),
+            hostedLiteparseFallback: hosted?.liteparseFallback,
+            llamaKeyConfigured: isLlamaCloudConfigured(),
+          });
+          opts.parseCredential = parseCredential;
+          process.env.ZIPWIKI_PARSE_CREDENTIAL = parseCredential;
+          // Remote parse follows ZipWiki credential only — clear an earlier
+          // --remote-parse when this run was switched to local / BYO Llama.
+          opts.remoteParse = parseCredential === "zipwiki";
           recurse = next.recurse;
           opts.recurse = next.recurse;
           if (next.okf === "off") {

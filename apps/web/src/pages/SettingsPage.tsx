@@ -110,8 +110,18 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
           : form;
       await saveMine({ settings: toSave, markSetupComplete: true });
       onSaved?.();
-      if (onboarding && !embedded) {
+      if (embedded) {
+        // CliSetupPage (and other embeds) own post-save UI via onSaved.
+      } else if (onboarding) {
         navigate("/dashboard/keys?welcome=1");
+      } else {
+        // Leave Settings: prefer the page that opened it, else dashboard.
+        const idx = (window.history.state as { idx?: number } | null)?.idx;
+        if (typeof idx === "number" && idx > 0) {
+          navigate(-1);
+        } else {
+          navigate("/dashboard");
+        }
       }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Save failed");

@@ -3,6 +3,11 @@
  * Prints the plan, then asks to proceed, change this run's settings, or abort.
  */
 import * as p from "@clack/prompts";
+import {
+  LLAMA_PARSE_TIER_INFO,
+  LLAMA_PARSE_TIERS,
+  resolveLlamaParseTier,
+} from "@zipwiki/api-client";
 import { statSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import type { StageOptions } from "./types.js";
@@ -43,6 +48,35 @@ export class PackAbortedError extends Error {
     super("Pack aborted.");
     this.name = "PackAbortedError";
   }
+}
+
+/**
+ * Credential source for an explicit pack-confirm parser choice.
+ * LlamaParse must not stay on a no-credit ZipWiki path that soft-falls back
+ * to LiteParse after the user already picked LlamaParse for this run.
+ */
+export function resolvePackConfirmParseCredential(input: {
+  parser: "liteparse" | "llamaparse";
+  accountConnected: boolean;
+  hostedLiteparseFallback?: boolean;
+  llamaKeyConfigured: boolean;
+}): "local" | "zipwiki" | "llama" {
+  if (input.parser === "liteparse") return "local";
+  const hostedOk =
+    input.accountConnected && input.hostedLiteparseFallback !== true;
+  if (hostedOk) return "zipwiki";
+  if (input.llamaKeyConfigured) return "llama";
+  if (input.accountConnected) {
+    throw new Error(
+      "LlamaParse needs credits on the ZipWiki account, or LLAMA_CLOUD_API_KEY on this machine.\n" +
+        "  Buy credits: zipwiki open → Billing\n" +
+        "  This machine: zipwiki config api-key llama <LLAMA_CLOUD_API_KEY>",
+    );
+  }
+  throw new Error(
+    "LlamaParse needs LLAMA_CLOUD_API_KEY on this machine (or zipwiki login with credits).\n" +
+      "  zipwiki config api-key llama <LLAMA_CLOUD_API_KEY>",
+  );
 }
 
 export function packOkfMode(opts: StageOptions, useAi: boolean): PackOkfMode {
@@ -291,18 +325,31 @@ async function promptPackSettings(
       next.compression = value as PackPlanSettings["compression"];
       continue;
     }
-    const value = await p.select({
-      message: "Document parser",
-      options: [
-        { value: "liteparse", label: "LiteParse (local)" },
-        { value: "llamaparse", label: "LlamaParse" },
-      ],
-      initialValue: next.parser,
-    });
-    if (cancelMeansAbort(value)) return "abort";
-    next.parser = value as PackPlanSettings["parser"];
-    if (next.parser === "llamaparse" && !next.llamaTier?.trim()) {
-      next.llamaTier = "cost_effective";
+    if (which === "parser") {
+      const value = await p.select({
+        message: "Document parser",
+        options: [
+          { value: "liteparse", label: "LiteParse (local)" },
+          { value: "llamaparse", label: "LlamaParse" },
+        ],
+        initialValue: next.parser,
+      });
+      if (cancelMeansAbort(value)) return "abort";
+      next.parser = value as PackPlanSettings["parser"];
+      if (next.parser === "llamaparse") {
+        const tier = await p.select({
+          message: "LlamaParse tier",
+          options: LLAMA_PARSE_TIERS.map((id) => ({
+            value: id,
+            label: LLAMA_PARSE_TIER_INFO[id].label,
+            hint: LLAMA_PARSE_TIER_INFO[id].blurb,
+          })),
+          initialValue: resolveLlamaParseTier(next.llamaTier),
+        });
+        if (cancelMeansAbort(tier)) return "abort";
+        next.llamaTier = resolveLlamaParseTier(String(tier));
+      }
+      continue;
     }
   }
 }

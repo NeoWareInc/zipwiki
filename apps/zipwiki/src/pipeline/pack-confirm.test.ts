@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   formatPackPlan,
   packOkfMode,
+  resolvePackConfirmParseCredential,
   resolvePackUseAi,
   shouldConfirmPack,
 } from "./pack-confirm.js";
@@ -140,6 +141,46 @@ describe("pack confirm", () => {
     assert.equal(packOkfMode({ noAiOkf: true }, true), "fallback");
     assert.equal(packOkfMode({}, false), "fallback");
     assert.equal(packOkfMode({}, true), "ai");
+  });
+
+  it("keeps an explicit LlamaParse choice off the no-credit hosted fallback path", () => {
+    assert.equal(
+      resolvePackConfirmParseCredential({
+        parser: "liteparse",
+        accountConnected: true,
+        hostedLiteparseFallback: true,
+        llamaKeyConfigured: false,
+      }),
+      "local",
+    );
+    assert.equal(
+      resolvePackConfirmParseCredential({
+        parser: "llamaparse",
+        accountConnected: true,
+        hostedLiteparseFallback: false,
+        llamaKeyConfigured: false,
+      }),
+      "zipwiki",
+    );
+    assert.equal(
+      resolvePackConfirmParseCredential({
+        parser: "llamaparse",
+        accountConnected: true,
+        hostedLiteparseFallback: true,
+        llamaKeyConfigured: true,
+      }),
+      "llama",
+    );
+    assert.throws(
+      () =>
+        resolvePackConfirmParseCredential({
+          parser: "llamaparse",
+          accountConnected: true,
+          hostedLiteparseFallback: true,
+          llamaKeyConfigured: false,
+        }),
+      /needs credits/,
+    );
   });
 
   it("turns AI OKF on for an explicit ZipWiki or Anthropic credential", () => {
