@@ -447,6 +447,7 @@ export async function pack(args: {
   noOkf?: boolean;
   noOcr?: boolean;
   recurse?: boolean;
+  origins?: string;
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
@@ -483,6 +484,7 @@ export async function pack(args: {
       noOkf: args.noOkf,
       noOcr: args.noOcr,
       recurse: args.recurse,
+      origins: args.origins,
       originPattern: args.originPattern,
       originUrlTemplate: args.originUrlTemplate,
       originFile: args.originFile,
@@ -557,6 +559,7 @@ export async function update(args: {
   noOcr?: boolean;
   omitOriginalDocuments?: boolean;
   includeOriginal?: boolean;
+  origins?: string;
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
@@ -600,6 +603,7 @@ export async function update(args: {
       noOkf: args.noOkf,
       noOcr: args.noOcr,
       omitOriginalDocuments,
+      origins: args.origins,
       originPattern: args.originPattern,
       originUrlTemplate: args.originUrlTemplate,
       originFile: args.originFile,

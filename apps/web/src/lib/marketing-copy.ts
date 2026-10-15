@@ -7,23 +7,26 @@ export const SITE_TAGLINE = "AI-Searchable Knowledge";
 export const SITE_DESCRIPTION =
   "Archival data has to stay small enough to keep and still open when needed. That reader is increasingly an AI agent. A .zipwiki holds compact extracted markdown and an OKF index so an agent can search and read the records a question requires.";
 
-export const NAV = [
+/** Flip to true when Beta public downloads open. Install is last in the menu. */
+export const SHOW_INSTALL_IN_NAV = false;
+
+const NAV_CORE = [
   { to: "/", label: "Product" },
   { to: "/how-it-works", label: "How it works" },
-  { to: "/install", label: "Install" },
-  { to: "/mcp", label: "MCP" },
-  { to: "/cli", label: "CLI" },
-  { to: "/roadmap", label: "Roadmap" },
+  { to: "/mcp", label: "MCP & CLI" },
 ] as const;
+
+export const NAV = SHOW_INSTALL_IN_NAV
+  ? ([...NAV_CORE, { to: "/install", label: "Install" }] as const)
+  : NAV_CORE;
 
 export const PAGE_TITLES: Record<string, string> = {
   "/": `${SITE_NAME} — ${SITE_TAGLINE}`,
   "/how-it-works": `How it works — ${SITE_NAME}`,
-  "/mcp": `MCP — ${SITE_NAME}`,
-  "/cli": `CLI — ${SITE_NAME}`,
+  "/mcp": `MCP & CLI — ${SITE_NAME}`,
+  "/cli": `MCP & CLI — ${SITE_NAME}`,
   "/install": `Install — ${SITE_NAME}`,
   "/download": `Install — ${SITE_NAME}`,
-  "/roadmap": `Roadmap — ${SITE_NAME}`,
   "/terms": `Terms — ${SITE_NAME}`,
   "/privacy": `Privacy — ${SITE_NAME}`,
 };
@@ -128,6 +131,52 @@ export const CREATE_PACKAGE = {
       body: "Parsed markdown is the evidence. Open Knowledge Format (OKF) cards are the index: title, type, tags, and key facts the agent can skim before opening a full chapter. That is indexing as content—not a sidecar vector database that drifts when you copy the file, and not a filename-only ZIP.",
     },
   ],
+} as const;
+
+/** Origin locators at pack time — How it works. */
+export const ORIGIN_LINKS = {
+  title: "Attach an origin link to each document",
+  lead: "An origin is the canonical URL (or file path) for the source behind a packed document. When you omit bulky originals from the archive, ZipWiki still records where to fetch them and can verify CRC-32 later. Set origins at pack time—ZipWiki never invents a link.",
+  methods: [
+    {
+      title: "Per-file list (earnings, filings, mixed corpora)",
+      body: "When every PDF has its own investor or EDGAR URL—Apple Q2, Microsoft Q2, random company 10-Ks—create a small map next to the folder. Use .zipwiki-origins.tsv (filename, then tab or space, then https URL), .zipwiki-origins.json with an entries object, or pass any list path with --origins. You will often write that list by hand or with a spreadsheet export. Pack always excludes the list file (and *.url / *.origin.json sidecars) so it never becomes a document inside the .zipwiki.",
+    },
+    {
+      title: "Filename pattern (session laws, numbered series)",
+      body: "When names share a structure, one rule fills every URL. Example: Ch_2025-001.pdf → https://laws.flrules.org/2025/1 via pattern + urlTemplate in .zipwiki-origins.json, or the same flags on zipwiki pack.",
+    },
+    {
+      title: "Sidecar next to one file",
+      body: "For a single override, put Report.pdf.url (one URL per line) or Report.pdf.origin.json beside the document. A sidecar wins over the folder map.",
+    },
+  ],
+  tsvExample: `# file	url
+AAPL-2024-Q2.pdf	https://investor.apple.com/example/q2-2024.pdf
+MSFT-2024-Q2.pdf	https://www.microsoft.com/example/q2-2024.pdf
+ACME-2024-10K.pdf	https://www.sec.gov/example/acme-10k.pdf`,
+  jsonExample: `{
+  "entries": {
+    "AAPL-2024-Q2.pdf": "https://investor.apple.com/example/q2-2024.pdf",
+    "MSFT-2024-Q2.pdf": "https://www.microsoft.com/example/q2-2024.pdf",
+    "ACME-2024-10K.pdf": "https://www.sec.gov/example/acme-10k.pdf"
+  }
+}`,
+  patternExample: `{
+  "pattern": "Ch_(?<year>\\d{4})-(?<chapter>\\d+)",
+  "urlTemplate": "https://laws.flrules.org/{year}/{chapter}"
+}`,
+  cliExample: `zipwiki pack ./earnings -o knowledge/earnings.zipwiki \\
+  --origins ./earnings/earnings-links.tsv \\
+  --omit-original
+# --origins list is applied for links and never packed into the .zipwiki.
+# Or place .zipwiki-origins.tsv / .json next to the corpus (also auto-excluded).
+
+zipwiki pack ./florida-laws -o knowledge/florida-laws.zipwiki \\
+  --origin-pattern 'Ch_(?<year>\\d{4})-(?<chapter>\\d+)' \\
+  --origin-url-template 'https://laws.flrules.org/{year}/{chapter}'`,
+  agentPrompt:
+    "Using ZipWiki, pack ./earnings into ./knowledge/earnings.zipwiki with --origins ./earnings/earnings-links.tsv (one filename and https URL per line). Omit original PDFs from the archive but keep origin links. Do not add the origins list itself as a package document.",
 } as const;
 
 export const PARSE_PROBLEM = {
@@ -400,95 +449,6 @@ export const AGENT_PROMPTS: AgentPrompt[] = [
     description: "Fetch the origin URL and check CRC-32.",
     prompt:
       "Using ZipWiki on ./knowledge/florida-laws.zipwiki, show the origin URL for Ch_2025-001 and fetch it to verify CRC-32.",
-  },
-];
-
-export type RoadmapStatus = "Now" | "Next" | "Later";
-
-export const ROADMAP: Array<{
-  title: string;
-  why: string;
-  status: RoadmapStatus;
-}> = [
-  {
-    title: "Marketing site",
-    why: "zipwiki.ai product pages, install, MCP, CLI, and roadmap.",
-    status: "Now",
-  },
-  {
-    title: "TypeScript pack, query, MCP",
-    why: "The Beta engine. zipwiki pack, zipwiki open/search/read, and stdio MCP run on Node, agents, and Vercel — anywhere TypeScript runs.",
-    status: "Next",
-  },
-  {
-    title: "Cursor marketplace plugin",
-    why: "One install that ships skills, MCP, and the CLI together—so marketing matches the box.",
-    status: "Next",
-  },
-  {
-    title: "Public downloads",
-    why: "Signed installers and npm-from-site packages on the Download page when Beta is ready.",
-    status: "Next",
-  },
-  {
-    title: "Hosted API under zipwiki.ai",
-    why: "api.zipwiki.ai for accounts, keys, and hosted parse. New Fly/Convex/Stripe projects—not zipcodex.ai credentials.",
-    status: "Later",
-  },
-  {
-    title: "Dashboard account plane",
-    why: "Keys, usage, billing, settings, and a browser inspector for a local package.",
-    status: "Later",
-  },
-  {
-    title: "Rust native CLI",
-    why: "After TypeScript Beta. A zipwiki binary only on machines we compile for (macOS arm64 first). TypeScript stays the everywhere runtime.",
-    status: "Later",
-  },
-  {
-    title: "In-browser pack",
-    why: "Create a .zipwiki from the dashboard without opening an agent.",
-    status: "Later",
-  },
-  {
-    title: "Richer Knowledge Archive browser",
-    why: "Digest cards and the original beside its extracted markdown.",
-    status: "Later",
-  },
-  {
-    title: "Hosted MCP + saved library",
-    why: "Agents that cannot see your disk; optional account-stored packages.",
-    status: "Later",
-  },
-  {
-    title: "Connector listings",
-    why: "ChatGPT and Claude directory listings—plugin-shaped, not a raw CLI.",
-    status: "Later",
-  },
-  {
-    title: "Encryption",
-    why: "AES so sensitive archives stay sealed in transit.",
-    status: "Later",
-  },
-  {
-    title: "Duplicates and supersession",
-    why: "Collapse near-duplicates; mark older docs as superseded.",
-    status: "Later",
-  },
-  {
-    title: "Per-page figures and quotes",
-    why: "Page-level markdown, extracted figures, bounding-box citations.",
-    status: "Later",
-  },
-  {
-    title: "Ingest pipes",
-    why: "Watched folder, IMAP, or scanner drop → new .zipwiki.",
-    status: "Later",
-  },
-  {
-    title: "Teams and share links",
-    why: "Workspaces, revoke-a-link sharing, only if you need multi-user.",
-    status: "Later",
   },
 ];
 

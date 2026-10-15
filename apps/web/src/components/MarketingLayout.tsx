@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   NAV,
   PAGE_TITLES,
+  SHOW_INSTALL_IN_NAV,
   SITE_DESCRIPTION,
   SITE_NAME,
   SITE_TAGLINE,
@@ -156,18 +157,14 @@ export function MarketingLayout() {
             <p className="mt-1">© 2026 NeoWare Inc.</p>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
-            <Link to="/install" className="hover:text-(--accent)">
-              Install
-            </Link>
             <Link to="/mcp" className="hover:text-(--accent)">
-              MCP
+              MCP & CLI
             </Link>
-            <Link to="/cli" className="hover:text-(--accent)">
-              CLI
-            </Link>
-            <Link to="/roadmap" className="hover:text-(--accent)">
-              Roadmap
-            </Link>
+            {SHOW_INSTALL_IN_NAV && (
+              <Link to="/install" className="hover:text-(--accent)">
+                Install
+              </Link>
+            )}
             <Link to="/login" className="hover:text-(--accent)">
               Sign in
             </Link>

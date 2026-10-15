@@ -2,6 +2,7 @@ import {
   CLASSIC_ZIP_PROBLEM,
   HOME_OUTCOMES,
   PRODUCT_CAPABILITIES,
+  SHOW_INSTALL_IN_NAV,
   TRUST_BULLETS,
 } from "../../lib/marketing-copy";
 import {
@@ -79,7 +80,11 @@ export default function ProductPage() {
           ))}
         </ul>
         <div className="mt-10 flex flex-wrap gap-3">
-          <PrimaryCta to="/install">Install</PrimaryCta>
+          {SHOW_INSTALL_IN_NAV ? (
+            <PrimaryCta to="/install">Install</PrimaryCta>
+          ) : (
+            <PrimaryCta to="/mcp">MCP & CLI</PrimaryCta>
+          )}
           <SecondaryCta to="/how-it-works">See how it works</SecondaryCta>
         </div>
       </Section>

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   CREATE_PACKAGE,
   HOW_COMING_SOON,
@@ -6,6 +7,7 @@ import {
   OKF_INDEXING,
   OKF_SPEC_LINK_LABEL,
   OKF_SPEC_URL,
+  ORIGIN_LINKS,
   PACKAGE_ACTIONS,
   PARSE_ENGINES,
   PARSE_FAMILIES,
@@ -14,6 +16,25 @@ import {
   SAMPLE_OKF,
 } from "../../lib/marketing-copy";
 import { FeatureGrid, PageHero, PromptCard, Section } from "./MarketingUi";
+
+/** Full-bleed band so consecutive sections alternate clearly. */
+function Band({
+  tone,
+  children,
+}: {
+  tone: "plain" | "tint";
+  children: ReactNode;
+}) {
+  const shell =
+    tone === "tint"
+      ? "border-t border-(--line) bg-white"
+      : "border-t border-(--line) bg-transparent";
+  return (
+    <div className={shell}>
+      <Section>{children}</Section>
+    </div>
+  );
+}
 
 export default function HowItWorksPage() {
   return (
@@ -26,28 +47,26 @@ export default function HowItWorksPage() {
         />
       </Section>
 
-      <section className="border-t border-(--line) bg-white/50">
-        <Section>
-          <h2 className="font-display text-3xl font-semibold text-(--ink)">
-            {CREATE_PACKAGE.title}
-          </h2>
-          <p className="mt-3 max-w-3xl text-(--muted)">{CREATE_PACKAGE.lead}</p>
-          <div className="mt-10 grid gap-8 md:grid-cols-2">
-            {CREATE_PACKAGE.jobs.map((job) => (
-              <div key={job.title} className="space-y-2">
-                <h3 className="font-display text-xl font-semibold text-(--ink)">
-                  {job.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-(--muted)">
-                  {job.body}
-                </p>
-              </div>
-            ))}
-          </div>
-        </Section>
-      </section>
+      <Band tone="tint">
+        <h2 className="font-display text-3xl font-semibold text-(--ink)">
+          {CREATE_PACKAGE.title}
+        </h2>
+        <p className="mt-3 max-w-3xl text-(--muted)">{CREATE_PACKAGE.lead}</p>
+        <div className="mt-10 grid gap-8 md:grid-cols-2">
+          {CREATE_PACKAGE.jobs.map((job) => (
+            <div key={job.title} className="space-y-2">
+              <h3 className="font-display text-xl font-semibold text-(--ink)">
+                {job.title}
+              </h3>
+              <p className="text-sm leading-relaxed text-(--muted)">
+                {job.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Band>
 
-      <Section>
+      <Band tone="plain">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           {PARSE_PROBLEM.title}
         </h2>
@@ -67,46 +86,107 @@ export default function HowItWorksPage() {
         <p className="mt-8 max-w-3xl text-sm font-medium text-(--ink)">
           {HOW_COMING_SOON}
         </p>
-      </Section>
+      </Band>
 
-      <section className="border-t border-(--line) bg-white/50">
-        <Section>
-          <h2 className="font-display text-3xl font-semibold text-(--ink)">
-            {OKF_INDEXING.title}
-          </h2>
-          <p className="mt-3 max-w-3xl text-(--muted)">{OKF_INDEXING.lead}</p>
-          <p className="mt-4 text-sm">
-            <a
-              className="font-medium text-(--accent) hover:underline"
-              href={OKF_SPEC_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {OKF_SPEC_LINK_LABEL}
-            </a>
+      <Band tone="tint">
+        <h2 className="font-display text-3xl font-semibold text-(--ink)">
+          {OKF_INDEXING.title}
+        </h2>
+        <p className="mt-3 max-w-3xl text-(--muted)">{OKF_INDEXING.lead}</p>
+        <p className="mt-4 text-sm">
+          <a
+            className="font-medium text-(--accent) hover:underline"
+            href={OKF_SPEC_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {OKF_SPEC_LINK_LABEL}
+          </a>
+        </p>
+        <div className="mt-10">
+          <FeatureGrid items={OKF_FIELDS} columns={2} />
+        </div>
+        <div className="mt-10 overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
+          <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+            Example OKF frontmatter
           </p>
-          <div className="mt-10">
-            <FeatureGrid items={OKF_FIELDS} columns={2} />
-          </div>
-          <div className="mt-10 overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
+          <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
+            {SAMPLE_OKF}
+          </pre>
+        </div>
+        <p className="mt-6 max-w-3xl text-sm leading-relaxed text-(--muted)">
+          Search looks at those fields first, then optionally scans extracted
+          markdown at a lower weight. That is why “find homestead exemption”
+          works without loading every chapter into the chat. OKF is markdown
+          you can open in any editor—the same files live at{" "}
+          <code className="text-xs">wiki/okf/</code> inside the zip.
+        </p>
+      </Band>
+
+      <Band tone="plain">
+        <h2 className="font-display text-3xl font-semibold text-(--ink)">
+          {ORIGIN_LINKS.title}
+        </h2>
+        <p className="mt-3 max-w-3xl text-(--muted)">{ORIGIN_LINKS.lead}</p>
+        <div className="mt-10 grid gap-8 md:grid-cols-3">
+          {ORIGIN_LINKS.methods.map((method) => (
+            <div key={method.title} className="space-y-2">
+              <h3 className="font-display text-xl font-semibold text-(--ink)">
+                {method.title}
+              </h3>
+              <p className="text-sm leading-relaxed text-(--muted)">
+                {method.body}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
+          <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
             <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
-              Example OKF frontmatter
+              .zipwiki-origins.tsv — one file, one link
             </p>
             <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
-              {SAMPLE_OKF}
+              {ORIGIN_LINKS.tsvExample}
             </pre>
           </div>
-          <p className="mt-6 max-w-3xl text-sm leading-relaxed text-(--muted)">
-            Search looks at those fields first, then optionally scans extracted
-            markdown at a lower weight. That is why “find homestead exemption”
-            works without loading every chapter into the chat. OKF is markdown
-            you can open in any editor—the same files live at{" "}
-            <code className="text-xs">wiki/okf/</code> inside the zip.
+          <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
+            <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+              .zipwiki-origins.json — entries map
+            </p>
+            <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
+              {ORIGIN_LINKS.jsonExample}
+            </pre>
+          </div>
+        </div>
+        <div className="mt-6 overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
+          <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+            Patterned names (optional)
           </p>
-        </Section>
-      </section>
+          <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
+            {ORIGIN_LINKS.patternExample}
+          </pre>
+        </div>
+        <div className="mt-6 overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
+          <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+            Pack with origins
+          </p>
+          <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
+            {ORIGIN_LINKS.cliExample}
+          </pre>
+        </div>
+        <div className="mt-8 max-w-2xl">
+          <PromptCard
+            item={{
+              id: "pack-with-origins",
+              title: "Ask your agent",
+              description: "Pack a mixed earnings folder using a file→URL list.",
+              prompt: ORIGIN_LINKS.agentPrompt,
+            }}
+          />
+        </div>
+      </Band>
 
-      <Section>
+      <Band tone="tint">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           {PACKAGE_ACTIONS.title}
         </h2>
@@ -131,56 +211,54 @@ export default function HowItWorksPage() {
             </li>
           ))}
         </ul>
-      </Section>
+      </Band>
 
-      <section className="border-t border-(--line) bg-white/50">
-        <Section>
-          <h2 className="font-display text-3xl font-semibold text-(--ink)">
-            What the agent should report
-          </h2>
-          <p className="mt-3 max-w-2xl text-(--muted)">
-            A catalog from OKF, not a raw zip listing. This is the Florida
-            session-laws sample:{" "}
-            <code className="text-xs">Ch_YYYY-NNN.pdf</code> maps to{" "}
-            <code className="text-xs">
-              https://laws.flrules.org/{"{year}/{chapter}"}
-            </code>
-            . Scans without extracted markdown still appear so you can see what
-            needs a better extraction or a hosted pass.
-          </p>
-          <div className="mt-8 overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
-            <table className="w-full min-w-[40rem] text-left text-sm">
-              <thead className="border-b border-(--line) text-(--muted)">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Title</th>
-                  <th className="px-4 py-3 font-medium">Type</th>
-                  <th className="px-4 py-3 font-medium">OKF</th>
-                  <th className="px-4 py-3 font-medium">Markdown</th>
-                  <th className="px-4 py-3 font-medium">Read next</th>
+      <Band tone="plain">
+        <h2 className="font-display text-3xl font-semibold text-(--ink)">
+          What the agent should report
+        </h2>
+        <p className="mt-3 max-w-2xl text-(--muted)">
+          A catalog from OKF, not a raw zip listing. This is the Florida
+          session-laws sample:{" "}
+          <code className="text-xs">Ch_YYYY-NNN.pdf</code> maps to{" "}
+          <code className="text-xs">
+            https://laws.flrules.org/{"{year}/{chapter}"}
+          </code>
+          . Scans without extracted markdown still appear so you can see what
+          needs a better extraction or a hosted pass.
+        </p>
+        <div className="mt-8 overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+          <table className="w-full min-w-[40rem] text-left text-sm">
+            <thead className="border-b border-(--line) text-(--muted)">
+              <tr>
+                <th className="px-4 py-3 font-medium">Title</th>
+                <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">OKF</th>
+                <th className="px-4 py-3 font-medium">Markdown</th>
+                <th className="px-4 py-3 font-medium">Read next</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SAMPLE_CATALOG.map((row) => (
+                <tr
+                  key={row.title}
+                  className="border-b border-(--line)/70 last:border-0"
+                >
+                  <td className="px-4 py-3 font-medium text-(--ink)">
+                    {row.title}
+                  </td>
+                  <td className="px-4 py-3 text-(--muted)">{row.type}</td>
+                  <td className="px-4 py-3">{row.okf ? "Yes" : "—"}</td>
+                  <td className="px-4 py-3">{row.parsed ? "Yes" : "No"}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-(--muted)">
+                    {row.next}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {SAMPLE_CATALOG.map((row) => (
-                  <tr
-                    key={row.title}
-                    className="border-b border-(--line)/70 last:border-0"
-                  >
-                    <td className="px-4 py-3 font-medium text-(--ink)">
-                      {row.title}
-                    </td>
-                    <td className="px-4 py-3 text-(--muted)">{row.type}</td>
-                    <td className="px-4 py-3">{row.okf ? "Yes" : "—"}</td>
-                    <td className="px-4 py-3">{row.parsed ? "Yes" : "No"}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-(--muted)">
-                      {row.next}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Section>
-      </section>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Band>
     </main>
   );
 }

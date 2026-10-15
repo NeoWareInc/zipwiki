@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import type { AgentPrompt, RoadmapStatus } from "../../lib/marketing-copy";
+import type { AgentPrompt } from "../../lib/marketing-copy";
 
 export function PageHero({
   kicker,
@@ -62,22 +62,6 @@ export function FeatureGrid({
         </div>
       ))}
     </div>
-  );
-}
-
-export function StatusBadge({ status }: { status: RoadmapStatus }) {
-  const tone =
-    status === "Now"
-      ? "bg-(--accent)/10 text-(--accent)"
-      : status === "Next"
-        ? "bg-amber-50 text-amber-800"
-        : "bg-(--paper-deep) text-(--muted)";
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${tone}`}
-    >
-      {status}
-    </span>
   );
 }
 

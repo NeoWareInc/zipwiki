@@ -17,6 +17,7 @@ import {
   isOmittableDocumentSource,
   writeNzipCollectionBundle,
   cliOriginOverlay,
+  loadOriginListFile,
   resolveOriginUri,
   type DocumentType,
   type NeoZipAiParser,
@@ -47,6 +48,7 @@ import {
   imageModeFrom,
   parseDocument,
   resolveLibreOfficeMissing,
+  resolveRepoPath,
   retargetParsedImageHrefs,
   type CliParseOptions,
 } from "../lib/parse/index.js";
@@ -797,10 +799,25 @@ export async function runCompressPhase(input: {
     input.inputRoots && input.inputRoots.length > 0
       ? input.inputRoots
       : [...new Set(usable.map((m) => resolve(m.abs, "..")))];
+  let originEntries: Record<string, string> | undefined;
+  let originPattern = input.opts.originPattern;
+  let originUrlTemplate = input.opts.originUrlTemplate;
+  let originFile = input.opts.originFile;
+  const originsPath = input.opts.origins?.trim();
+  if (originsPath) {
+    const fromList = loadOriginListFile(resolve(resolveRepoPath(originsPath)));
+    originEntries = fromList.entries;
+    if (!originPattern && fromList.pattern) originPattern = fromList.pattern;
+    if (!originUrlTemplate && fromList.urlTemplate) {
+      originUrlTemplate = fromList.urlTemplate;
+    }
+    if (originFile !== true && fromList.file === true) originFile = true;
+  }
   const overlay = cliOriginOverlay({
-    originPattern: input.opts.originPattern,
-    originUrlTemplate: input.opts.originUrlTemplate,
-    originFile: input.opts.originFile,
+    originPattern,
+    originUrlTemplate,
+    originFile,
+    originEntries,
   });
 
   const indexPath = join(okfDir, "index.md");

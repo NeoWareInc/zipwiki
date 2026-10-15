@@ -789,22 +789,34 @@ when requested (`--origin-sha256`). Do not write both digest tags. Sidecar
 **MUST NOT** invent a URI.
 
 Rule files and sidecars are **pack input only**. They **MUST NOT** be written
-into the `.zipwiki`.
+into the `.zipwiki`. Pack/discover **MUST** exclude `.zipwiki-origins.json`,
+`.zipwiki-origins.tsv`, `*.url`, `*.origin.json`, and any path passed to
+`--origins` / MCP `origins` so those documents cannot become archive members
+(even when the list uses a packable extension such as `.tsv`).
 
 `.zipwiki-origins.json` is a JSON object:
 
 | Field | Meaning |
 | :---- | :---- |
+| `entries` | Optional map of basename or path (relative to the rule directory) → absolute URI. Checked **before** `pattern` / `urlTemplate`. Use when filenames do not share a URL pattern (for example company earnings PDFs). |
 | `pattern` | Optional filename/path regex; named groups fill `urlTemplate`. No match → fall through |
 | `urlTemplate` | Absolute URI template. Placeholders: `{name}` (stem), `{path}` (POSIX path relative to the rule directory), `{dir}` (first path segment), plus regex capture names / `{1}`, `{2}`, … |
 | `file` | `true` → locator is `pathToFileURL` of the absolute source path |
 | `include` | Optional globs (basename or path relative to the rule dir); non-match → fall through |
 
+At least one of `entries`, `urlTemplate`, or `file: true` **MUST** be set.
+
+Alternatively (or additionally), place a **`.zipwiki-origins.tsv`** next to the
+corpus: one document per line as `filename-or-relative-path` then a tab (or
+space) then an absolute `https:` / `file:` URI. `#` lines are comments. JSON
+`entries` win over TSV for the same key. Neither rule file is stored inside
+the `.zipwiki`.
+
 Numeric capture groups **SHOULD** strip leading zeros (`Ch_2025-001` →
 chapter `1`). Absolute OS paths in sidecars **MUST** be normalized to
 `file:` URIs on the wire. Relative locators **MUST** be rejected.
 
-**Example** `.zipwiki-origins.json`:
+**Example** patterned `.zipwiki-origins.json`:
 
 ```json
 {
@@ -815,7 +827,26 @@ chapter `1`). Absolute OS paths in sidecars **MUST** be normalized to
 
 `Ch_2025-001.pdf` → `https://laws.flrules.org/2025/1`.
 
-CLI equivalent:
+**Example** per-file map (earnings-style corpus):
+
+```json
+{
+  "entries": {
+    "AAPL-2024-Q2.pdf": "https://investor.apple.com/…/q2-2024.pdf",
+    "MSFT-2024-Q2.pdf": "https://www.microsoft.com/…/q2-2024.pdf"
+  }
+}
+```
+
+Same map as `.zipwiki-origins.tsv`:
+
+```text
+# file	url
+AAPL-2024-Q2.pdf	https://investor.apple.com/…/q2-2024.pdf
+MSFT-2024-Q2.pdf	https://www.microsoft.com/…/q2-2024.pdf
+```
+
+CLI equivalent for patterned names:
 
 ```bash
 zipwiki pack ./corpus -o laws.zipwiki \
@@ -825,7 +856,8 @@ zipwiki pack ./corpus -o laws.zipwiki \
 
 `--origin-file` stores a `file:` URI per parse (useful for NAS paths when
 originals are omitted). `--origin-pattern` requires `--origin-url-template`
-or `--origin-file`.
+or `--origin-file`. For irregular corpora, prefer `entries` / `.tsv` (or a
+per-file `*.url` sidecar) instead of inventing a fake pattern.
 
 #### 6.7.3 Read path
 

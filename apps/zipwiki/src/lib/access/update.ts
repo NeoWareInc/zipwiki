@@ -48,8 +48,11 @@ import {
   originLocatorPresent,
   splitOriginRecord,
   cliOriginOverlay,
+  isOriginPackInputName,
+  loadOriginListFile,
   resolveOriginUri,
 } from "../archive/index.js";
+import { resolveRepoPath } from "../parse/index.js";
 import { conceptFileNameFor } from "../okf/render.js";
 import {
   parseFrontmatterFields,
@@ -107,6 +110,8 @@ export type UpdatePackageInput = {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  /** Origins list path; excluded from ingest and applied as Extra Field 0x014F overlay. */
+  origins?: string;
   originRecord?: StageOptions["originRecord"];
   /** Write Extra Field 0x014E on newly compressed members. */
   sha256Extra?: boolean;
@@ -591,12 +596,23 @@ function rememberPrimary(
 export async function updatePackage(
   input: UpdatePackageInput,
 ): Promise<UpdatePackageResult> {
-  const add = (input.add ?? []).map((f) => resolve(f));
+  const originsAbs = input.origins?.trim()
+    ? resolve(resolveRepoPath(input.origins.trim()))
+    : undefined;
+  const isBlockedOriginDoc = (abs: string) =>
+    isOriginPackInputName(basename(abs)) ||
+    (originsAbs !== undefined && resolve(abs) === originsAbs);
+
+  const add = (input.add ?? [])
+    .map((f) => resolve(f))
+    .filter((f) => !isBlockedOriginDoc(f));
   const delKeys = input.del ?? [];
-  const updateSpecs = (input.update ?? []).map((r) => ({
-    entry: r.entry,
-    file: resolve(r.file),
-  }));
+  const updateSpecs = (input.update ?? [])
+    .map((r) => ({
+      entry: r.entry,
+      file: resolve(r.file),
+    }))
+    .filter((r) => !isBlockedOriginDoc(r.file));
   if (add.length === 0 && delKeys.length === 0 && updateSpecs.length === 0) {
     throw new AccessError(
       "update requires --add, --del, and/or --update",
@@ -647,15 +663,32 @@ export async function updatePackage(
     originPattern: input.originPattern,
     originUrlTemplate: input.originUrlTemplate,
     originFile: input.originFile,
+    origins: input.origins,
     originRecord: input.originRecord,
     sha256Extra: input.sha256Extra,
     originSha256: input.originSha256,
     okfProfile: parseOkfProfileFlag(input.okfProfile),
   };
+  let originEntries: Record<string, string> | undefined;
+  let originPattern = input.originPattern;
+  let originUrlTemplate = input.originUrlTemplate;
+  let originFile = input.originFile;
+  if (input.origins?.trim()) {
+    const fromList = loadOriginListFile(
+      resolve(resolveRepoPath(input.origins.trim())),
+    );
+    originEntries = fromList.entries;
+    if (!originPattern && fromList.pattern) originPattern = fromList.pattern;
+    if (!originUrlTemplate && fromList.urlTemplate) {
+      originUrlTemplate = fromList.urlTemplate;
+    }
+    if (originFile !== true && fromList.file === true) originFile = true;
+  }
   const originOverlay = cliOriginOverlay({
-    originPattern: input.originPattern,
-    originUrlTemplate: input.originUrlTemplate,
-    originFile: input.originFile,
+    originPattern,
+    originUrlTemplate,
+    originFile,
+    originEntries,
   });
 
   const quiet = input.quiet === true;

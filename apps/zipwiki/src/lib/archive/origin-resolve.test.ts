@@ -7,6 +7,8 @@ import { describe, it } from "node:test";
 import {
   cliOriginOverlay,
   normalizeOriginUri,
+  parseOriginEntriesTsv,
+  parseOriginRuleJson,
   resolveOriginUri,
   tryApplyOriginRule,
 } from "./origin-resolve.js";
@@ -101,6 +103,77 @@ describe("origin-resolve", () => {
     assert.equal(
       resolveOriginUri(pdfB, { inputRoots: [a], cliOverlay: overlay }),
       null,
+    );
+  });
+
+  it("entries map matches basename or relative path before pattern", () => {
+    const rule = {
+      entries: {
+        "AAPL-2024-Q2.pdf": "https://sec.example/aapl-q2",
+        "filings/MSFT-2024-Q2.pdf": "https://sec.example/msft-q2",
+      },
+      pattern: "Ch_(?<year>\\d{4})-(?<chapter>\\d+)",
+      urlTemplate: "https://laws.flrules.org/{year}/{chapter}",
+    };
+    assert.equal(
+      tryApplyOriginRule(
+        rule,
+        "/tmp/earnings/AAPL-2024-Q2.pdf",
+        "/tmp/earnings",
+      ),
+      "https://sec.example/aapl-q2",
+    );
+    assert.equal(
+      tryApplyOriginRule(
+        rule,
+        "/tmp/earnings/filings/MSFT-2024-Q2.pdf",
+        "/tmp/earnings",
+      ),
+      "https://sec.example/msft-q2",
+    );
+  });
+
+  it("loads entries from .zipwiki-origins.tsv next to the corpus", () => {
+    const root = mkdtempSync(join(tmpdir(), "origin-tsv-"));
+    writeFileSync(
+      join(root, ".zipwiki-origins.tsv"),
+      [
+        "# file\turl",
+        "AAPL-2024-Q2.pdf\thttps://investor.example/aapl/q2",
+        "MSFT-2024-Q2.pdf https://investor.example/msft/q2",
+        "",
+      ].join("\n"),
+    );
+    const aapl = join(root, "AAPL-2024-Q2.pdf");
+    const msft = join(root, "MSFT-2024-Q2.pdf");
+    writeFileSync(aapl, "a");
+    writeFileSync(msft, "b");
+    assert.equal(
+      resolveOriginUri(aapl, { inputRoots: [root] }),
+      "https://investor.example/aapl/q2",
+    );
+    assert.equal(
+      resolveOriginUri(msft, { inputRoots: [root] }),
+      "https://investor.example/msft/q2",
+    );
+  });
+
+  it("parses entries-only JSON and TSV documents", () => {
+    const rule = parseOriginRuleJson(
+      JSON.stringify({
+        entries: { "report.pdf": "https://example.org/report.pdf" },
+      }),
+      "test.json",
+    );
+    assert.deepEqual(rule.entries, {
+      "report.pdf": "https://example.org/report.pdf",
+    });
+    assert.deepEqual(
+      parseOriginEntriesTsv(
+        "report.pdf\thttps://example.org/report.pdf\n",
+        "test.tsv",
+      ),
+      { "report.pdf": "https://example.org/report.pdf" },
     );
   });
 

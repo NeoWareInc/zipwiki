@@ -128,7 +128,7 @@ Query:
 ## A7. Website (dev.zipwiki.ai + local)
 
 - [ ] `https://dev.zipwiki.ai/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it (same for local after `pnpm dev:web`).
-- [ ] A visitor can reach Install, How it works, CLI, MCP, Roadmap, Terms, and Privacy without guessing URLs.
+- [ ] A visitor can reach How it works, MCP & CLI, Terms, and Privacy without guessing URLs. Install stays off the nav until Beta opens (`SHOW_INSTALL_IN_NAV` in `marketing-copy.ts`); then it is last in the menu.
 - [ ] Waitlist and sales mail links reach a mailbox that is read.
 - [ ] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
 - [ ] `/install` on **dev.zipwiki.ai** offers a working download or a working `npm i -g` URL for rehearsal.

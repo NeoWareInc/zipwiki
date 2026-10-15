@@ -1,14 +1,17 @@
-import { statSync } from "node:fs";
 import { basename, resolve } from "node:path";
+import { statSync } from "node:fs";
 import { collectFiles, resolveRepoPath } from "../lib/parse/index.js";
+import { isOriginPackInputName } from "../lib/archive/origin-resolve.js";
 
 function matchGlob(path: string, pattern: string): boolean {
   const escaped = pattern
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
     .replace(/\*/g, ".*")
     .replace(/\?/g, ".");
-  return new RegExp(`^${escaped}$`, "i").test(path) ||
-    new RegExp(`^${escaped}$`, "i").test(basename(path));
+  return (
+    new RegExp(`^${escaped}$`, "i").test(path) ||
+    new RegExp(`^${escaped}$`, "i").test(basename(path))
+  );
 }
 
 /** Expand inputs: directories → supported files; apply include/exclude. */
@@ -18,6 +21,11 @@ export function discoverInputs(
     recurse?: boolean;
     include?: string[];
     exclude?: string[];
+    /**
+     * Absolute (or resolveable) paths that must never be packed — e.g. the
+     * file passed to `--origins`.
+     */
+    excludePaths?: string[];
   } = {},
 ): string[] {
   const out: string[] = [];
@@ -52,7 +60,15 @@ export function discoverInputs(
     }
   }
 
-  let filtered = out;
+  let filtered = out.filter((p) => !isOriginPackInputName(basename(p)));
+
+  if (opts.excludePaths && opts.excludePaths.length > 0) {
+    const blocked = new Set(
+      opts.excludePaths.map((p) => resolve(resolveRepoPath(p))),
+    );
+    filtered = filtered.filter((p) => !blocked.has(resolve(p)));
+  }
+
   if (opts.include && opts.include.length > 0) {
     filtered = filtered.filter((p) =>
       opts.include!.some((pat) => matchGlob(p, pat)),

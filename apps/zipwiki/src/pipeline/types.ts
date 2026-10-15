@@ -91,6 +91,11 @@ export type StageOptions = CliParseOptions & {
   originUrlTemplate?: string;
   /** When true, CLI overlay uses pathToFileURL for each file. */
   originFile?: boolean;
+  /**
+   * Path to a pack-input origins list (`.json` rule or `.tsv` / text map).
+   * Loaded for Extra Field 0x014F and always excluded from packed documents.
+   */
+  origins?: string;
   /** Store each file's Google Drive URL from Drive for desktop. */
   originDrive?: boolean;
   /**

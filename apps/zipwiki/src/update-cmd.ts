@@ -29,6 +29,7 @@ export type UpdateCommandOptions = {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  origins?: string;
   originRecord?: string;
   sha256Extra?: boolean;
   originSha256?: boolean;
@@ -94,6 +95,7 @@ export async function runUpdateCommand(
       originPattern: opts.originPattern,
       originUrlTemplate: opts.originUrlTemplate,
       originFile: opts.originFile,
+      origins: opts.origins,
       originRecord: parseOriginRecord(opts.originRecord),
       sha256Extra: opts.sha256Extra,
       originSha256: opts.originSha256,

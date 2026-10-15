@@ -34,8 +34,19 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 | `--omit-original` | Store parse + Extra Field `0x014F` locator instead of the original document bytes |
 | `--compression zstd\|deflate\|store` | ZIP method (default zstd) |
 | `--sha256` | Extra Field `0x014E` on members |
+| `--origins <path>` | Origins list file (JSON rule/`entries`, or TSV/`filename`+URL rows). Locators go on Extra Field `0x014F`. **This file is always excluded from the pack** — it is never stored as a document inside the `.zipwiki` |
 | `--origin-url-template` | Fill the origin URI from filename captures |
+| `--origin-pattern` | Filename regex; named groups fill `--origin-url-template` |
+| `--origin-file` | Store a `file:` URI per document |
 | `--origin-record manifest\|cd\|both` | Where URI, size, and date are stored. Default `manifest` (compressed in `META-INF/manifest.json`). `cd` keeps them on Extra Field `0x014F`. `both` writes both. CRC-32 stays on `0x014F` when the original is omitted or a URI is recorded |
+
+Origin links can also come from pack-input files next to the corpus (not stored
+in the `.zipwiki`): per-file `*.url` / `*.origin.json` sidecars, a
+`.zipwiki-origins.json` rule (`entries` map and/or `pattern` + `urlTemplate`),
+or a `.zipwiki-origins.tsv` list of `filename` + URL rows for irregular sets
+(earnings reports, mixed filings). Those well-known names and any path passed
+to `--origins` are automatically skipped during discover so they cannot become
+package members. See [ZIPWIKI_APPNOTE.md](ZIPWIKI_APPNOTE.md) §6.7.2.
 
 `zipwiki update` rewrites an archive (`--add` / `--update` / `--del`). Unchanged
 members are copied compressed. `--okf-profile` on an add or update stores the

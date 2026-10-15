@@ -300,6 +300,12 @@ export function registerTools(server: McpServer): void {
         noOkf: z.boolean().optional(),
         noOcr: z.boolean().optional(),
         recurse: z.boolean().optional(),
+        origins: z
+          .string()
+          .optional()
+          .describe(
+            "Path to an origins list (JSON entries/rule or TSV file→URL map). Applied as Extra Field 0x014F locators and always excluded from the packed .zipwiki (never stored as a document).",
+          ),
         originPattern: z
           .string()
           .optional()
@@ -393,6 +399,12 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe("Include original bytes for new/updated files"),
+        origins: z
+          .string()
+          .optional()
+          .describe(
+            "Origins list path (JSON or TSV). Applied for new members; always excluded from packed documents",
+          ),
         originPattern: z.string().optional(),
         originUrlTemplate: z.string().optional(),
         originFile: z.boolean().optional(),

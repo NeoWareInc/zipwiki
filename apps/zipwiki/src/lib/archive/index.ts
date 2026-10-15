@@ -251,9 +251,14 @@ export {
 export type { OriginRule, ResolveOriginOptions } from "./origin-resolve.js";
 export {
   ORIGINS_RULE_FILENAME,
+  ORIGINS_TSV_FILENAME,
   cliOriginOverlay,
+  isOriginPackInputName,
+  loadOriginListFile,
   normalizeOriginUri,
+  parseOriginEntriesTsv,
   parseOriginRuleJson,
+  readDirOriginRule,
   readOriginSidecar,
   resolveOriginUri,
   tryApplyOriginRule,

@@ -243,6 +243,10 @@ function withPipelineFlags(cmd: Command): Command {
       [] as string[],
     )
     .option(
+      "--origins <path>",
+      "Origins list file (JSON entries/rule or TSV file→URL map). Used for Extra Field 0x014F; always excluded from the .zipwiki (not packed as a document)",
+    )
+    .option(
       "--origin-pattern <re>",
       "Filename regex for remote original URI (named groups fill --origin-url-template)",
     )
@@ -823,6 +827,10 @@ program
     (v, prev: string[] = []) => prev.concat(v.split(",").map((s) => s.trim())),
     [] as string[],
   )
+  .option(
+    "--origins <path>",
+    "Origins list file (JSON or TSV). Used for Extra Field 0x014F; always excluded from packed documents",
+  )
   .option("--origin-pattern <re>", "Filename regex for Extra Field 0x014F")
   .option("--origin-url-template <tpl>", "URI template for Extra Field 0x014F")
   .option("--origin-file", "Store file: URI as the original locator")
@@ -877,6 +885,7 @@ program
       originPattern: opts.originPattern,
       originUrlTemplate: opts.originUrlTemplate,
       originFile: opts.originFile === true,
+      origins: opts.origins,
       originRecord: opts.originRecord,
       sha256Extra: opts.sha256 === true,
       originSha256: opts.originSha256 === true,

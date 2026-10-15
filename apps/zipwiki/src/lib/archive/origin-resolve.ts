@@ -17,6 +17,18 @@ import { pathToFileURL } from "node:url";
 import { ORIGIN_URI_MAX_BYTES } from "./origin-extra.js";
 
 export const ORIGINS_RULE_FILENAME = ".zipwiki-origins.json";
+/** Tab- or space-separated file→URL map (pack input only). */
+export const ORIGINS_TSV_FILENAME = ".zipwiki-origins.tsv";
+
+/** True for origin rule/list/sidecar names that must never be packed as documents. */
+export function isOriginPackInputName(name: string): boolean {
+  if (name === ORIGINS_RULE_FILENAME || name === ORIGINS_TSV_FILENAME) {
+    return true;
+  }
+  if (name.endsWith(".url")) return true;
+  if (name.endsWith(".origin.json")) return true;
+  return false;
+}
 
 export type OriginRule = {
   /** Optional filename regex; named groups fill urlTemplate. Fall through if no match. */
@@ -27,6 +39,11 @@ export type OriginRule = {
   file?: boolean;
   /** Optional globs (basename or path relative to rule dir); non-match → fall through. */
   include?: string[];
+  /**
+   * Explicit basename or path (relative to the rule directory) → absolute URI.
+   * Checked before pattern / urlTemplate. Use for irregular corpora (earnings PDFs, etc.).
+   */
+  entries?: Record<string, string>;
 };
 
 export type ResolveOriginOptions = {
@@ -148,6 +165,15 @@ export function tryApplyOriginRule(
     if (!ok) return null;
   }
 
+  if (rule.entries && Object.keys(rule.entries).length > 0) {
+    const hit =
+      rule.entries[name] ??
+      rule.entries[relPath] ??
+      rule.entries[stem] ??
+      null;
+    if (hit) return normalizeOriginUri(hit);
+  }
+
   const vars: Record<string, string> = {
     name: stem,
     path: relPath,
@@ -186,6 +212,22 @@ export function tryApplyOriginRule(
   return null;
 }
 
+function parseEntriesObject(
+  raw: unknown,
+  sourceLabel: string,
+): Record<string, string> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${sourceLabel}: "entries" must be an object of path → URI`);
+  }
+  const entries: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const key = k.trim();
+    if (!key || typeof v !== "string" || !v.trim()) continue;
+    entries[key] = v.trim();
+  }
+  return Object.keys(entries).length > 0 ? entries : undefined;
+}
+
 export function parseOriginRuleJson(raw: string, sourceLabel: string): OriginRule {
   let parsed: unknown;
   try {
@@ -204,18 +246,78 @@ export function parseOriginRuleJson(raw: string, sourceLabel: string): OriginRul
   if (Array.isArray(o.include)) {
     rule.include = o.include.filter((x): x is string => typeof x === "string");
   }
-  if (!rule.file && !rule.urlTemplate) {
+  if ("entries" in o) {
+    rule.entries = parseEntriesObject(o.entries, sourceLabel);
+  }
+  if (!rule.file && !rule.urlTemplate && !rule.entries) {
     throw new Error(
-      `${sourceLabel} must set "urlTemplate" and/or "file": true`,
+      `${sourceLabel} must set "entries", "urlTemplate", and/or "file": true`,
     );
   }
   return rule;
 }
 
-function readRuleFile(dir: string): OriginRule | null {
-  const path = joinPath(dir, ORIGINS_RULE_FILENAME);
-  if (!existsSync(path)) return null;
-  return parseOriginRuleJson(readFileSync(path, "utf-8"), path);
+/**
+ * Parse a file→URL list document.
+ * Lines: `#` comments, blanks ignored; `path-or-name<TAB>url` or `path-or-name url`.
+ */
+export function parseOriginEntriesTsv(
+  raw: string,
+  sourceLabel: string,
+): Record<string, string> {
+  const entries: Record<string, string> = {};
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const tab = trimmed.indexOf("\t");
+    let key: string;
+    let uri: string;
+    if (tab >= 0) {
+      key = trimmed.slice(0, tab).trim();
+      uri = trimmed.slice(tab + 1).trim();
+    } else {
+      const m = /^(\S+)\s+(https?:\/\/\S+|file:\S+)$/i.exec(trimmed);
+      if (!m) {
+        throw new Error(
+          `${sourceLabel}: expected "file\\turl" (got: ${trimmed})`,
+        );
+      }
+      key = m[1]!;
+      uri = m[2]!;
+    }
+    if (!key || !uri) {
+      throw new Error(`${sourceLabel}: empty path or URI on line: ${trimmed}`);
+    }
+    entries[key] = uri;
+  }
+  if (Object.keys(entries).length === 0) {
+    throw new Error(`${sourceLabel} has no file→URL rows`);
+  }
+  return entries;
+}
+
+/** Load `.zipwiki-origins.json` and/or `.zipwiki-origins.tsv` for a directory. */
+export function readDirOriginRule(dir: string): OriginRule | null {
+  const jsonPath = joinPath(dir, ORIGINS_RULE_FILENAME);
+  const tsvPath = joinPath(dir, ORIGINS_TSV_FILENAME);
+  let rule: OriginRule | null = null;
+  let tsvEntries: Record<string, string> | undefined;
+
+  if (existsSync(tsvPath)) {
+    tsvEntries = parseOriginEntriesTsv(readFileSync(tsvPath, "utf-8"), tsvPath);
+  }
+  if (existsSync(jsonPath)) {
+    rule = parseOriginRuleJson(readFileSync(jsonPath, "utf-8"), jsonPath);
+  }
+
+  if (tsvEntries) {
+    if (!rule) return { entries: tsvEntries };
+    rule = {
+      ...rule,
+      entries: { ...tsvEntries, ...(rule.entries ?? {}) },
+    };
+  }
+  return rule;
 }
 
 function joinPath(dir: string, name: string): string {
@@ -303,7 +405,7 @@ export function resolveOriginUri(
   }
 
   for (const d of chain) {
-    const rule = readRuleFile(d);
+    const rule = readDirOriginRule(d);
     if (!rule) continue;
     const uri = tryApplyOriginRule(rule, abs, d);
     if (uri) return uri;
@@ -317,24 +419,47 @@ export function resolveOriginUri(
   return null;
 }
 
-/** Build a CLI overlay rule from pack flags (null if neither flag set). */
+/**
+ * Load a pack-input origins list from `--origins <path>`.
+ * `.json` → full rule object; otherwise → TSV/space-separated file→URL rows.
+ */
+export function loadOriginListFile(filePath: string): OriginRule {
+  const abs = resolve(filePath);
+  if (!existsSync(abs)) {
+    throw new Error(`Origins list not found: ${filePath}`);
+  }
+  const raw = readFileSync(abs, "utf-8");
+  if (abs.toLowerCase().endsWith(".json")) {
+    return parseOriginRuleJson(raw, abs);
+  }
+  return { entries: parseOriginEntriesTsv(raw, abs) };
+}
+
+/** Build a CLI overlay rule from pack flags (null if nothing set). */
 export function cliOriginOverlay(input: {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  /** Entries from `--origins` (and/or merged rule fields). */
+  originEntries?: Record<string, string>;
 }): OriginRule | null {
   const pattern = input.originPattern?.trim();
   const urlTemplate = input.originUrlTemplate?.trim();
   const file = input.originFile === true;
-  if (!pattern && !urlTemplate && !file) return null;
-  if (!file && !urlTemplate) {
+  const entries =
+    input.originEntries && Object.keys(input.originEntries).length > 0
+      ? input.originEntries
+      : undefined;
+  if (!pattern && !urlTemplate && !file && !entries) return null;
+  if (!file && !urlTemplate && !entries) {
     throw new Error(
-      "--origin-pattern requires --origin-url-template (or --origin-file)",
+      "--origin-pattern requires --origin-url-template, --origin-file, or --origins",
     );
   }
   return {
     ...(pattern ? { pattern } : {}),
     ...(urlTemplate ? { urlTemplate } : {}),
     ...(file ? { file: true } : {}),
+    ...(entries ? { entries } : {}),
   };
 }

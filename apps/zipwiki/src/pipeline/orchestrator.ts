@@ -57,6 +57,7 @@ import {
 } from "./pack-confirm.js";
 import { openPackage } from "../lib/access/index.js";
 import { runListCommand, runTestCommand } from "../inspect-cmd.js";
+import { loadOriginListFile } from "../lib/archive/origin-resolve.js";
 import { discoverInputs } from "./discover.js";
 import {
   ensureStageDirs,
@@ -306,11 +307,19 @@ export async function runStage(
       accountSettings.settings.pack.recurse === true ||
       (!accountSettings.setupComplete && onboarding.recurse === true) ||
       false;
+    const originsPath = opts.origins?.trim()
+      ? resolve(resolveRepoPath(opts.origins.trim()))
+      : undefined;
+    if (originsPath) {
+      // Validate early so dry-run / confirm see a clear error.
+      loadOriginListFile(originsPath);
+    }
     const discover = () =>
       discoverInputs(files, {
         recurse,
         include: opts.include,
         exclude: opts.exclude,
+        excludePaths: originsPath ? [originsPath] : undefined,
       });
     let expanded = discover();
     if (expanded.length === 0) {
@@ -409,6 +418,7 @@ export async function runStage(
         originPattern: opts.originPattern,
         originUrlTemplate: opts.originUrlTemplate,
         originFile: opts.originFile === true,
+        origins: opts.origins,
         originDrive: opts.originDrive === true,
       });
       await runPackConfirmLoop({

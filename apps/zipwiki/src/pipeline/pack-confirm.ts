@@ -30,6 +30,8 @@ export type PackPlanSettings = {
   originPattern?: string;
   originUrlTemplate?: string;
   originFile?: boolean;
+  /** Path shown for `--origins` (list is excluded from the package). */
+  origins?: string;
   originDrive?: boolean;
 };
 
@@ -170,10 +172,16 @@ export function parserLabel(
 export function originLabel(
   plan: Pick<
     PackPlanSettings,
-    "originPattern" | "originUrlTemplate" | "originFile" | "originDrive"
+    | "originPattern"
+    | "originUrlTemplate"
+    | "originFile"
+    | "originDrive"
+    | "origins"
   >,
 ): string {
   const bits: string[] = [];
+  const origins = plan.origins?.trim();
+  if (origins) bits.push(`list ${origins}`);
   const pattern = plan.originPattern?.trim();
   const template = plan.originUrlTemplate?.trim();
   if (template) bits.push(template);
