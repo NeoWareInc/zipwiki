@@ -6,10 +6,13 @@ import {
   creditsForUsdCents,
   zipwikiCreditsForLlamaCredits,
   zipwikiCreditsForAnthropicTokens,
+  llamaVendorUsdCents,
+  anthropicVendorUsdCents,
   resolveHostedOkfModel,
   approxAgenticPagesForUsd,
   approxPagesForUsd,
   crossedLowCreditThreshold,
+  crossedLowFloatThreshold,
   creditsSpendBlocked,
   isLowCredits,
   llamaCreditsPerPageForTier,
@@ -198,6 +201,72 @@ describe("credits", () => {
     assert.equal(
       crossedLowCreditThreshold({ before: 501, after: 500, unlimited: true }),
       false,
+    );
+  });
+
+  it("prices vendor LlamaParse USD without ZipWiki markup", () => {
+    assert.equal(llamaVendorUsdCents(0), 0);
+    // 1000 Llama credits × $1.25/1k = $1.25 → 125¢
+    assert.equal(llamaVendorUsdCents(1000), 125);
+    // 8 credits → $0.01 → ceil 1¢
+    assert.equal(llamaVendorUsdCents(8), 1);
+  });
+
+  it("prices vendor Anthropic USD without ZipWiki markup", () => {
+    assert.equal(anthropicVendorUsdCents({}), 0);
+    // Haiku: 1M in + 1M out = $0.10 + $0.50 = $0.60 → 60¢
+    assert.equal(
+      anthropicVendorUsdCents({
+        model: "claude-haiku-5-5",
+        inputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+      }),
+      60,
+    );
+  });
+
+  it("emails ops once when vendor float crosses the low line", () => {
+    assert.equal(
+      crossedLowFloatThreshold({
+        before: 501,
+        after: 500,
+        threshold: 500,
+      }),
+      true,
+    );
+    assert.equal(
+      crossedLowFloatThreshold({
+        before: 400,
+        after: 399,
+        threshold: 500,
+      }),
+      false,
+    );
+    assert.equal(
+      crossedLowFloatThreshold({
+        before: 501,
+        after: 500,
+        threshold: 500,
+        notifiedAt: 1,
+      }),
+      false,
+    );
+    assert.equal(
+      crossedLowFloatThreshold({
+        before: 501,
+        after: 500,
+        threshold: 0,
+      }),
+      false,
+    );
+    assert.equal(
+      crossedLowFloatThreshold({
+        before: 501,
+        after: 500,
+        threshold: 500,
+        notifiedAt: 0,
+      }),
+      true,
     );
   });
 

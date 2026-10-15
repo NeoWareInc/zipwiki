@@ -183,6 +183,8 @@ export default defineSchema({
     secretEnv: v.string(),
     floatUsdCents: v.number(),
     lowFloatUsdCents: v.number(),
+    /** Set when ops was emailed for a low-float dip; cleared on restock above threshold. */
+    lowFloatNotifiedAt: v.optional(v.number()),
   }).index("by_slug", ["slug"]),
 
   providerFloatLedger: defineTable({

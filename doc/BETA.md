@@ -181,7 +181,7 @@ Settings and keys:
 - [ ] Account search finds a user by email. Disable, role change, unlimited credits, credit lock, and **add/subtract credits** take effect on the next API call.
 - [ ] `/admin/accounts/:id` shows keys, usage, and the credit ledger for that account.
 - [ ] `/admin/usage` matches Fly and Convex for a known pack (same file count, same credit count).
-- [ ] `/admin/billing` shows vendor float for Anthropic and LlamaParse. Restock and low-float threshold save, and a low float is visible before the vendor key runs dry.
+- [ ] `/admin/billing` shows customer ZipWiki credit balances, auto-reload On/Off, and the platform spend lock, plus links to LlamaCloud / Anthropic billing consoles. Per-account Llama / Claude usage stays on `/admin/usage` only.
 - [ ] Granting or adjusting credits writes a ledger row and updates the balance the user sees.
 - [ ] Admin actions are attributable (who changed the account).
 

@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Resend } from "resend";
+import { OPS_ALERT_EMAIL } from "./lib/adminEmails";
 
 function fromAddress(): string {
   return process.env.AUTH_EMAIL?.trim() || "ZipWiki <onboarding@resend.dev>";
@@ -73,6 +74,43 @@ export const sendReceipt = internalAction({
       `<p style="font-family:sans-serif;font-size:16px;line-height:1.5">We added <strong>${args.credits.toLocaleString()}</strong> credits ($${dollars}).</p>
 <p style="font-family:sans-serif;font-size:16px;line-height:1.5">Your balance is <strong>${args.creditsRemaining.toLocaleString()}</strong> credits.</p>
 ${args.receiptUrl ? `<p><a href="${args.receiptUrl}">View the Stripe receipt</a></p>` : `<p style="font-family:sans-serif;font-size:14px;color:#5a6b78">Stripe will also email its own receipt.</p>`}`,
+    );
+  },
+});
+
+/** Ops alert when LlamaParse or Anthropic vendor float crosses the low threshold. */
+export const sendLowProviderFloat = internalAction({
+  args: {
+    slug: v.string(),
+    displayName: v.optional(v.string()),
+    floatUsdCents: v.optional(v.number()),
+    lowFloatUsdCents: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<{ ok: boolean; reason?: string }> => {
+    const provider = await ctx.runQuery(internal.adminBilling.getProviderForAlert, {
+      slug: args.slug,
+    });
+    const displayName =
+      args.displayName?.trim() ||
+      provider?.displayName ||
+      args.slug;
+    const floatCents = args.floatUsdCents ?? provider?.floatUsdCents ?? 0;
+    const thresholdCents =
+      args.lowFloatUsdCents ?? provider?.lowFloatUsdCents ?? 0;
+    const origin = (process.env.SITE_URL?.trim() || "https://zipwiki.ai").replace(
+      /\/+$/,
+      "",
+    );
+    const billingUrl = `${origin}/admin/billing`;
+    const float = (floatCents / 100).toFixed(2);
+    const threshold = (thresholdCents / 100).toFixed(2);
+    return await send(
+      OPS_ALERT_EMAIL,
+      `ZipWiki vendor float low — ${displayName}`,
+      `${displayName} estimated float is $${float} (threshold $${threshold}). Top up in the vendor console (LlamaCloud or Anthropic billing) and enable their auto-reload / email alerts. Admin billing: ${billingUrl}`,
+      `<p style="font-family:sans-serif;font-size:16px;line-height:1.5"><strong>${displayName}</strong> estimated float is <strong>$${float}</strong> (threshold $${threshold}).</p>
+<p style="font-family:sans-serif;font-size:16px;line-height:1.5">Top up in the vendor console and turn on their auto-reload / billing alert emails.</p>
+<p><a href="${billingUrl}">Open Admin Billing</a> (console links)</p>`,
     );
   },
 });

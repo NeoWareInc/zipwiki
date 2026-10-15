@@ -55,6 +55,11 @@ function bytesToB64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64url");
 }
 
+/** Always advertise internal so Chrome does not offer iPhone / hybrid. */
+function platformTransports(_stored?: string[]): ["internal"] {
+  return ["internal"];
+}
+
 async function requireAdminUser(ctx: ActionCtx) {
   const userId = await getAuthUserId(ctx);
   if (!userId) throw new Error("Not authenticated");
@@ -77,10 +82,14 @@ export const beginRegistration = action({
       excludeCredentials: admin.credentials.map(
         (key: { credentialId: string; transports: string[] }) => ({
           id: key.credentialId,
-          transports: key.transports,
+          // Prefer this Chrome profile — do not steer toward phone/hybrid.
+          transports: platformTransports(key.transports),
         }),
       ),
+      // Chrome / this computer only — avoid iPhone QR / hybrid prompts.
+      preferredAuthenticatorType: "localDevice",
       authenticatorSelection: {
+        authenticatorAttachment: "platform",
         residentKey: "preferred",
         userVerification: "required",
       },
@@ -113,12 +122,17 @@ export const finishRegistration = action({
     });
     if (!verified.verified) throw new Error("Passkey registration was rejected");
     const credential = verified.registrationInfo.credential;
+    const transports = (credential.transports ?? []).filter(
+      (t) => t === "internal",
+    );
+    // Platform registration should land as internal; if the browser only
+    // reported hybrid, still store internal so later asserts stay on Chrome.
     await ctx.runMutation(internal.adminPasskey.storePasskey, {
       userId,
       credentialId: credential.id,
       publicKey: bytesToB64(credential.publicKey),
       counter: credential.counter,
-      transports: credential.transports ?? [],
+      transports: transports.length > 0 ? transports : ["internal"],
     });
     return { ok: true as const };
   },
@@ -138,7 +152,8 @@ export const beginAuthentication = action({
       allowCredentials: admin.credentials.map(
         (key: { credentialId: string; transports: string[] }) => ({
           id: key.credentialId,
-          transports: key.transports,
+          // Restrict to this computer's Chrome/platform authenticator.
+          transports: platformTransports(key.transports),
         }),
       ),
     });

@@ -144,6 +144,57 @@ export function zipwikiCreditsForLlamaCredits(llamaCredits: number): number {
 }
 
 /**
+ * Vendor USD cents for a LlamaParse job (no ZipWiki resale markup).
+ * Uses Llama credits × $1.25 / 1,000.
+ */
+export function llamaVendorUsdCents(llamaCredits: number): number {
+  if (!Number.isFinite(llamaCredits) || llamaCredits <= 0) return 0;
+  const usd = (llamaCredits * LLAMA_USD_PER_1000_CREDITS) / 1000;
+  return Math.max(0, Math.ceil(usd * 100 - 1e-9));
+}
+
+/**
+ * Vendor USD cents for an Anthropic Messages call (no ZipWiki resale markup).
+ */
+export function anthropicVendorUsdCents(args: {
+  model?: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+}): number {
+  const input =
+    typeof args.inputTokens === "number" && Number.isFinite(args.inputTokens)
+      ? Math.max(0, args.inputTokens)
+      : 0;
+  const output =
+    typeof args.outputTokens === "number" && Number.isFinite(args.outputTokens)
+      ? Math.max(0, args.outputTokens)
+      : 0;
+  if (input <= 0 && output <= 0) return 0;
+
+  const model = resolveHostedOkfModel(args.model);
+  const prices = ANTHROPIC_MODEL_PRICES[model];
+  const usd =
+    (input / 1_000_000) * prices.inputUsdPerMTok +
+    (output / 1_000_000) * prices.outputUsdPerMTok;
+  return Math.max(0, Math.ceil(usd * 100 - 1e-9));
+}
+
+/**
+ * True when a vendor float debit moves the balance from above the warning
+ * line to at or below it (once per dip until restock clears notifiedAt).
+ */
+export function crossedLowFloatThreshold(args: {
+  before: number;
+  after: number;
+  threshold: number;
+  notifiedAt?: number;
+}): boolean {
+  if (!(args.threshold > 0)) return false;
+  if (args.notifiedAt) return false;
+  return args.before > args.threshold && args.after <= args.threshold;
+}
+
+/**
  * Approximate pages covered by `usd` at TARGET_PROFIT_MARGIN for a Parse tier
  * (fractional sell rate; per-job ceil may yield slightly fewer pages).
  */

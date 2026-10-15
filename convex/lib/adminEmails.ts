@@ -1,6 +1,9 @@
 /** Emails that receive admin on first profile create / bootstrap. */
 const DEFAULT_ADMIN_EMAILS = ["steve@neoware.io", "admin@neoware.io"];
 
+/** Ops alerts for vendor float (LlamaParse / Anthropic). */
+export const OPS_ALERT_EMAIL = "admin@neoware.io";
+
 export function bootstrapAdminEmails(
   env: NodeJS.ProcessEnv = process.env,
 ): string[] {

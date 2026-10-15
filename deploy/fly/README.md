@@ -33,6 +33,14 @@ Image: [`apps/server/Dockerfile`](../../apps/server/Dockerfile) (port **3001**,
 - **Prod:** same autostop for excess Machines, `min_machines_running = 1`.
 - **Region:** `primary_region = "iad"`.
 
+## Vendor billing (LlamaCloud / Anthropic)
+
+Master API keys stay on Fly (`LLAMA_CLOUD_API_KEY`, `ANTHROPIC_API_KEY`) and
+are never shown in the admin UI. Manage vendor credit balances, auto-reload,
+and billing alert emails in each vendor console — Admin → Billing only links
+out. Customer ZipWiki prepaid credits and usage remain in Convex
+(`/admin/billing`, `/admin/usage`).
+
 ## Prerequisites
 
 1. A [Fly.io](https://fly.io) account in the **NeoWare** org.

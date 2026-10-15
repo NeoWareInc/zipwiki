@@ -74,6 +74,10 @@ export default function App() {
               <Route element={<AdminLayout />}>
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/usage" element={<AdminUsagePage />} />
+                <Route
+                  path="/admin/credits"
+                  element={<Navigate to="/admin/billing" replace />}
+                />
                 <Route path="/admin/accounts/:id" element={<AdminAccountPage />} />
                 <Route path="/admin/billing" element={<AdminBillingPage />} />
               </Route>

@@ -16,11 +16,14 @@ import {
   creditSnapshot,
   zipwikiCreditsForLlamaCredits,
   zipwikiCreditsForAnthropicTokens,
+  llamaVendorUsdCents,
+  anthropicVendorUsdCents,
   crossedLowCreditThreshold,
   isLowCredits,
   remainingCredits,
   shouldStartAutoReload,
 } from "./lib/credits";
+import { applyProviderFloatUsage } from "./lib/providerFloat";
 import { creditsLockedFor } from "./lib/creditLock";
 import { activityEventFields, type ActivityInput } from "./lib/activityEvent";
 import type { Id } from "./_generated/dataModel";
@@ -263,13 +266,20 @@ export const recordUsage = internalMutation({
           .withIndex("by_slug", (q) => q.eq("slug", providerSlug))
           .unique();
     if (providerAccount) {
-      await ctx.db.insert("providerFloatLedger", {
-        providerAccountId: providerAccount._id,
-        kind: "usage",
+      const usdCents =
+        kind === "parse"
+          ? llamaVendorUsdCents(llamaCredits ?? 0)
+          : anthropicVendorUsdCents({
+              model,
+              inputTokens,
+              outputTokens,
+            });
+      await applyProviderFloatUsage(ctx, {
+        providerAccount,
+        usdCents,
         pages,
         inputTokens,
         outputTokens,
-        calls: 1,
         accountId,
       });
     }
@@ -481,12 +491,15 @@ export const recordQueryDebit = internalMutation({
       .withIndex("by_slug", (q) => q.eq("slug", "anthropic"))
       .unique();
     if (providerAccount) {
-      await ctx.db.insert("providerFloatLedger", {
-        providerAccountId: providerAccount._id,
-        kind: "usage",
+      await applyProviderFloatUsage(ctx, {
+        providerAccount,
+        usdCents: anthropicVendorUsdCents({
+          model: args.model,
+          inputTokens: args.inputTokens,
+          outputTokens: args.outputTokens,
+        }),
         inputTokens: args.inputTokens,
         outputTokens: args.outputTokens,
-        calls: 1,
         accountId: args.accountId,
       });
     }

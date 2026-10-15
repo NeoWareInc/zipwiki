@@ -1,157 +1,66 @@
-import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { Link } from "react-router-dom";
+import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { AdminCreditsLock } from "../components/AdminCreditsLock";
 
-function dollars(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
+const VENDOR_CONSOLES = [
+  {
+    name: "LlamaParse (LlamaCloud)",
+    href: "https://cloud.llamaindex.ai/",
+    note: "Sign in → Settings → Organization → Plan & Credits (balance, plan, overage, invoices)",
+  },
+  {
+    name: "Anthropic (Claude API)",
+    href: "https://console.anthropic.com/settings/billing",
+    note: "Credit balance, auto-reload, and billing alerts",
+  },
+] as const;
 
 export default function AdminBillingPage() {
-  const ensure = useMutation(api.adminBilling.ensureProviders);
-  const restock = useMutation(api.adminBilling.restock);
-  const setLowFloat = useMutation(api.adminBilling.setLowFloat);
   const overview = useQuery(api.adminBilling.overview);
-  const [error, setError] = useState("");
-  const [amounts, setAmounts] = useState<Record<string, string>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
-  const [thresholds, setThresholds] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    void ensure({}).catch((err: unknown) => {
-      setError(err instanceof Error ? err.message : "Could not prepare providers");
-    });
-  }, [ensure]);
-
-  async function onRestock(slug: string) {
-    setError("");
-    const usd = Number(amounts[slug] ?? "");
-    if (!Number.isFinite(usd) || usd <= 0) {
-      setError("Enter a dollar amount you added in the vendor console");
-      return;
-    }
-    try {
-      await restock({
-        slug,
-        usdCents: Math.round(usd * 100),
-        note: notes[slug],
-      });
-      setAmounts((prev) => ({ ...prev, [slug]: "" }));
-      setNotes((prev) => ({ ...prev, [slug]: "" }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Restock failed");
-    }
-  }
-
-  async function onThreshold(slug: string) {
-    setError("");
-    const usd = Number(thresholds[slug] ?? "");
-    if (!Number.isFinite(usd) || usd < 0) {
-      setError("Enter a low-float threshold in dollars");
-      return;
-    }
-    try {
-      await setLowFloat({ slug, usdCents: Math.round(usd * 100) });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save threshold");
-    }
-  }
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-semibold">Billing</h1>
         <p className="mt-1 text-sm text-(--muted)">
-          Customer credits and the master vendor accounts. API keys stay on Fly
-          and are not shown here.
+          Customer ZipWiki prepaid credits and the platform spend lock. Hosted
+          LlamaParse / Claude keys stay on Fly — manage vendor balances in their
+          consoles (and turn on their email alerts). Usage by account is under{" "}
+          <Link to="/admin/usage" className="text-(--accent) hover:underline">
+            Usage
+          </Link>
+          .
         </p>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <section className="space-y-4">
-        <h2 className="font-display text-xl font-semibold">Master accounts</h2>
-        {(overview?.providers ?? []).map((provider) => (
-          <div
-            key={provider.slug}
-            className="space-y-3 rounded-xl border border-(--border) bg-white p-5 shadow-soft"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="font-semibold">{provider.displayName}</h3>
-              <p className="text-sm text-(--muted)">
-                Secret env <code>{provider.secretEnv}</code>
-              </p>
-            </div>
-            <p className="text-sm">
-              Float {dollars(provider.floatUsdCents)}
-              {provider.lowFloat
-                ? " · low — add funds in the vendor console"
-                : ""}
-            </p>
-            <p className="text-sm text-(--muted)">
-              Since last restock: {provider.calls.toLocaleString()} calls ·{" "}
-              {provider.pages.toLocaleString()} pages ·{" "}
-              {provider.inputTokens.toLocaleString()} in /{" "}
-              {provider.outputTokens.toLocaleString()} out tokens
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Dollars added"
-                value={amounts[provider.slug] ?? ""}
-                onChange={(e) =>
-                  setAmounts((prev) => ({ ...prev, [provider.slug]: e.target.value }))
-                }
-                className="w-36 rounded-md border border-(--border) px-3 py-2 text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Note"
-                value={notes[provider.slug] ?? ""}
-                onChange={(e) =>
-                  setNotes((prev) => ({ ...prev, [provider.slug]: e.target.value }))
-                }
-                className="min-w-40 flex-1 rounded-md border border-(--border) px-3 py-2 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => void onRestock(provider.slug)}
-                className="rounded-md bg-(--accent) px-3 py-2 text-sm font-semibold text-white"
+      <section className="rounded-xl border border-(--border) bg-white p-5 shadow-soft space-y-4">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Vendor credits</h2>
+          <p className="mt-1 text-sm text-(--muted)">
+            ZipWiki does not show live vendor wallets. Open each console for
+            balance, autofill, and alert emails. API keys stay on Fly.
+          </p>
+        </div>
+        <ul className="space-y-3">
+          {VENDOR_CONSOLES.map((vendor) => (
+            <li
+              key={vendor.name}
+              className="rounded-lg border border-(--border) bg-(--paper) px-4 py-3"
+            >
+              <a
+                href={vendor.href}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-(--accent) hover:underline"
               >
-                Record restock
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Low-float warning ($)"
-                value={
-                  thresholds[provider.slug] ??
-                  (provider.lowFloatUsdCents
-                    ? String(provider.lowFloatUsdCents / 100)
-                    : "")
-                }
-                onChange={(e) =>
-                  setThresholds((prev) => ({
-                    ...prev,
-                    [provider.slug]: e.target.value,
-                  }))
-                }
-                className="w-48 rounded-md border border-(--border) px-3 py-2 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => void onThreshold(provider.slug)}
-                className="rounded-md border border-(--border) px-3 py-2 text-sm font-semibold"
-              >
-                Save warning
-              </button>
-            </div>
-          </div>
-        ))}
+                {vendor.name} →
+              </a>
+              <p className="mt-1 text-sm text-(--muted)">{vendor.note}</p>
+              <p className="mt-1 break-all text-xs text-(--muted)">{vendor.href}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="space-y-3">
@@ -175,9 +84,7 @@ export default function AdminBillingPage() {
                     <div className="text-(--muted)">{account.name}</div>
                   </td>
                   <td className="px-3 py-2 tabular-nums">
-                    {account.creditsLocked
-                      ? "Locked · "
-                      : ""}
+                    {account.creditsLocked ? "Locked · " : ""}
                     {account.creditsUnlimited
                       ? "Unlimited"
                       : account.creditsRemaining.toLocaleString()}
@@ -197,7 +104,6 @@ export default function AdminBillingPage() {
           </table>
         </div>
       </section>
-
     </div>
   );
 }
