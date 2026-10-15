@@ -100,8 +100,8 @@ Query:
 
 ## A5. Distribution rehearsal on the dev host
 
-- [ ] Dev install page (on `https://dev.zipwiki.ai/install` or the equivalent) can point at tarballs served from the **dev** site for rehearsal.
-- [ ] `apps/web/public/releases/index.json` lists only files that exist under `public/releases/` after `pnpm build:dist`; the web build fails when the list and the files disagree.
+- [ ] Dev install page (on `https://dev.zipwiki.ai/install` or the equivalent) can point at tarballs served from the **dev** site for rehearsal. Build with `pnpm build:dist:dev` (sets `latest.json` to the dev host). Use `pnpm build:dist` only when cutting production.
+- [ ] `apps/web/public/releases/index.json` lists only files that exist under `public/releases/` after `pnpm build:dist:dev` (or `pnpm build:dist`); the web build fails when the list and the files disagree.
 - [ ] `/releases/` is not rewritten to `index.html` on the **dev** deploy.
 - [ ] Copy icons on the install scripts copy the command that is on screen.
 - [ ] Platforms that are not published say so and do not offer a fake `npm i -g` URL.

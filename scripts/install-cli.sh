@@ -7,8 +7,9 @@
 # Produces one tarball per OS/arch with the matching LiteParse native package
 # (fetched from npm — does not require building on that machine).
 # Set ZIPWIKI_SITE_URL (e.g. https://dev.zipwiki.ai) to point latest.json at a
-# non-production install page. Default remains https://zipwiki.ai. The Install
-# page itself always uses window.location.origin for npm one-liners.
+# non-production install page. Default remains https://zipwiki.ai.
+# Prefer: pnpm build:dist:dev (dev) or pnpm build:dist (production).
+# The Install page itself always uses window.location.origin for npm one-liners.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
