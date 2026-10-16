@@ -41,7 +41,7 @@
   ],
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/lib/okf/rules/types && cp src/lib/okf/rules/*.md dist/lib/okf/rules/ && cp src/lib/okf/rules/types/*.md dist/lib/okf/rules/types/",
     "start": "node dist/cli.js",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "lint": "tsc -p tsconfig.json --noEmit"

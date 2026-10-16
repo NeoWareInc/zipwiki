@@ -53,6 +53,36 @@ describe("okf bundle", () => {
     assert.match(topics[0]!.markdown, /\.\.\/\.\.\/deed\.pdf/);
   });
 
+  it("does not emit a topic that only repeats one filename family", () => {
+    const card = (href: string, tags: string) => ({
+      href,
+      markdown: [
+        "---",
+        "type: Document",
+        `title: ${href}`,
+        "description: filing",
+        `tags: [${tags}]`,
+        "sources:",
+        `  - resource: "../../${href.replace(/\.md$/, ".pdf")}"`,
+        "---",
+        "",
+      ].join("\n"),
+    });
+    const topics = buildTopicFiles(
+      [
+        card("AAPL-10-K.md", "aapl, 10-k"),
+        card("AAPL-10-Q.md", "aapl, 10-q"),
+        card("MSFT-10-K.md", "msft, 10-k"),
+        card("MSFT-10-Q.md", "msft, 10-q"),
+      ],
+      "2026-01-02T00:00:00.000Z",
+    );
+    assert.deepEqual(
+      topics.map((topic) => topic.href).sort(),
+      ["topics/10-k.md", "topics/10-q.md"],
+    );
+  });
+
   it("does not emit topics/pdf.md for the file-type tag", () => {
     const withPdf = (file: typeof lease) => ({
       ...file,

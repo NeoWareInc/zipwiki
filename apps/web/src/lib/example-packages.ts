@@ -32,6 +32,19 @@ export const EXAMPLE_PACKAGES: readonly ExamplePackage[] = [
     ],
   },
   {
+    name: "earnings-2025.zipwiki",
+    title: "2025 Earnings",
+    description:
+      "28 SEC annual and quarterly reports for 2025, with links back to the official filings.",
+    queries: [
+      "Give me a summary of this ZipWiki package.",
+      "Which companies are included, and what is the fiscal year-end for each annual report?",
+      "What revenue did Apple, Microsoft, and Alphabet report in their latest annual filing?",
+      "Find Uber’s most recent quarterly report and give me the link to open the SEC filing.",
+      "What risks do Coinbase and Palantir mention about their businesses in the annual reports?",
+    ],
+  },
+  {
     name: "medical-pdfs.zipwiki",
     title: "Medical PDFs",
     description:

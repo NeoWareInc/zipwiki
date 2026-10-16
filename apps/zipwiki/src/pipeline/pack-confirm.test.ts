@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   formatPackPlan,
   packOkfMode,
+  applyCliLlamaParseCredential,
   resolvePackConfirmParseCredential,
   resolvePackUseAi,
   shouldConfirmPack,
@@ -143,6 +144,36 @@ describe("pack confirm", () => {
     assert.equal(packOkfMode({}, true), "ai");
   });
 
+  it("uses a local LlamaParse key when one is set, otherwise ZipWiki credits", () => {
+    assert.deepEqual(
+      applyCliLlamaParseCredential({
+        parser: "llamaparse",
+        llamaKeyConfigured: true,
+        accountConnected: true,
+      }),
+      { parseCredential: "llama", remoteParse: false },
+    );
+    assert.deepEqual(
+      applyCliLlamaParseCredential({
+        parser: "llamaparse",
+        llamaKeyConfigured: false,
+        accountConnected: true,
+      }),
+      { parseCredential: "zipwiki", remoteParse: true },
+    );
+    assert.throws(
+      () =>
+        applyCliLlamaParseCredential({
+          parser: "llamaparse",
+          llamaKeyConfigured: false,
+          accountConnected: false,
+        }),
+      (err: Error) =>
+        /ZipWiki credits/.test(err.message) &&
+        !/LLAMA_CLOUD_API_KEY/.test(err.message),
+    );
+  });
+
   it("keeps an explicit LlamaParse choice off the no-credit hosted fallback path", () => {
     assert.equal(
       resolvePackConfirmParseCredential({
@@ -152,6 +183,15 @@ describe("pack confirm", () => {
         llamaKeyConfigured: false,
       }),
       "local",
+    );
+    assert.equal(
+      resolvePackConfirmParseCredential({
+        parser: "llamaparse",
+        accountConnected: true,
+        hostedLiteparseFallback: false,
+        llamaKeyConfigured: true,
+      }),
+      "llama",
     );
     assert.equal(
       resolvePackConfirmParseCredential({
@@ -179,7 +219,9 @@ describe("pack confirm", () => {
           hostedLiteparseFallback: true,
           llamaKeyConfigured: false,
         }),
-      /needs credits/,
+      (err: Error) =>
+        /ZipWiki credits/.test(err.message) &&
+        !/LLAMA_CLOUD_API_KEY/.test(err.message),
     );
   });
 

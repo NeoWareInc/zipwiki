@@ -12,9 +12,9 @@ import {
   OKF_LOG_NAME,
   OKF_TOPICS_DIR,
   renderOkfIndex,
-  TOPIC_PAGE_CAP,
   type OkfIndexEntry,
 } from "./render.js";
+import { loadOkfRules } from "./rules/load.js";
 import { buildDocumentFrontmatter } from "./yaml.js";
 export type OkfMarkdownFile = {
   /** Path relative to `wiki/okf/`, e.g. `lease.md` or `topics/warehouse.md`. */
@@ -47,11 +47,31 @@ function tagsOf(markdown: string): string[] {
 
 /** `topics/pdf.md` lists every PDF and adds nothing the index does not already say. */
 function isOmittedTopicTag(tag: string): boolean {
-  return tag.trim().toLowerCase() === "pdf";
+  const name = tag.trim().toLowerCase();
+  return loadOkfRules().catalog.omitTags.some((omit) => omit.toLowerCase() === name);
+}
+
+/** Leading token of a concept filename, e.g. `AAPL-10-K.md` → `aapl`. */
+function nameFamily(href: string): string {
+  const base = href.replace(/\\/g, "/").split("/").pop() ?? href;
+  const stem = base.replace(/\.md$/i, "");
+  return (stem.split(/[^A-Za-z0-9]+/)[0] ?? stem).toLowerCase();
+}
+
+/**
+ * A tag whose cards all share one filename family only repeats those cards.
+ * `aapl` on `AAPL-*` is that case. `10-k` across AAPL and MSFT is not.
+ */
+function isSingleNameFamily(cards: OkfMarkdownFile[]): boolean {
+  const families = new Set(cards.map((card) => nameFamily(card.href)));
+  return families.size <= 1;
 }
 
 function isOmittedTopicHref(href: string): boolean {
-  return /(?:^|\/)topics\/pdf\.md$/i.test(href.replace(/\\/g, "/"));
+  const name = href.replace(/\\/g, "/").split("/").pop()?.toLowerCase() ?? "";
+  return loadOkfRules().catalog.omitTags.some(
+    (tag) => name === `${tag.toLowerCase()}.md`,
+  );
 }
 
 function sourcesOf(markdown: string): Array<{ resource: string; description?: string }> {
@@ -78,6 +98,8 @@ function titleOf(href: string, markdown: string): string {
 /**
  * Shared tags that appear on at least two concept cards become topic pages.
  * Capped so the first read of the index stays short. The `pdf` tag is skipped.
+ * A tag that only groups one filename family is skipped too: it repeats those
+ * concept cards, and the cap would otherwise keep whichever family sorts first.
  */
 export function buildTopicFiles(
   concepts: OkfMarkdownFile[],
@@ -92,13 +114,15 @@ export function buildTopicFiles(
       byTag.set(tag, list);
     }
   }
+  const catalog = loadOkfRules().catalog;
   const shared = [...byTag.entries()]
-    .filter(([, cards]) => cards.length >= 2)
+    .filter(([, cards]) => cards.length >= catalog.minimumCards)
     .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
-    .slice(0, TOPIC_PAGE_CAP);
+    .slice(0, catalog.pageCap);
 
   const pages: OkfMarkdownFile[] = [];
   for (const [tag, cards] of shared) {
+    if (catalog.omitSingleFilenameFamily && isSingleNameFamily(cards)) continue;
     const markdown = renderTopicMarkdown(tag, cards, generatedAt);
     if (!sourcesOf(markdown).length) continue;
     pages.push({ href: `${OKF_TOPICS_DIR}/${tag}.md`, markdown });

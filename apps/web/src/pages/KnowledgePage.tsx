@@ -934,7 +934,7 @@ export default function KnowledgePage() {
               <p className="text-xs font-medium text-(--ink)">
                 Example packages
               </p>
-              <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {EXAMPLE_PACKAGES.map((example) => (
                   <li key={example.name}>
                     <button

@@ -122,7 +122,7 @@ function withPipelineFlags(cmd: Command): Command {
     )
     .option(
       "--okf-profile <profile>",
-      "OKF profile for every file: auto|book|legislation|invoice (default auto; .epub is book)",
+      "OKF profile for every file: auto, or a data type in the OKF rules (book, legislation, invoice, earnings). Default auto; .epub is book; 10-K and 10-Q are earnings",
     )
     .option(
       "--okf-provider <id>",
@@ -803,7 +803,7 @@ program
   .option("--no-ai-okf", "Skip AI for OKF on added/updated files")
   .option(
     "--okf-profile <profile>",
-    "OKF profile for added/updated files: auto|book|legislation|invoice (default: keep the stored profile, or auto for new files)",
+    "OKF profile for added/updated files: auto, or a data type in the OKF rules (book, legislation, invoice, earnings). Default: keep the stored profile, or auto for new files",
   )
   .option("--no-okf", "Do not write OKF for added/updated files")
   .option("--omit-original", "Omit omittable originals for new/updated files")

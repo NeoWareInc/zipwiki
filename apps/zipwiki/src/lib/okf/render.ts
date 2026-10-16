@@ -15,6 +15,7 @@ import type {
   OkfPrimaryRef,
   OkfSourceRef,
 } from "./types.js";
+import { loadOkfRules, topicPageCap } from "./rules/load.js";
 
 export const OKF_VERSION = "0.2" as const;
 /**
@@ -28,8 +29,9 @@ export const OKF_INDEX_NAME = "index.md" as const;
 export const OKF_LOG_NAME = "log.md" as const;
 /** Cross-document pages live under `wiki/okf/topics/`. `pdf.md` is not written. */
 export const OKF_TOPICS_DIR = "topics" as const;
-/** Cap shared topic pages so the catalog stays short. */
-export const TOPIC_PAGE_CAP = 8 as const;
+/** Catalog cap from `rules/package.md`. */
+export const TOPIC_PAGE_CAP: number = topicPageCap();
+export { topicPageCap };
 
 /** One entry in a generated OKF `index.md` Files section. */
 export type OkfIndexEntry = {
@@ -180,14 +182,9 @@ export function fallbackTags(input: {
   const seeds: string[] = [input.type];
   if (input.documentType) seeds.push(input.documentType);
   const lower = (input.primaryPath ?? "").toLowerCase();
-  if (/\.(pdf)$/i.test(lower)) seeds.push("pdf");
-  if (/\.(docx?|odt|rtf)$/i.test(lower)) seeds.push("word", "office");
-  if (/\.(xlsx|xls|csv)$/i.test(lower)) seeds.push("spreadsheet");
-  if (/\.(eml|msg)$/i.test(lower)) seeds.push("email");
-  if (/\.(png|jpe?g|webp|tiff?|gif)$/i.test(lower)) seeds.push("image", "scan");
-  if (/10[-_]?k|sec|edgar/i.test(lower)) seeds.push("sec-filing");
-  if (/deed|contract|nda|agreement/i.test(lower)) seeds.push("legal");
-  if (/invoice|receipt/i.test(lower)) seeds.push("finance");
+  for (const rule of loadOkfRules().fallbackTags) {
+    if (rule.pattern.test(lower)) seeds.push(...rule.tags);
+  }
   return normalizeOkfTags(seeds);
 }
 

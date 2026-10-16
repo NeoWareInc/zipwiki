@@ -229,7 +229,7 @@ describe("parseDocument router", () => {
             }),
             liteparse: lite as LiteParseAdapter,
           }),
-        /LLAMA_CLOUD_API_KEY/,
+        /configured client/
       );
     } finally {
       if (prev !== undefined) process.env.LLAMA_CLOUD_API_KEY = prev;

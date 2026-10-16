@@ -53,10 +53,27 @@ export class PackAbortedError extends Error {
 }
 
 /**
- * Credential source for an explicit pack-confirm parser choice.
- * LlamaParse must not stay on a no-credit ZipWiki path that soft-falls back
- * to LiteParse after the user already picked LlamaParse for this run.
+ * LlamaParse uses this machine's API key when one is set.
+ * With no key, the same request uses ZipWiki credits. A missing key is not
+ * an error and is not printed.
  */
+export function applyCliLlamaParseCredential(input: {
+  parser?: string;
+  llamaKeyConfigured: boolean;
+  accountConnected: boolean;
+}): { parseCredential?: "llama" | "zipwiki"; remoteParse: boolean } {
+  if (input.parser !== "llamaparse") {
+    return { remoteParse: false };
+  }
+  if (input.llamaKeyConfigured) {
+    return { parseCredential: "llama", remoteParse: false };
+  }
+  if (!input.accountConnected) {
+    throw new Error("LlamaParse uses ZipWiki credits. Run: zipwiki login");
+  }
+  return { parseCredential: "zipwiki", remoteParse: true };
+}
+
 export function resolvePackConfirmParseCredential(input: {
   parser: "liteparse" | "llamaparse";
   accountConnected: boolean;
@@ -64,21 +81,17 @@ export function resolvePackConfirmParseCredential(input: {
   llamaKeyConfigured: boolean;
 }): "local" | "zipwiki" | "llama" {
   if (input.parser === "liteparse") return "local";
-  const hostedOk =
-    input.accountConnected && input.hostedLiteparseFallback !== true;
-  if (hostedOk) return "zipwiki";
   if (input.llamaKeyConfigured) return "llama";
+  if (input.accountConnected && input.hostedLiteparseFallback !== true) {
+    return "zipwiki";
+  }
   if (input.accountConnected) {
     throw new Error(
-      "LlamaParse needs credits on the ZipWiki account, or LLAMA_CLOUD_API_KEY on this machine.\n" +
-        "  Buy credits: zipwiki open → Billing\n" +
-        "  This machine: zipwiki config api-key llama <LLAMA_CLOUD_API_KEY>",
+      "LlamaParse needs ZipWiki credits on this account.\n" +
+        "  Buy credits: zipwiki open → Billing",
     );
   }
-  throw new Error(
-    "LlamaParse needs LLAMA_CLOUD_API_KEY on this machine (or zipwiki login with credits).\n" +
-      "  zipwiki config api-key llama <LLAMA_CLOUD_API_KEY>",
-  );
+  throw new Error("LlamaParse uses ZipWiki credits. Run: zipwiki login");
 }
 
 export function packOkfMode(opts: StageOptions, useAi: boolean): PackOkfMode {

@@ -21,6 +21,13 @@ describe("example packages", () => {
     assert.match(dickens?.queries[2] ?? "", /Golden Mary/);
 
     assert.equal(examplePackageForFilename("notes.zipwiki"), undefined);
+    const earnings = examplePackageForFilename("earnings-2025.zipwiki");
+    assert.equal(earnings?.title, "2025 Earnings");
+    assert.match(earnings?.description ?? "", /SEC/);
+    assert.equal(earnings?.queries.length, 5);
+    assert.match(earnings?.queries[3] ?? "", /Uber/);
+    assert.match(earnings?.queries[4] ?? "", /Coinbase/);
+
     assert.equal(
       EXAMPLE_PACKAGES.find((example) => example.name === "medical-pdfs.zipwiki")
         ?.queries.length,

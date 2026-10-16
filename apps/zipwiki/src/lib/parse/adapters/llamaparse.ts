@@ -68,9 +68,7 @@ export class LlamaParseAdapter implements DocumentParser {
     opts: ParseRuntimeOptions,
   ): Promise<DocumentParseResult> {
     if (!isLlamaCloudConfigured() && !this.clientFactory && !defaultFactory) {
-      throw new Error(
-        "LlamaParse requires LLAMA_CLOUD_API_KEY (or an injected LlamaCloud client).",
-      );
+      throw new Error("LlamaParse on this machine needs a configured client.");
     }
 
     const filename = basename(path);

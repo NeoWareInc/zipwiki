@@ -47,6 +47,7 @@ import { syncAccountSettingsForPackWithAuth } from "../interactive/resume-login.
 import {
   fileBytes,
   formatPackPlan,
+  applyCliLlamaParseCredential,
   packOkfMode,
   resolvePackConfirmParseCredential,
   resolvePackUseAi,
@@ -244,9 +245,24 @@ export async function runStage(
       quiet: opts.quiet,
     });
 
-    // BYO LlamaParse stays on LlamaParse. Hosted parse falls back to
-    // LiteParse only when the account has no parse credits.
-    if (parseCredential === "llama") {
+    // A LlamaParse key on this machine is used, and the session header says
+    // so once. No key means ZipWiki credits, with no missing-key message.
+    const llamaparseSelected =
+      opts.parser === "llamaparse" || project.parser.engine === "llamaparse";
+    if (llamaparseSelected) {
+      const routed = applyCliLlamaParseCredential({
+        parser: "llamaparse",
+        llamaKeyConfigured: isLlamaCloudConfigured(),
+        accountConnected: isZipwikiAccountConnected(),
+      });
+      if (routed.parseCredential) {
+        parseCredential = routed.parseCredential;
+        opts.parseCredential = routed.parseCredential;
+        opts.remoteParse = routed.remoteParse;
+        process.env.ZIPWIKI_PARSE_CREDENTIAL = routed.parseCredential;
+      }
+      project.parser.engine = "llamaparse";
+    } else if (parseCredential === "llama") {
       project.parser.engine = "llamaparse";
     } else if (hosted?.liteparseFallback) {
       project.parser.engine = "liteparse";

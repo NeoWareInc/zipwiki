@@ -14,6 +14,7 @@ export {
   OKF_TOPICS_DIR,
   OKF_VERSION,
   TOPIC_PAGE_CAP,
+  topicPageCap,
   conceptFileNameFor,
   defaultConceptType,
   extractFrontmatterType,

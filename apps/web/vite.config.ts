@@ -10,6 +10,7 @@ const repoRoot = path.resolve(__dirname, "../..");
 const EXAMPLE_ZIPWIKI_NAMES = new Set([
   "florida-laws-2025.zipwiki",
   "charles-dickens.zipwiki",
+  "earnings-2025.zipwiki",
   "medical-pdfs.zipwiki",
 ]);
 

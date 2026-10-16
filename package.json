@@ -52,6 +52,7 @@
     "fetch:xberg-wordperfect": "node scripts/archive-word-perfect.mjs --fetch-only",
     "archive:word-perfect": "node scripts/archive-word-perfect.mjs",
     "archive:medical-pdfs": "pnpm zipwiki -- pack \"$HOME/Library/CloudStorage/GoogleDrive-steve@neoware.io/My Drive/Medical PDFs\" -r -o knowledge/medical-pdfs.zipwiki --stage-dir knowledge/.stage/medical-pdfs --include-original --include '*.pdf' -sf -T",
+    "archive:earnings": "pnpm zipwiki -- pack \"$HOME/Library/CloudStorage/GoogleDrive-steve@neoware.io/My Drive/2025 Earnings Reports (10-K and 10-Q)\" -o knowledge/earnings-2025.zipwiki --stage-dir knowledge/.stage/earnings-2025 --omit-original --parser llamaparse --okf-profile earnings --include '*.pdf' --exclude .DS_Store -sf -T",
     "archive:florida-laws": "pnpm zipwiki -- pack \"$HOME/Documents/florida-laws/2025-pdf\" -r -o knowledge/florida-laws-2025.zipwiki --stage-dir knowledge/.stage/florida-laws --omit-original --okf-profile legislation --include '*.pdf' --exclude .DS_Store --exclude '.zipwiki-origins.json' --exclude '*.url' --exclude '*.origin.json' --exclude MANIFEST.txt --exclude SUMMARY.json --origin-pattern 'Ch_(?<year>\\d{4})-(?<chapter>\\d+)' --origin-url-template 'https://laws.flrules.org/{year}/{chapter}' -sf -T",
     "query:florida-laws": "pnpm zipwiki -- ask knowledge/florida-laws-2025.zipwiki",
     "query:charles-dickens": "pnpm zipwiki -- ask knowledge/charles-dickens.zipwiki",

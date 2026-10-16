@@ -6,7 +6,7 @@ profile note, not a fork of the language.
 
 **Normative source of truth for the language:** [OKF_SPEC.md](./OKF_SPEC.md).  
 **How OKF sits inside `.nzip` / `.zipwiki`:** [NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md) §6 · [ZIPWIKI_APPNOTE.md](./ZIPWIKI_APPNOTE.md) §7.  
-**Code:** `@zipwiki/okf`, `zipwiki okf`, and pack’s OKF pass.
+**Code:** `apps/zipwiki/src/lib/okf/rules/` (the rules pack reads), `@zipwiki/okf`, `zipwiki okf`, and pack’s OKF pass.
 
 ---
 
@@ -29,7 +29,7 @@ workflows).
 
 | Spec (§3, §8–§9) | ZipWiki |
 | --- | --- |
-| Arbitrary directory tree of concepts | Per-file cards at `{aiRoot}/okf/{stem}.md`. Shared tags also produce a capped set of `{aiRoot}/okf/topics/{tag}.md` pages, rebuilt on add, update, and delete. The file-type tag `pdf` does not get a page |
+| Arbitrary directory tree of concepts | Per-file cards at `{aiRoot}/okf/{stem}.md`. Shared tags also produce topic pages under `{aiRoot}/okf/topics/`, rebuilt on add, update, and delete. Which tags get a page is set in `apps/zipwiki/src/lib/okf/rules/package.md` |
 | `index.md` optional at any level | **Emitted** at bundle root with `okf_version: "0.2"`, a `# Files` list, and a `# Topics` list when topic pages exist; never used as a concept |
 | `log.md` optional | **Not emitted.** OKF allows it; ZipWiki does not write `wiki/okf/log.md` |
 | Bundle-root `index.md` MAY carry `okf_version` (§12) | Yes — also advertised via `manifest.json` → `ai.okf.version` / `ai.okf.index` |
