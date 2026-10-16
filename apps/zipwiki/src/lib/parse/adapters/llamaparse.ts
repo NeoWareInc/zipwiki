@@ -91,21 +91,35 @@ export class LlamaParseAdapter implements DocumentParser {
         const upload_file = new File([bytes], filename);
         const ocrWanted = resolveParseOcrEnabled(opts.cli, opts.project);
 
-        const result = await client.parsing.parse({
-          tier: lp.tier,
-          version: lp.version,
-          expand,
-          upload_file,
-          ...(ocrWanted
-            ? {}
-            : {
-                // Classic LlamaParse job flag; v2 SDK forwards extra body fields.
-                disable_ocr: true,
-                processing_options: {
-                  ignore: { ignore_text_in_image: true },
-                },
-              }),
-        });
+        let result: LlamaParseResult;
+        try {
+          result = await client.parsing.parse({
+            tier: lp.tier,
+            version: lp.version,
+            expand,
+            upload_file,
+            ...(ocrWanted
+              ? {}
+              : {
+                  // Classic LlamaParse job flag; v2 SDK forwards extra body fields.
+                  disable_ocr: true,
+                  processing_options: {
+                    ignore: { ignore_text_in_image: true },
+                  },
+                }),
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          if (
+            /exceeded the maximum number of credits/i.test(message) ||
+            /llamaparse upload failed \(402\)/i.test(message)
+          ) {
+            throw new Error(
+              "LlamaParse is out of credits. This file was not parsed.",
+            );
+          }
+          throw err;
+        }
 
         const pages = (result.markdown?.pages ?? []).map((p, i) => ({
           pageNum: p.pageNum ?? p.page ?? i + 1,

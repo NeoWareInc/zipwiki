@@ -21,6 +21,8 @@ export type NzipOpenSummary = {
   aiRoot: string;
   /** Package-level one-line summary from `ai.digest`, when the manifest recorded it. */
   digest?: string;
+  /** Statement from `ai.notice`, copied from `.zipwiki-notice.md` at pack time. */
+  notice?: string;
   primaryCount: number;
   /** Sum of original file sizes from `ai.originalBytes`, when the manifest recorded it. */
   originalBytes?: number;
@@ -191,6 +193,9 @@ export async function openNzip(
     aiRoot,
     ...(typeof ai?.digest === "string" && ai.digest.trim()
       ? { digest: ai.digest.trim() }
+      : {}),
+    ...(typeof ai?.notice === "string" && ai.notice.trim()
+      ? { notice: ai.notice.trim() }
       : {}),
     primaryCount:
       typeof ai?.primaryCount === "number"

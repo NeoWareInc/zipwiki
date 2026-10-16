@@ -11,6 +11,10 @@ import {
 import { basename, join, resolve } from "node:path";
 import { stageLog } from "../lib/cli/activity-dots.js";
 import {
+  indexWithNotice,
+  readPackNotice,
+} from "../lib/archive/pack-notice.js";
+import {
   parseCategoryOverride,
   parsedMarkdownFileName,
   relativeContentPath,
@@ -53,7 +57,7 @@ import {
   type CliParseOptions,
 } from "../lib/parse/index.js";
 import { runManifestCommand } from "../manifest-cmd.js";
-import { PackAbortedError } from "./pack-confirm.js";
+import { PackAbortedError, abortIfLlamaParseCredits } from "./pack-confirm.js";
 import { runParseOkfPipeline } from "./scheduler.js";
 import type { StageMember, StageOptions } from "./types.js";
 
@@ -522,6 +526,7 @@ export async function runParseAndOkfPhase(input: {
           }
           return { ...result, parsePath };
         } catch (err) {
+          abortIfLlamaParseCredits(err);
           await maybeReportLocalLiteParse({
             success: false,
             quiet: opts.quiet,
@@ -591,6 +596,7 @@ export async function runParseAndOkfPhase(input: {
         }
         return { ...result, parsePath, parseFailed: false as const };
       } catch (err) {
+        abortIfLlamaParseCredits(err);
         if (err instanceof PackAbortedError) throw err;
         softParseErrors += 1;
         await maybeReportLocalLiteParse({
@@ -821,6 +827,14 @@ export async function runCompressPhase(input: {
   });
 
   const indexPath = join(okfDir, "index.md");
+  const notice = readPackNotice(inputRoots);
+  if (notice) {
+    const indexFile = okfFiles.find((file) => file.name === "index.md");
+    if (indexFile) {
+      indexFile.data = indexWithNotice(indexFile.data, notice);
+      writeFileSync(indexPath, indexFile.data);
+    }
+  }
   const packageDigest =
     input.opts.noOkf !== true && okfFiles.length > 0
       ? await resolvePackageDigest({
@@ -851,6 +865,7 @@ export async function runCompressPhase(input: {
   const written = writeNzipCollectionBundle({
     outputPath: input.outputPath,
     title: input.title,
+    ...(notice ? { notice } : {}),
     omitOriginalDocuments: input.omitOriginalDocuments,
     wikiDir: input.stageDir,
     keepWikiDir: true,

@@ -15,6 +15,7 @@ describe("example packages", () => {
     assert.equal(florida?.queries.length, 5);
     assert.match(florida?.queries[0] ?? "", /summary of this ZipWiki package/);
 
+    assert.equal(EXAMPLE_PACKAGES.at(-1)?.title, "Charles Dickens");
     const dickens = examplePackageForFilename("Charles-Dickens.zipwiki");
     assert.equal(dickens?.title, "Charles Dickens");
     assert.equal(dickens?.queries.length, 3);
@@ -28,10 +29,11 @@ describe("example packages", () => {
     assert.match(earnings?.queries[3] ?? "", /Uber/);
     assert.match(earnings?.queries[4] ?? "", /Coinbase/);
 
-    assert.equal(
-      EXAMPLE_PACKAGES.find((example) => example.name === "medical-pdfs.zipwiki")
-        ?.queries.length,
-      0,
-    );
+    const medical = examplePackageForFilename("medical-pdfs.zipwiki");
+    assert.match(medical?.description ?? "", /made up/);
+    assert.match(medical?.notice ?? "", /not real patients/);
+    assert.equal(medical?.queries.length, 5);
+    assert.match(medical?.queries[3] ?? "", /hospice admission/);
+    assert.match(medical?.queries[4] ?? "", /imaging/);
   });
 });

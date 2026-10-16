@@ -46,9 +46,27 @@ export type PackPlan = PackPlanSettings & {
 };
 
 export class PackAbortedError extends Error {
-  constructor() {
-    super("Pack aborted.");
+  readonly exitCode: number;
+
+  constructor(message = "Pack aborted.", exitCode = 0) {
+    super(message);
     this.name = "PackAbortedError";
+    this.exitCode = exitCode;
+  }
+}
+
+const LLAMA_PARSE_CREDITS_STOP =
+  "LlamaParse is out of credits. Pack stopped. Add credits, or run the next pack with --parser liteparse.";
+
+/** Credit exhaustion ends the pack. Other parse errors stay soft. */
+export function abortIfLlamaParseCredits(err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  if (
+    /llamaparse is out of credits/i.test(message) ||
+    /exceeded the maximum number of credits/i.test(message) ||
+    /llamaparse upload failed \(402\)/i.test(message)
+  ) {
+    throw new PackAbortedError(LLAMA_PARSE_CREDITS_STOP, 1);
   }
 }
 

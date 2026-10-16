@@ -8,7 +8,7 @@ import {
   type ResolvedZipwikiConfig,
 } from "../../config/index.js";
 import { runWithCreateIdAsync } from "../../config/create-session.js";
-import { RemoteParseAdapter } from "./remote.js";
+import { RemoteParseAdapter, formatRemoteParseError } from "./remote.js";
 import type { DocumentParseResult } from "../types.js";
 
 function project(): ResolvedZipwikiConfig {
@@ -167,5 +167,32 @@ describe("RemoteParseAdapter", () => {
       /422.*parse_yield_failed/,
     );
     unlinkSync(tmp);
+  });
+
+  it("replaces a LlamaParse 402 credit body with one sentence", async () => {
+    const tmp = join(tmpdir(), `remote-parse-${Date.now()}.txt`);
+    writeFileSync(tmp, "body", "utf8");
+    const raw =
+      'LlamaParse upload failed (402): {"detail":"You\'ve exceeded the maximum number of credits for your plan. (Project ID: ad8d0631)"}';
+    const fetchImpl = async (): Promise<Response> =>
+      ({
+        ok: false,
+        status: 502,
+        text: async () =>
+          JSON.stringify({ event: "error", status: 502, error: raw }),
+      }) as Response;
+    const adapter = new RemoteParseAdapter({
+      api: { url: "http://api.example.com", key: "k" },
+      fetchImpl,
+    });
+    await assert.rejects(
+      () => adapter.parse(tmp, { project: project(), cli: { quiet: true } }),
+      /LlamaParse is out of credits\. This file was not parsed\./,
+    );
+    unlinkSync(tmp);
+    assert.equal(
+      formatRemoteParseError(502, raw),
+      "LlamaParse is out of credits. This file was not parsed.",
+    );
   });
 });

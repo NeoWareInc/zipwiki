@@ -167,6 +167,8 @@ export type NeoZipAi = {
   originalBytes?: number;
   assetEntryCount?: number;
   digest?: string;
+  /** Plain statement copied from `.zipwiki-notice.md`. Not a document summary. */
+  notice?: string;
   okf?: NeoZipAiOkf;
   parser?: NeoZipAiParser;
   /** Optional advisory file summary; CD is the inventory. */
@@ -276,6 +278,8 @@ export type CollectionWriteInput = {
   outputPath: string;
   title?: string;
   digest?: string;
+  /** Copied from `.zipwiki-notice.md` in a pack folder. */
+  notice?: string;
   members: CollectionMemberInput[];
   aiRoot?: AiRootName | string;
   parserEngine?: string;
@@ -669,6 +673,8 @@ export type BuildNeoZipManifestInput = {
   aiRoot?: AiRootName | string;
   /** Package-level one-line summary. */
   digest?: string;
+  /** Plain statement from `.zipwiki-notice.md`. */
+  notice?: string;
   /** Advisory per-primary summaries (APPNOTE §4.3.1). */
   primaries: NeoZipAiPrimary[];
   /**
@@ -711,6 +717,7 @@ export function buildNeoZipManifest(
     input.parsedCount ?? primaries.filter((p) => p.hasParsed).length;
   const aiOkf = resolveOkfBlock(input.okf, aiRoot);
   const digest = input.digest?.trim() || undefined;
+  const notice = input.notice?.trim() || undefined;
   const recordedParser = normalizeParserRecords(primaries);
   const profiles = okfProfilesUsed(primaries);
   if (aiOkf && profiles) aiOkf.profiles = profiles;
@@ -740,6 +747,7 @@ export function buildNeoZipManifest(
         ? { assetEntryCount: input.assetEntryCount }
         : {}),
       ...(digest ? { digest } : {}),
+      ...(notice ? { notice } : {}),
       ...(aiOkf ? { okf: aiOkf } : {}),
       parser: buildAiParser(input.parserEngine, parserRecord),
       ...(primaries.length > 0 ? { primaries } : {}),
@@ -996,6 +1004,7 @@ export function writeNzipCollectionBundle(
     createdAt,
     aiRoot,
     digest,
+    ...(input.notice?.trim() ? { notice: input.notice.trim() } : {}),
     primaries,
     okf: aiOkf,
     parserEngine: input.parserEngine,

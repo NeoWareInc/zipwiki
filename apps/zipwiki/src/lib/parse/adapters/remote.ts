@@ -15,6 +15,18 @@ export type RemoteParseAdapterOptions = {
   fetchImpl?: typeof fetch;
 };
 
+/** One line for a hosted parse failure. Credit exhaustion drops the raw vendor JSON. */
+export function formatRemoteParseError(status: number, error: string): string {
+  if (
+    /exceeded the maximum number of credits/i.test(error) ||
+    /llamaparse is out of credits/i.test(error) ||
+    /llamaparse upload failed \(402\)/i.test(error)
+  ) {
+    return "LlamaParse is out of credits. This file was not parsed.";
+  }
+  return `ZipWiki parse API ${status}: ${error}`;
+}
+
 type NdjsonEvent = {
   event?: string;
   status?: string | number;
@@ -172,7 +184,7 @@ export class RemoteParseAdapter {
             typeof ev.error === "string" ? ev.error : text.slice(0, 500);
           const status =
             typeof ev.status === "number" ? ev.status : response.status;
-          throw new Error(`ZipWiki parse API ${status}: ${err}`);
+          throw new Error(formatRemoteParseError(status, err));
         }
       }
 
@@ -188,7 +200,7 @@ export class RemoteParseAdapter {
       if (!response.ok && body.event !== "result") {
         const err =
           typeof body.error === "string" ? body.error : text.slice(0, 500);
-        throw new Error(`ZipWiki parse API ${response.status}: ${err}`);
+        throw new Error(formatRemoteParseError(response.status, err));
       }
 
       const parsed = body as DocumentParseResult & {
@@ -223,7 +235,10 @@ export class RemoteParseAdapter {
 
       if (body.event === "error") {
         throw new Error(
-          `ZipWiki parse API ${body.status ?? response.status}: ${body.error ?? "parse_failed"}`,
+          formatRemoteParseError(
+            typeof body.status === "number" ? body.status : response.status,
+            body.error ?? "parse_failed",
+          ),
         );
       }
 

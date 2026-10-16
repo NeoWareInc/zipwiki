@@ -13,14 +13,17 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-ENV_NAME="${1:-}"
+ENV_NAME=""
 FORCE_FLAG=""
-if [[ "${2:-}" == "--force" ]] || [[ "${1:-}" == "--force" ]]; then
-  FORCE_FLAG="--force"
-fi
-if [[ "${1:-}" == "--force" ]]; then
-  ENV_NAME="${2:-}"
-fi
+for arg in "$@"; do
+  if [[ "$arg" == "--force" ]]; then
+    FORCE_FLAG="--force"
+  elif [[ "$arg" == "--" ]]; then
+    continue
+  elif [[ -z "$ENV_NAME" ]]; then
+    ENV_NAME="$arg"
+  fi
+done
 
 if [[ "$ENV_NAME" != "dev" && "$ENV_NAME" != "prod" ]]; then
   echo "Usage: $0 <dev|prod> [--force]" >&2

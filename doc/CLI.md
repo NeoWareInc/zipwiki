@@ -48,6 +48,11 @@ or a `.zipwiki-origins.tsv` list of `filename` + URL rows for irregular sets
 to `--origins` are automatically skipped during discover so they cannot become
 package members. See [ZIPWIKI_APPNOTE.md](ZIPWIKI_APPNOTE.md) §6.7.2.
 
+A `.zipwiki-notice.md` file in the pack folder is also skipped as a document.
+Pack copies its text into `ai.notice` and places it at the top of
+`wiki/okf/index.md`. Use it for a statement that must stay with the package,
+such as “these patients are fictional.”
+
 `zipwiki update` rewrites an archive (`--add` / `--update` / `--del`). Unchanged
 members are copied compressed. `--okf-profile` on an add or update stores the
 same profile; omit it to keep the profile already on that primary.

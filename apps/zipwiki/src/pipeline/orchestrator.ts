@@ -807,6 +807,7 @@ export async function runStage(
   } catch (err) {
     if (err instanceof PackAbortedError) {
       console.error(err.message);
+      if (err.exitCode) process.exitCode = err.exitCode;
       return {
         stageDir: "(aborted)",
         members: [],

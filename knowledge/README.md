@@ -22,7 +22,7 @@ file size). The **%** is PKZIP’s compression ratio:
 | --- | --- |
 | [`florida-laws-2025.zipwiki`](florida-laws-2025.zipwiki) | 253 documents: Florida session laws 2025, chapters 2025-1 through 2025-253. Covers immigration enforcement, Gulf of America renaming, statute adoption/reviser’s bills, elections/petitions, education and school safety, insurance and health, criminal law and corrections, firearms and drones, landlord/housing, budget/appropriations (198–201), plus local special acts (e.g. Leon County). |
 | [`charles-dickens.zipwiki`](charles-dickens.zipwiki) | 67 documents: Project Gutenberg Charles Dickens — novels, Christmas/holiday tales, sketches, speeches, letters, and poems (Bleak House, David Copperfield, Great Expectations, Hard Times, Little Dorrit, Nickleby, Oliver Twist, Pickwick, unfinished Edwin Drood, co-writes with Collins, etc.). |
-| [`medical-pdfs.zipwiki`](medical-pdfs.zipwiki) | 59 documents: Clinical records for two patients who transitioned to home hospice (Sep 2026) — Leland T. Marchetti (Cheyenne Bluffs; metastatic pancreatic cancer / cholangitis) and Marguerite L. Ostrander (Boulder Valley; stage IVB lung adenocarcinoma with brain mets), including H&Ps, imaging, consults, discharge, and hospice notes. |
+| [`medical-pdfs.zipwiki`](medical-pdfs.zipwiki) | Fictional example. These are not real patients; names, results, and symptoms are made up. 59 documents: clinical records for two home-hospice patients (Sep 2026), including H&Ps, imaging, consults, discharge, and hospice notes. |
 
 ### Originals vs parse-only
 

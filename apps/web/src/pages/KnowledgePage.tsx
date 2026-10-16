@@ -1000,6 +1000,13 @@ export default function KnowledgePage() {
           </div>
 
           <dl className="grid gap-3 rounded-xl border border-(--border) bg-white p-5 text-sm sm:grid-cols-2">
+            {summary.notice || openedExample?.notice ? (
+              <OverviewRow
+                className="sm:col-span-2"
+                label="Notice"
+                value={summary.notice ?? openedExample?.notice ?? ""}
+              />
+            ) : null}
             {summary.digest ? (
               <OverviewRow
                 className="sm:col-span-2"

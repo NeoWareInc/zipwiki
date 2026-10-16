@@ -11,6 +11,8 @@ let nextId = 1;
 let timer: ReturnType<typeof setInterval> | null = null;
 let frame = 0;
 let lastLen = 0;
+/** Visual rows the last spinner frame occupied. A wrapped frame must be erased upward. */
+let lastRows = 0;
 /** Guard so timer ticks never interleave with stageLog / job teardown. */
 let locked = false;
 
@@ -18,10 +20,33 @@ const DOT_FRAMES = [".  ", ".. ", "...", " ..", "  .", "   "] as const;
 const TICK_MS = 200;
 const DEFAULT_ACTIVITY = "zipwiki parse";
 
+function terminalColumns(): number {
+  const columns = process.stderr.columns;
+  return typeof columns === "number" && columns > 20 ? columns : 80;
+}
+
+/** Keep the spinner on one row. A line past the terminal width wraps, and `\r` then reprints it. */
+export function fitActivityLine(line: string, columns: number): string {
+  const width = Math.max(20, columns - 1);
+  if (line.length <= width) return line;
+  return `${line.slice(0, width - 1)}…`;
+}
+
 function clearLine(): void {
-  if (!process.stderr.isTTY || lastLen <= 0) return;
-  process.stderr.write(`\r${" ".repeat(lastLen)}\r`);
+  if (!process.stderr.isTTY || lastRows <= 0) return;
+  if (lastRows > 1) process.stderr.write(`\x1b[${lastRows - 1}A`);
+  process.stderr.write("\r\x1b[J");
   lastLen = 0;
+  lastRows = 0;
+}
+
+function paint(line: string): void {
+  const fitted = fitActivityLine(line, terminalColumns());
+  if (lastRows > 1) process.stderr.write(`\x1b[${lastRows - 1}A\r\x1b[J`);
+  else process.stderr.write("\r\x1b[K");
+  process.stderr.write(fitted);
+  lastLen = fitted.length;
+  lastRows = 1;
 }
 
 function formatActivityLine(dots: string): string {
@@ -46,10 +71,7 @@ function render(): void {
   if (locked || !process.stderr.isTTY || jobs.size === 0) return;
   frame = (frame + 1) % DOT_FRAMES.length;
   const dots = DOT_FRAMES[frame]!;
-  const line = formatActivityLine(dots);
-  const pad = Math.max(0, lastLen - line.length);
-  process.stderr.write(`\r${line}${" ".repeat(pad)}`);
-  lastLen = line.length;
+  paint(formatActivityLine(dots));
 }
 
 function ensureTicker(): void {
@@ -142,10 +164,7 @@ function renderUnlocked(): void {
   if (!process.stderr.isTTY || jobs.size === 0) return;
   frame = (frame + 1) % DOT_FRAMES.length;
   const dots = DOT_FRAMES[frame]!;
-  const line = formatActivityLine(dots);
-  const pad = Math.max(0, lastLen - line.length);
-  process.stderr.write(`\r${line}${" ".repeat(pad)}`);
-  lastLen = line.length;
+  paint(formatActivityLine(dots));
 }
 
 /** Test helper — reset shared ticker state. */
@@ -156,6 +175,7 @@ export function resetActivityDotsForTests(): void {
   }
   jobs.clear();
   lastLen = 0;
+  lastRows = 0;
   frame = 0;
   nextId = 1;
   locked = false;

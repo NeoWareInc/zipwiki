@@ -2,6 +2,28 @@ import { llamaCreditsFromPayload } from "./llama-credits.js";
 
 const LLAMA_BASE = "https://api.cloud.llamaindex.ai";
 
+/** Shown when Llama Cloud rejects an upload because the plan has no credits left. */
+export const LLAMA_PARSE_CREDITS_MESSAGE =
+  "LlamaParse is out of credits. This file was not parsed.";
+
+export function isLlamaParseCreditsError(text: string): boolean {
+  return (
+    /exceeded the maximum number of credits/i.test(text) ||
+    /llamaparse is out of credits/i.test(text) ||
+    /llamaparse upload failed \(402\)/i.test(text)
+  );
+}
+
+export function llamaParseUploadError(status: number, detail: string): Error {
+  if (status === 402 || isLlamaParseCreditsError(detail)) {
+    return new Error(LLAMA_PARSE_CREDITS_MESSAGE);
+  }
+  const clipped = detail.replace(/\s+/g, " ").trim().slice(0, 200);
+  return new Error(
+    `LlamaParse upload failed (${status})${clipped ? `: ${clipped}` : ""}`,
+  );
+}
+
 /** How long to wait for LlamaParse before LiteParse fallback.
  * Official poll payloads only expose coarse job.status (PENDING/RUNNING/…).
  * There is no reliable progress % — so we do not wait beyond 5 minutes. */
@@ -141,9 +163,7 @@ export async function invokeLlamaParse(
   });
   if (!upload.ok) {
     const detail = await upload.text().catch(() => "");
-    throw new Error(
-      `LlamaParse upload failed (${upload.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-    );
+    throw llamaParseUploadError(upload.status, detail);
   }
   const job = (await upload.json()) as LlamaJob;
   const jobId = job.id ?? job.job?.id;

@@ -4,6 +4,8 @@ export type ExamplePackage = {
   title: string;
   description: string;
   queries: readonly string[];
+  /** Shown on the package overview. Also the text pack copies from `.zipwiki-notice.md`. */
+  notice?: string;
 };
 
 export const EXAMPLE_PACKAGES: readonly ExamplePackage[] = [
@@ -18,17 +20,6 @@ export const EXAMPLE_PACKAGES: readonly ExamplePackage[] = [
       "Does Florida regulate pet insurance and wellness programs?",
       "Find any legislation related to Beach Erosion Control and give me links to open them",
       "Are there any references to the Gulf of America",
-    ],
-  },
-  {
-    name: "charles-dickens.zipwiki",
-    title: "Charles Dickens",
-    description:
-      "67 Project Gutenberg works: novels, stories, sketches, and letters.",
-    queries: [
-      "Quote the opening of A Tale of Two Cities and Sydney Carton’s last line.",
-      'Find the book and the quote that starts "It is a far, far better thing that I do, than I have ever done."',
-      'Please find me the “The Wreck of the Golden Mary” and tell me the names of the characters. Then give me the link to download it.',
     ],
   },
   {
@@ -48,8 +39,27 @@ export const EXAMPLE_PACKAGES: readonly ExamplePackage[] = [
     name: "medical-pdfs.zipwiki",
     title: "Medical PDFs",
     description:
-      "Clinical records for two home-hospice patients, with the original PDFs included.",
-    queries: [],
+      "Fictional records for two home-hospice patients. Names, results, and symptoms are made up for this example.",
+    notice:
+      "These are not real patients. All names, results, and symptoms are made up for example purposes.",
+    queries: [
+      "Give me a summary of this ZipWiki package",
+      "How many patients are in this package, and what care setting did they move to?",
+      "What diagnoses are documented for each patient?",
+      "Find the hospice admission notes and give me links to open them",
+      "Which imaging studies are included, and what did they show?",
+    ],
+  },
+  {
+    name: "charles-dickens.zipwiki",
+    title: "Charles Dickens",
+    description:
+      "67 Project Gutenberg works: novels, stories, sketches, and letters.",
+    queries: [
+      "Quote the opening of A Tale of Two Cities and Sydney Carton’s last line.",
+      'Find the book and the quote that starts "It is a far, far better thing that I do, than I have ever done."',
+      'Please find me the “The Wreck of the Golden Mary” and tell me the names of the characters. Then give me the link to download it.',
+    ],
   },
 ];
 

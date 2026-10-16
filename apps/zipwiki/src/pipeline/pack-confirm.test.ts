@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  abortIfLlamaParseCredits,
   formatPackPlan,
   packOkfMode,
   applyCliLlamaParseCredential,
@@ -247,5 +248,26 @@ describe("pack confirm", () => {
       false,
     );
     assert.equal(resolvePackUseAi({ projectUseAi: false }), false);
+  });
+
+  it("stops the pack when LlamaParse is out of credits", () => {
+    assert.throws(
+      () =>
+        abortIfLlamaParseCredits(
+          new Error(
+            'LlamaParse upload failed (402): {"detail":"You\'ve exceeded the maximum number of credits for your plan."}',
+          ),
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal(err.name, "PackAbortedError");
+        assert.match(err.message, /Pack stopped/);
+        assert.match(err.message, /Add credits/);
+        assert.match(err.message, /--parser liteparse/);
+        assert.equal((err as { exitCode?: number }).exitCode, 1);
+        return true;
+      },
+    );
+    abortIfLlamaParseCredits(new Error("LlamaParse timed out"));
   });
 });

@@ -44,6 +44,18 @@ describe("openNzip ai.digest", () => {
     assert.equal(opened.digest, "Two tiny text files.");
   });
 
+  it("keeps a package notice for the overview", async () => {
+    const opened = await openNzip(
+      manifestArchive({
+        root: "wiki",
+        notice: "  These are not real patients.  ",
+        primaries: [],
+      }),
+      "sample.zipwiki",
+    );
+    assert.equal(opened.notice, "These are not real patients.");
+  });
+
   it("omits a blank digest", async () => {
     const opened = await openNzip(
       manifestArchive({ root: "wiki", digest: "   ", primaries: [] }),
