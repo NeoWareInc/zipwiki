@@ -120,14 +120,14 @@ Production Vercel builds **delete** `public/dev-releases/` before the web build.
 
 ## A7. Website (dev.zipwiki.ai + local)
 
-- [ ] `https://dev.zipwiki.ai/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it (same for local after `pnpm dev:web`).
-- [ ] A visitor can reach How it works, MCP & CLI, Terms, and Privacy without guessing URLs. Install stays off the nav until Beta opens (`SHOW_INSTALL_IN_NAV` in `marketing-copy.ts`); then it is last in the menu.
+- [x] `https://dev.zipwiki.ai/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it (same for local after `pnpm dev:web`).
+- [x] A visitor can reach How it works, MCP & CLI, Terms, and Privacy without guessing URLs. Install stays off the nav until Beta opens (`SHOW_INSTALL_IN_NAV` in `marketing-copy.ts`); then it is last in the menu.
 - [ ] Waitlist and sales mail links reach a mailbox that is read.
-- [ ] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
-- [ ] `/install` on **dev.zipwiki.ai** offers a working download or a working `npm i -g` URL for rehearsal.
-- [ ] Mobile and desktop both show the install commands and the two-line header without a third wrapped line.
-- [ ] No beta CTA points at a page that redirects away or 404s (`/product`, `/download`, `/plugin` may redirect; the destination must be the intended page).
-- [ ] How it works and Knowledge Archive settings education (parse + OKF / ZipWiki LLM) are clear on **dev** before promoting copy to production.
+- [x] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
+- [x] `/install` on **dev.zipwiki.ai** offers a working download or a working `npm i -g` URL for rehearsal.
+- [x] Mobile and desktop both show the install commands and the two-line header without a third wrapped line.
+- [x] No beta CTA points at a page that redirects away or 404s (`/product`, `/download`, `/plugin` may redirect; the destination must be the intended page).
+- [x] How it works and Knowledge Archive settings education (parse + OKF / ZipWiki LLM) are clear on **dev** before promoting copy to production.
 
 ## A8. Portal (dev)
 
@@ -163,13 +163,13 @@ Settings and keys:
 
 ## A10. Admin (dev)
 
-- [ ] `/admin` on **dev** requires an admin role and a current passkey step-up. A normal customer gets a refusal, not a half-loaded page.
-- [ ] Account search finds a user by email. Disable, role change, unlimited credits, credit lock, and **add/subtract credits** take effect on the next API call.
-- [ ] `/admin/accounts/:id` shows keys, usage, and the credit ledger for that account.
+- [x] `/admin` on **dev** requires an admin role and a current passkey step-up. A normal customer gets a refusal, not a half-loaded page.
+- [x] Account search finds a user by email. Disable, role change, unlimited credits, credit lock, and **add/subtract credits** take effect on the next API call.
+- [x] `/admin/accounts/:id` shows keys, usage, and the credit ledger for that account.
 - [ ] `/admin/usage` matches Fly and Convex for a known pack (same file count, same credit count).
-- [ ] `/admin/billing` shows customer ZipWiki credit balances, auto-reload On/Off, and the platform spend lock, plus links to LlamaCloud / Anthropic billing consoles. Per-account Llama / Claude usage stays on `/admin/usage` only.
-- [ ] Granting or adjusting credits writes a ledger row and updates the balance the user sees.
-- [ ] Admin actions are attributable (who changed the account).
+- [x] `/admin/billing` shows customer ZipWiki credit balances, auto-reload On/Off, and the platform spend lock, plus links to LlamaCloud / Anthropic billing consoles. Per-account Llama / Claude usage stays on `/admin/usage` only.
+- [x] Granting or adjusting credits writes a ledger row and updates the balance the user sees.
+- [x] Admin actions are attributable (who changed the account).
 
 ## A11. Dev smokes (gate before Part B)
 

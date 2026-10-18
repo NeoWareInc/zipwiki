@@ -217,6 +217,98 @@ export default function AdminAccountPage() {
       </div>
 
       <section className="space-y-2">
+        <h2 className="font-display text-lg font-semibold">Credit ledger</h2>
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+          <table className="w-full min-w-xl text-left text-sm">
+            <thead>
+              <tr className="border-b border-(--border) text-(--muted)">
+                <th className="px-4 py-2 font-medium">When</th>
+                <th className="px-4 py-2 font-medium">Kind</th>
+                <th className="px-4 py-2 font-medium tabular-nums">Credits</th>
+                <th className="px-4 py-2 font-medium">By / detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.ledger ?? []).map((row, i) => (
+                <tr
+                  key={`${row.createdAt}-${i}`}
+                  className="border-b border-(--border)/60"
+                >
+                  <td className="px-4 py-2 whitespace-nowrap text-(--muted)">
+                    {new Date(row.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2">{row.kind}</td>
+                  <td className="px-4 py-2 tabular-nums font-medium">
+                    {row.credits > 0 ? `+${row.credits}` : row.credits}
+                  </td>
+                  <td className="px-4 py-2 text-(--muted)">
+                    {row.adminEmail ??
+                      row.filename ??
+                      row.model ??
+                      row.provider ??
+                      "—"}
+                  </td>
+                </tr>
+              ))}
+              {(data.ledger ?? []).length === 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-4 py-6 text-center text-(--muted)"
+                  >
+                    No ledger rows yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-display text-lg font-semibold">Admin actions</h2>
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+          <table className="w-full min-w-xl text-left text-sm">
+            <thead>
+              <tr className="border-b border-(--border) text-(--muted)">
+                <th className="px-4 py-2 font-medium">When</th>
+                <th className="px-4 py-2 font-medium">Action</th>
+                <th className="px-4 py-2 font-medium">Admin</th>
+                <th className="px-4 py-2 font-medium">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.audits ?? []).map((row, i) => (
+                <tr
+                  key={`${row.createdAt}-${i}`}
+                  className="border-b border-(--border)/60"
+                >
+                  <td className="px-4 py-2 whitespace-nowrap text-(--muted)">
+                    {new Date(row.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-2 font-medium">{row.action}</td>
+                  <td className="px-4 py-2">{row.adminEmail}</td>
+                  <td className="px-4 py-2 text-(--muted)">
+                    {row.detail ?? "—"}
+                  </td>
+                </tr>
+              ))}
+              {(data.audits ?? []).length === 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-4 py-6 text-center text-(--muted)"
+                  >
+                    No admin actions recorded yet
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="space-y-2">
         <h2 className="font-display text-lg font-semibold">API keys</h2>
         <ul className="rounded-xl border border-(--border) bg-white shadow-soft divide-y divide-(--border)">
           {data.keys.map((k: {

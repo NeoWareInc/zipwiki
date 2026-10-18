@@ -2,7 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { requireAdmin } from "./lib/admin";
+import { recordAdminAudit, requireAdmin } from "./lib/admin";
 import { globalCreditsLocked } from "./lib/creditLock";
 import { startOfMonthMs } from "./lib/crypto";
 import { creditSnapshot, LOW_CREDITS_THRESHOLD } from "./lib/credits";
@@ -102,6 +102,16 @@ export const accountDetail = query({
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
       .order("desc")
       .take(50);
+    const ledger = await ctx.db
+      .query("creditLedger")
+      .withIndex("by_accountId", (q) => q.eq("accountId", id))
+      .order("desc")
+      .take(50);
+    const audits = await ctx.db
+      .query("adminAuditLog")
+      .withIndex("by_accountId", (q) => q.eq("accountId", id))
+      .order("desc")
+      .take(50);
 
     return {
       account: {
@@ -158,6 +168,21 @@ export const accountDetail = query({
         filename: e.filename ?? null,
         createId: e.createId ?? null,
         createdAt: new Date(e._creationTime).toISOString(),
+      })),
+      ledger: ledger.map((row) => ({
+        kind: row.kind,
+        credits: row.credits,
+        adminEmail: row.adminEmail ?? null,
+        provider: row.provider ?? null,
+        model: row.model ?? null,
+        filename: row.filename ?? null,
+        createdAt: new Date(row._creationTime).toISOString(),
+      })),
+      audits: audits.map((row) => ({
+        action: row.action,
+        detail: row.detail ?? null,
+        adminEmail: row.adminEmail,
+        createdAt: new Date(row._creationTime).toISOString(),
       })),
     };
   },
@@ -565,13 +590,18 @@ export const creditControls = query({
 export const setGlobalCreditsLocked = mutation({
   args: { locked: v.boolean() },
   handler: async (ctx, { locked }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
     const row = await ctx.db.query("platformControls").first();
     if (row) {
       await ctx.db.patch(row._id, { creditsLocked: locked });
     } else {
       await ctx.db.insert("platformControls", { creditsLocked: locked });
     }
+    await recordAdminAudit(ctx, {
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: locked ? "platform_credits_locked" : "platform_credits_unlocked",
+    });
     return { creditsLocked: locked };
   },
 });
@@ -579,10 +609,16 @@ export const setGlobalCreditsLocked = mutation({
 export const setCreditsLocked = mutation({
   args: { id: v.id("accounts"), locked: v.boolean() },
   handler: async (ctx, { id, locked }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
     const account = await ctx.db.get(id);
     if (!account) throw new Error("Not found");
     await ctx.db.patch(id, { creditsLocked: locked });
+    await recordAdminAudit(ctx, {
+      accountId: id,
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: locked ? "credits_locked" : "credits_unlocked",
+    });
     return { ok: true, creditsLocked: locked };
   },
 });
@@ -590,7 +626,7 @@ export const setCreditsLocked = mutation({
 export const setDisabled = mutation({
   args: { id: v.id("accounts"), disabled: v.boolean() },
   handler: async (ctx, { id, disabled }) => {
-    const { userId } = await requireAdmin(ctx);
+    const { userId, adminEmail } = await requireAdmin(ctx);
     const account = await ctx.db.get(id);
     if (!account) throw new Error("Not found");
     if (disabled && account.userId === userId) {
@@ -600,6 +636,12 @@ export const setDisabled = mutation({
     if (disabled) {
       await revokeLoginSessions(ctx, account.userId);
     }
+    await recordAdminAudit(ctx, {
+      accountId: id,
+      adminUserId: userId,
+      adminEmail,
+      action: disabled ? "login_disabled" : "login_enabled",
+    });
     return { ok: true };
   },
 });
@@ -608,6 +650,7 @@ async function applyCreditAdjustment(
   ctx: MutationCtx,
   id: Id<"accounts">,
   credits: number,
+  admin?: { userId: Id<"users">; adminEmail: string },
 ) {
   if (!Number.isFinite(credits) || credits === 0) {
     throw new Error("credits must be a non-zero number");
@@ -644,7 +687,17 @@ async function applyCreditAdjustment(
     accountId: id,
     kind: "grant",
     credits: applied,
+    ...(admin ? { adminEmail: admin.adminEmail } : {}),
   });
+  if (admin) {
+    await recordAdminAudit(ctx, {
+      accountId: id,
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: applied > 0 ? "credits_added" : "credits_subtracted",
+      detail: `${applied > 0 ? "+" : ""}${applied}`,
+    });
+  }
   return {
     ok: true as const,
     delta: applied,
@@ -664,8 +717,11 @@ export const adjustCredits = mutation({
     credits: v.number(),
   },
   handler: async (ctx, { id, credits }) => {
-    await requireAdmin(ctx);
-    return await applyCreditAdjustment(ctx, id, credits);
+    const admin = await requireAdmin(ctx);
+    return await applyCreditAdjustment(ctx, id, credits, {
+      userId: admin.userId,
+      adminEmail: admin.adminEmail,
+    });
   },
 });
 
@@ -676,11 +732,14 @@ export const grantCredits = mutation({
     credits: v.number(),
   },
   handler: async (ctx, { id, credits }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
     if (!Number.isFinite(credits) || credits <= 0) {
       throw new Error("credits must be a positive number");
     }
-    const result = await applyCreditAdjustment(ctx, id, credits);
+    const result = await applyCreditAdjustment(ctx, id, credits, {
+      userId: admin.userId,
+      adminEmail: admin.adminEmail,
+    });
     return {
       ok: true as const,
       creditsPurchased: result.creditsPurchased,
@@ -691,8 +750,14 @@ export const grantCredits = mutation({
 export const setCreditsUnlimited = mutation({
   args: { id: v.id("accounts"), unlimited: v.boolean() },
   handler: async (ctx, { id, unlimited }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
     await ctx.db.patch(id, { creditsUnlimited: unlimited });
+    await recordAdminAudit(ctx, {
+      accountId: id,
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: unlimited ? "credits_unlimited_on" : "credits_unlimited_off",
+    });
     return { ok: true, creditsUnlimited: unlimited };
   },
 });
@@ -703,7 +768,7 @@ export const setRole = mutation({
     role: v.union(v.literal("admin"), v.literal("customer")),
   },
   handler: async (ctx, { id, role }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
     const account = await ctx.db.get(id);
     if (!account) throw new Error("Not found");
     const profile = await ctx.db
@@ -712,6 +777,13 @@ export const setRole = mutation({
       .unique();
     if (!profile) throw new Error("Profile missing");
     await ctx.db.patch(profile._id, { role });
+    await recordAdminAudit(ctx, {
+      accountId: id,
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: "role_changed",
+      detail: role,
+    });
     return { ok: true, role };
   },
 });
@@ -719,15 +791,23 @@ export const setRole = mutation({
 export const revokeKeys = mutation({
   args: { id: v.id("accounts") },
   handler: async (ctx, { id }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
     const keys = await ctx.db
       .query("apiKeys")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
       .collect();
+    const active = keys.filter((k) => !k.revokedAt).length;
     const now = Date.now();
     for (const k of keys) {
       if (!k.revokedAt) await ctx.db.patch(k._id, { revokedAt: now });
     }
+    await recordAdminAudit(ctx, {
+      accountId: id,
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: "keys_revoked",
+      detail: `${active} key(s)`,
+    });
     return { ok: true };
   },
 });
@@ -735,7 +815,13 @@ export const revokeKeys = mutation({
 export const deleteAccount = mutation({
   args: { id: v.id("accounts") },
   handler: async (ctx, { id }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
+    await recordAdminAudit(ctx, {
+      accountId: id,
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: "account_deleted",
+    });
     const keys = await ctx.db
       .query("apiKeys")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))

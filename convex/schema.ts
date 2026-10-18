@@ -73,10 +73,21 @@ export default defineSchema({
     llamaCredits: v.optional(v.number()),
     filename: v.optional(v.string()),
     jobId: v.optional(v.string()),
+    /** Admin email when kind is `grant` from the admin UI. */
+    adminEmail: v.optional(v.string()),
   })
     .index("by_accountId", ["accountId"])
     .index("by_stripeSessionId", ["stripeSessionId"])
     .index("by_stripePaymentIntentId", ["stripePaymentIntentId"]),
+
+  /** Who changed an account (or platform control) from /admin. */
+  adminAuditLog: defineTable({
+    accountId: v.optional(v.id("accounts")),
+    adminUserId: v.id("users"),
+    adminEmail: v.string(),
+    action: v.string(),
+    detail: v.optional(v.string()),
+  }).index("by_accountId", ["accountId"]),
 
   apiKeys: defineTable({
     accountId: v.id("accounts"),

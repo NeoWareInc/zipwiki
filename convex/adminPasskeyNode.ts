@@ -12,6 +12,10 @@ import {
   type AuthenticationResponseJSON,
   type RegistrationResponseJSON,
 } from "@simplewebauthn/server";
+import {
+  allowedAuthOrigins,
+  isTrustedZipWikiHost,
+} from "./authRedirects";
 
 /** Apex ↔ www twin so Vercel’s redirect host still matches SITE_URL / WEB_ORIGIN. */
 function withWwwTwin(origin: string): string[] {
@@ -29,23 +33,38 @@ function withWwwTwin(origin: string): string[] {
 }
 
 function allowedOrigins(): string[] {
-  const raw = [
-    process.env.SITE_URL ?? "",
-    ...(process.env.WEB_ORIGIN ?? "").split(","),
-  ];
   const out = new Set<string>();
-  for (const item of raw) {
-    const trimmed = item.trim().replace(/\/+$/, "");
-    if (!trimmed) continue;
-    for (const variant of withWwwTwin(trimmed)) out.add(variant);
+  for (const item of allowedAuthOrigins()) {
+    for (const variant of withWwwTwin(item)) out.add(variant);
+  }
+  // Product hosts that auth already trusts even when not listed in WEB_ORIGIN.
+  for (const host of [
+    "https://dev.zipwiki.ai",
+    "https://zipwiki.ai",
+    "https://www.zipwiki.ai",
+  ]) {
+    for (const variant of withWwwTwin(host)) out.add(variant);
   }
   if (out.size === 0) out.add("http://localhost:5173");
   return [...out];
 }
 
+function isAllowedPasskeyOrigin(origin: string): boolean {
+  if (allowedOrigins().includes(origin)) return true;
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      return url.protocol === "http:" || url.protocol === "https:";
+    }
+    return url.protocol === "https:" && isTrustedZipWikiHost(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 function originContext(origin: string): { origin: string; rpID: string } {
   const clean = origin.trim().replace(/\/+$/, "");
-  if (!allowedOrigins().includes(clean)) {
+  if (!isAllowedPasskeyOrigin(clean)) {
     throw new Error("This site is not allowed to register an admin passkey");
   }
   return { origin: clean, rpID: new URL(clean).hostname };
