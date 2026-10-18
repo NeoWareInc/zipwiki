@@ -209,8 +209,8 @@ As models and codecs improve, ZipWiki’s shape is ready for deeper AI-native ar
 
 | Direction | Why it fits |
 | --- | --- |
-| **Richer indexing** | Multi-level OKF (entities, citations, cross-doc links), better digests, topic graphs still stored *inside* the package |
-| **Smarter search** | Hybrid lexical + embedding indexes shipped as optional members, or rebuilt on open without re-parsing sources |
+| **Richer indexing** | Multi-level OKF (entities, citations, cross-doc links), better digests, topic graphs still stored *inside* the package ([ENHANCEMENTS.md](./ENHANCEMENTS.md) §3) |
+| **Smarter search** | Hybrid lexical + embedding indexes shipped as optional members, or rebuilt on open without re-parsing sources ([ENHANCEMENTS.md](./ENHANCEMENTS.md) §1) |
 | **AI-aware compression** | Semantic dedup, shared phrase dictionaries across extracted markdown, learned codecs for markdown/OKF payloads while keeping ZIP interoperability |
 | **Adaptive fidelity** | Tiered packages: index-only → markdown+index → markdown+index+originals, chosen per corpus and bandwidth |
 | **Continuous enrichment** | `okf_enrich` / update pipelines that refresh cards when models improve, without rewriting every primary |
@@ -236,3 +236,4 @@ These stay aligned with the same promise: **the archive remains self-describing 
 | Agent MCP tools | [doc/MCP.md](../doc/MCP.md) |
 | CLI pack & query | [doc/CLI.md](../doc/CLI.md) |
 | Phases (plugin, portal, Rust CLI) | [PHASES.md](../PHASES.md) |
+| Proposed search upgrades | [ENHANCEMENTS.md](./ENHANCEMENTS.md) |
