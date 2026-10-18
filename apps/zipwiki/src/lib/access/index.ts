@@ -70,6 +70,7 @@ export {
   isIncompleteAskAnswer,
   rememberSource,
   resolveAskQuestion,
+  selectAskHits,
   sourceKind,
   type AskArchiveResult,
   type AskExcerpt,

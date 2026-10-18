@@ -54,12 +54,13 @@ async function parseFixedLlama(
  * Parse a document with the configured engine (`fixed`) or auto-escalate
  * from LiteParse → LlamaParse when complexity thresholds fire.
  *
- * Fixed `llamaparse`: LlamaParse only. Fixed `liteparse`: always local.
- * Auto: probe LiteParse, escalate when thresholds fire, and fall back to
- * LiteParse only when escalation was not required.
+ * Fixed `llamaparse`: LlamaParse only. Fixed `liteparse`: always local
+ * (never the ZipWiki remote parse API — that path is LlamaParse and needs
+ * credits). Auto: probe LiteParse, escalate when thresholds fire, and fall
+ * back to LiteParse only when escalation was not required.
  *
- * When `ZIPWIKI_PARSE_MODE=remote` (or `remoteParse: true`), delegates to
- * the ZipWiki parse API server.
+ * When `ZIPWIKI_PARSE_MODE=remote` (or `remoteParse: true`) **and** the
+ * engine is not fixed LiteParse, delegates to the ZipWiki parse API server.
  */
 export async function parseDocument(
   path: string,
@@ -75,6 +76,17 @@ export async function parseDocument(
   loadEnvFiles();
   const { project, cli } = options;
   const runtime: ParseRuntimeOptions = { project, cli };
+  const mode = project.parser.mode;
+  const engine = project.parser.engine;
+  const escalateCfg = project.parser.escalate;
+  const lite = options.liteparse ?? new LiteParseAdapter();
+  const llama = options.llamaparse ?? new LlamaParseAdapter();
+
+  // Fixed LiteParse is local and free — account parseCredential zipwiki/llama
+  // must not route through the hosted LlamaParse API.
+  if (mode !== "auto" && engine === "liteparse") {
+    return lite.parse(path, runtime);
+  }
 
   if (isRemoteParseMode({ remoteParse: options.remoteParse })) {
     const remote = options.remote ?? new RemoteParseAdapter();
@@ -92,7 +104,6 @@ export async function parseDocument(
       ) {
         throw err;
       }
-      const lite = options.liteparse ?? new LiteParseAdapter();
       const probe = await lite.parse(path, runtime);
       return {
         ...probe,
@@ -100,13 +111,6 @@ export async function parseDocument(
       };
     }
   }
-
-  const lite = options.liteparse ?? new LiteParseAdapter();
-  const llama = options.llamaparse ?? new LlamaParseAdapter();
-
-  const mode = project.parser.mode;
-  const engine = project.parser.engine;
-  const escalateCfg = project.parser.escalate;
 
   if (mode !== "auto") {
     if (engine === "llamaparse") {

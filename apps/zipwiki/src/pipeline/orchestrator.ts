@@ -237,7 +237,17 @@ export async function runStage(
       accountOverlay,
     });
 
-    if (parseCredential === "llama" || parseCredential === "zipwiki") {
+    // `--parser liteparse|llamaparse` is a per-command override. Do not let a
+    // saved parse credential (llama / zipwiki) or account settings flip the
+    // engine after loadZipwikiConfig already applied the CLI flag.
+    const cliParser = opts.parser?.trim();
+    const cliFixedLiteparse = cliParser === "liteparse";
+    const cliFixedLlamaparse = cliParser === "llamaparse";
+
+    if (
+      !cliFixedLiteparse &&
+      (parseCredential === "llama" || parseCredential === "zipwiki")
+    ) {
       project.parser.engine = "llamaparse";
     }
 
@@ -248,7 +258,8 @@ export async function runStage(
     // A LlamaParse key on this machine is used, and the session header says
     // so once. No key means ZipWiki credits, with no missing-key message.
     const llamaparseSelected =
-      opts.parser === "llamaparse" || project.parser.engine === "llamaparse";
+      cliFixedLlamaparse ||
+      (!cliFixedLiteparse && project.parser.engine === "llamaparse");
     if (llamaparseSelected) {
       const routed = applyCliLlamaParseCredential({
         parser: "llamaparse",
@@ -262,6 +273,16 @@ export async function runStage(
         process.env.ZIPWIKI_PARSE_CREDENTIAL = routed.parseCredential;
       }
       project.parser.engine = "llamaparse";
+    } else if (cliFixedLiteparse) {
+      project.parser.engine = "liteparse";
+      project.parser.mode = "fixed";
+      project.parser.escalate.enabled = false;
+      // Account may still have parseCredential zipwiki/llama in env from
+      // settings sync — clear it so this pack does not call the remote API.
+      parseCredential = "local";
+      opts.parseCredential = "local";
+      opts.remoteParse = false;
+      process.env.ZIPWIKI_PARSE_CREDENTIAL = "local";
     } else if (parseCredential === "llama") {
       project.parser.engine = "llamaparse";
     } else if (hosted?.liteparseFallback) {

@@ -11,6 +11,7 @@ import {
   formatAskReport,
   isIncompleteAskAnswer,
   resolveAskQuestion,
+  selectAskHits,
   type AskArchiveResult,
 } from "./ask.js";
 
@@ -66,6 +67,26 @@ function answerResponse(answer: string, status = 200): Response {
 describe("ask bundle", () => {
   after(() => {
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("keeps only ask hits near the top score", () => {
+    const selected = selectAskHits([
+      { score: 27, path: "wiki/okf/apple.md" },
+      { score: 12.5, path: "wiki/okf/junkfax.md" },
+      { score: 9.5, path: "wiki/okf/deed.md" },
+    ]);
+    assert.deepEqual(
+      selected.map((hit) => hit.path),
+      ["wiki/okf/apple.md"],
+    );
+    assert.deepEqual(
+      selectAskHits([
+        { score: 20, path: "a" },
+        { score: 18, path: "b" },
+        { score: 8, path: "c" },
+      ]).map((hit) => hit.path),
+      ["a", "b"],
+    );
   });
 
   it("puts passages before concept cards and stops at nine", () => {

@@ -42,6 +42,25 @@ function collapsePriorReads(
 
 const BODY_CHARS = 12_000;
 const ASK_EXCERPT_CAP = 9;
+/** Keep ask evidence hits at least this fraction of the top hit score. */
+const ASK_HIT_SCORE_RATIO = 0.55;
+const ASK_HIT_CAP = 3;
+
+type ScoredAskHit = { score: number; path: string };
+
+/**
+ * Drop weak search neighbors so ask does not bundle unrelated passages.
+ * Keeps the top hit, then peers within ASK_HIT_SCORE_RATIO of its score.
+ */
+export function selectAskHits<T extends ScoredAskHit>(
+  hits: T[],
+  cap = ASK_HIT_CAP,
+): T[] {
+  if (hits.length === 0) return [];
+  const topScore = hits[0]!.score;
+  const floor = topScore * ASK_HIT_SCORE_RATIO;
+  return hits.filter((hit) => hit.score >= floor).slice(0, cap);
+}
 
 export type AskExcerpt = {
   path: string;
@@ -235,10 +254,10 @@ function excerptsFor(args: {
   const found = queryArchive({
     package: args.package,
     query: args.query,
-    readTopK: 3,
+    readTopK: ASK_HIT_CAP,
     maxBytes: BODY_CHARS,
   });
-  const top = found.hits.slice(0, 3);
+  const top = selectAskHits(found.hits, ASK_HIT_CAP);
   const bodies = new Map(found.topK.map((row) => [row.path, row.text ?? ""]));
   const passages = top.flatMap((hit) => hit.passages ?? []);
   const gaps = top.flatMap((hit) => hit.gaps ?? []);

@@ -141,6 +141,30 @@ describe("parseDocument router", () => {
     assert.equal(result.text, "from-lite");
   });
 
+  it("fixed liteparse ignores remoteParse (no hosted LlamaParse)", async () => {
+    let remoteCalled = false;
+    const lite = {
+      id: "liteparse" as const,
+      parse: async () => fakeLiteResult({ text: "local-lite" }),
+    };
+    const remote = {
+      id: "remote" as const,
+      parse: async () => {
+        remoteCalled = true;
+        throw new Error("LlamaParse is out of credits. This file was not parsed.");
+      },
+    };
+    const result = await parseDocument("/tmp/doc.pdf", {
+      project: project({ engine: "liteparse", mode: "fixed" }),
+      remoteParse: true,
+      liteparse: lite as LiteParseAdapter,
+      remote: remote as never,
+    });
+    assert.equal(remoteCalled, false);
+    assert.equal(result.engine, "liteparse");
+    assert.equal(result.text, "local-lite");
+  });
+
   it("auto escalates to llamaparse when thresholds fire", async () => {
     const lite = {
       id: "liteparse" as const,
