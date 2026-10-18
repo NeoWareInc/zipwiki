@@ -2,7 +2,6 @@ export {
   applyEnvFile,
   findEnvRoot,
   loadEnvFiles,
-  loadRepoLlamaCloudKey,
   parseEnvFile,
   resetEnvFileLoadStateForTests,
 } from "./env.js";

@@ -7,7 +7,11 @@ credits on successful hosted work.
 
 Master keys are Fly secrets: `LLAMA_CLOUD_API_KEY`, `ANTHROPIC_API_KEY`,
 `CONVEX_SITE_URL`, and `ZIPWIKI_WORKER_SECRET`. They are not stored in
-`~/.zipwiki` and are not accepted from the client.
+`~/.zipwiki`, are not accepted from the client, and are **not** loaded by the
+CLI from `deploy/.env.dev` / `deploy/.env.prod` (those files are Fly push
+templates only). User BYO Llama/Anthropic keys come only from shell, project
+`.env` / `.env.local`, or `~/.zipwiki/.env` — see [CONVEX.md](CONVEX.md)
+“Secret lanes”.
 
 ## Endpoints
 

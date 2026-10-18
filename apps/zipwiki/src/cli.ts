@@ -4,7 +4,6 @@ import { DOCUMENT_TYPES } from "./lib/archive/index.js";
 import { formatZipwikiVersion, printZipwikiBanner } from "./lib/cli/banner.js";
 import {
   loadEnvFiles,
-  loadRepoLlamaCloudKey,
   loadZipwikiHomeEnv,
   maybeCheckForUpdate,
   readZipwikiPackageVersion,
@@ -60,10 +59,10 @@ import {
   buildCatalog,
   formatCatalogText,
 } from "./lib/access/index.js";
-// Load `.env` / `.env.local` before any command reads process.env.
+// Lane C only: project `.env` / `.env.local`, then `~/.zipwiki/.env`.
+// Never load Fly master keys from `deploy/.env*` into the CLI.
 loadEnvFiles(REPO_ROOT);
 loadZipwikiHomeEnv();
-loadRepoLlamaCloudKey(REPO_ROOT);
 void maybeCheckForUpdate();
 const CATEGORY_LIST = DOCUMENT_TYPES.join("|");
 

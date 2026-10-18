@@ -84,6 +84,17 @@ zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
 
 Default package when omitted: `wiki.zipwiki` in the current directory.
 
+## API keys (Llama / AI)
+
+| Mode | What the CLI needs | Vendor key location |
+| --- | --- | --- |
+| Hosted LlamaParse / OKF (ZipWiki credits) | `zipwiki login` → `ZIPWIKI_API_KEY` | Fly master keys only — never on the CLI |
+| BYO LlamaParse | `LLAMA_CLOUD_API_KEY` in shell, project `.env` / `.env.local`, or `~/.zipwiki/.env` (`zipwiki config api-key llama …`) | This machine; pack shows `(user api key)` |
+| BYO OKF | `ANTHROPIC_API_KEY` (or another supported LLM key) in the same Lane C places | This machine |
+
+`deploy/.env.dev` / `.env.prod` are Fly secret templates. The CLI does not read
+them. Full lanes: [CONVEX.md](CONVEX.md) “Secret lanes”, [HOSTED-API.md](HOSTED-API.md).
+
 ## Open sequence
 
 1. `pack` (or take an existing `.zipwiki`)
