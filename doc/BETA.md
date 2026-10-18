@@ -10,15 +10,15 @@ Work in order:
 
 Rust CLI is Phase 4 and is not part of this beta.
 
-| Surface                 | Dev (finish first)                                   | Production Beta                                        |
-| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------ |
-| Website                 | `https://dev.zipwiki.ai` (`dev` branch → Vercel)     | `https://zipwiki.ai` (`main` → Vercel production)      |
-| Local site              | `http://localhost:5173` (`pnpm dev:web`)             | —                                                      |
-| API                     | `https://api-dev.zipwiki.ai` (`pnpm deploy:fly:dev`) | `https://api.zipwiki.ai` (`pnpm deploy:fly:prod`)      |
-| Accounts, credits, keys | Convex `dashing-cod-224` (`npx convex dev --once`)   | Convex `festive-hare-381` (`pnpm convex:deploy`)       |
-| Payments                | Stripe **test**                                      | Stripe **live**                                        |
-| Install rehearsal       | Tarball / `latest.json` under **`/dev-releases/`** on the **dev** host (`pnpm build:dist:dev`) | `npm i -g https://zipwiki.ai/releases/…tgz` (`pnpm build:dist` only) |
-| Local CLI               | `pnpm zipwiki -- …` from this repo                   | Published global `zipwiki` from the production tarball |
+| Surface                 | Dev (finish first)                                                                             | Production Beta                                                      |
+| ----------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Website                 | `https://dev.zipwiki.ai` (`dev` branch → Vercel)                                               | `https://zipwiki.ai` (`main` → Vercel production)                    |
+| Local site              | `http://localhost:5173` (`pnpm dev:web`)                                                       | —                                                                    |
+| API                     | `https://api-dev.zipwiki.ai` (`pnpm deploy:fly:dev`)                                           | `https://api.zipwiki.ai` (`pnpm deploy:fly:prod`)                    |
+| Accounts, credits, keys | Convex `dashing-cod-224` (`npx convex dev --once`)                                             | Convex `festive-hare-381` (`pnpm convex:deploy`)                     |
+| Payments                | Stripe **test**                                                                                | Stripe **live**                                                      |
+| Install rehearsal       | Tarball / `latest.json` under `**/dev-releases/**` on the **dev** host (`pnpm build:dist:dev`) | `npm i -g https://zipwiki.ai/releases/…tgz` (`pnpm build:dist` only) |
+| Local CLI               | `pnpm zipwiki -- …` from this repo                                                             | Published global `zipwiki` from the production tarball               |
 
 Related: [PHASES.md](../PHASES.md), [COMPLETE.md](COMPLETE.md), [CLI.md](CLI.md), [MCP.md](MCP.md), [HOSTED-API.md](HOSTED-API.md), [DISTRIBUTION.md](DISTRIBUTION.md), [CONVEX.md](CONVEX.md), [AGENTS.md](../AGENTS.md).
 
@@ -97,14 +97,14 @@ Rehearsal and production use **different directories** so a `dev` merge cannot p
 
 Production Vercel builds **delete** `public/dev-releases/` before the web build. The Install page on a dev host fetches `/dev-releases/`; production uses `/releases/`.
 
-- [ ] Dev install page (on `https://dev.zipwiki.ai/install`) points at tarballs under **`/dev-releases/`** on the **dev** site. Build with `pnpm build:dist:dev`. Use `pnpm build:dist` only when cutting production (writes `/releases/` only).
-- [ ] `apps/web/public/dev-releases/index.json` (after `build:dist:dev`) and `apps/web/public/releases/index.json` (after `build:dist`) each list only files that exist in that same directory; the web build fails when a list and its files disagree.
-- [ ] `/releases/` and `/dev-releases/` are not rewritten to `index.html` on the **dev** deploy.
-- [ ] Copy icons on the install scripts copy the command that is on screen.
-- [ ] Platforms that are not published say so and do not offer a fake `npm i -g` URL.
-- [ ] Node `>= 22.13` is stated on `/install` and enforced by the package `engines` field.
-- [ ] LibreOffice is documented as a system requirement for Office files and is not bundled. EasyOCR and PaddleOCR are not implied.
-- [ ] A second machine can install from the **dev** tarball URL (`…/dev-releases/….tgz` or a copied `.tgz`) and run `zipwiki --help` before production publish.
+- [x] Dev install page (on `https://dev.zipwiki.ai/install`) points at tarballs under `**/dev-releases/**` on the **dev** site. Build with `pnpm build:dist:dev`. Use `pnpm build:dist` only when cutting production (writes `/releases/` only).
+- [x] `apps/web/public/dev-releases/index.json` (after `build:dist:dev`) and `apps/web/public/releases/index.json` (after `build:dist`) each list only files that exist in that same directory; the web build fails when a list and its files disagree.
+- [x] `/releases/` and `/dev-releases/` are not rewritten to `index.html` on the **dev** deploy.
+- [x] Copy icons on the install scripts copy the command that is on screen.
+- [x] Platforms that are not published say so and do not offer a fake `npm i -g` URL.
+- [x] Node `>= 22.13` is stated on `/install` and enforced by the package `engines` field.
+- [x] LibreOffice is documented as a system requirement for Office files and is not bundled. EasyOCR and PaddleOCR are not implied.
+- [x] A second machine can install from the **dev** tarball URL (`…/dev-releases/….tgz` or a copied `.tgz`) and run `zipwiki --help` before production publish.
 
 ## A6. Hosted API (dev)
 
@@ -213,11 +213,9 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 
 ## B3. Distribution on [zipwiki.ai](http://zipwiki.ai)
 
-Production install artifacts live only under `apps/web/public/releases/` (`pnpm build:dist`). Do not promote `dev-releases/` to production; the production web build strips that directory.
-
-- [ ] `pnpm build:dist` produces the tarballs for every platform the beta claims under `public/releases/`.
+- [ ] `pnpm build:dist` produces the tarballs for every platform the beta claims.
 - [ ] Every `npm i -g https://zipwiki.ai/releases/<file>.tgz` command on `/install` downloads a real gzip tarball (`1f 8b`), not the website HTML.
-- [ ] Production deploy of `apps/web` contains those `releases/` files and `index.json` / `latest.json`, and does **not** serve `/dev-releases/`.
+- [ ] Production deploy of `apps/web` contains those release files and `index.json` / `latest.json`.
 - [ ] `/releases/` is not rewritten to `index.html` on **zipwiki.ai**.
 - [ ] Platforms that are not published say so. Beta is explicit if it is macOS Apple silicon only.
 - [ ] `latest.json` `version` equals the installed CLI, and `url` points at a page that exists (`/install` or a real release note).

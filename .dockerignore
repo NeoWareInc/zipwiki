@@ -25,6 +25,7 @@ artwork
 knowledge
 .pack
 apps/web/public/releases
+apps/web/public/dev-releases
 apps/zipwiki/eng.traineddata
 
 .DS_Store
