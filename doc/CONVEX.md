@@ -55,11 +55,18 @@ npx convex dev
 npx @convex-dev/auth
 ```
 
-Web env (repo-root `.env.local`):
+Web env (repo-root `.env.local` for local; Vercel for hosts):
 
-| Variable | Purpose |
-| --- | --- |
-| `VITE_CONVEX_URL` | `https://….convex.cloud` (same as `CONVEX_URL`) |
-| `VITE_API_URL` | Fly API (`https://zipwiki-api-dev.fly.dev`) |
+| Variable | Dev | Production |
+| --- | --- | --- |
+| `VITE_CONVEX_URL` | `https://dashing-cod-224.convex.cloud` | `https://festive-hare-381.convex.cloud` |
+| `VITE_API_URL` | `https://api-dev.zipwiki.ai` | `https://api.zipwiki.ai` |
+
+Convex `SITE_URL` / `WEB_ORIGIN` (passkeys, auth redirects, mail links):
+
+| Deployment | `SITE_URL` | `WEB_ORIGIN` (comma-separated) |
+| --- | --- | --- |
+| Dev (`dashing-cod-224`) | `https://dev.zipwiki.ai` | `dev.zipwiki.ai`, Vercel alias, `localhost:5173` |
+| Prod (`festive-hare-381`) | `https://zipwiki.ai` | `zipwiki.ai`, `www.zipwiki.ai`, Vercel alias, `localhost:5173` |
 
 Restart `pnpm dev:web` after changing env. Do not put `AUTH_*` in `VITE_*`.

@@ -203,11 +203,11 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 ## B2. Production environments and secrets
 
 - [ ] Production website deploy comes from `main`. Pushing `dev` updates `https://dev.zipwiki.ai` only.
-- [ ] `pnpm deploy:fly:prod` is what updates the API users call. `pnpm deploy:fly:dev` does not.
-- [ ] `pnpm convex:deploy` is production Convex (`festive-hare-381`). `npx convex dev --once` is the dev deployment only.
-- [ ] Fly **prod** secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://www.zipwiki.ai` and `https://zipwiki.ai` as required.
+- [x] `pnpm deploy:fly:prod` is what updates the API users call. `pnpm deploy:fly:dev` does not.
+- [x] `pnpm convex:deploy` is production Convex (`festive-hare-381`). `npx convex dev --once` is the dev deployment only.
+- [x] Fly **prod** secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://www.zipwiki.ai` and `https://zipwiki.ai` as required.
 - [ ] Stripe **live** keys, webhook secret, and price/credit settings point at production Convex. Test-mode webhooks are not attached to the live site.
-- [ ] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
+- [x] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
 - [ ] `ZIPWIKI_API_URL` baked into the installed CLI and into the website client config is the **production** API (`https://api.zipwiki.ai`).
 - [ ] `pnpm check:fly:prod` is clean.
 
@@ -226,7 +226,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 - [ ] Merge / promote the verified `dev` work to `main` (or the production deploy path) so `https://zipwiki.ai` matches the Part A product.
 - [ ] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse.
 - [ ] `api.zipwiki.ai` has a valid certificate and DNS. Clients do not depend on `*.fly.dev` hostnames for product use.
-- [ ] Production Convex functions match what the CLI and website call (including admin credit adjust, welcome credits, passkey origins for www/apex as needed).
+- [x] Production Convex functions match what the CLI and website call (including admin credit adjust, welcome credits, passkey origins for www/apex as needed).
 
 **Part B gate:** release artifacts and production wiring are ready. Proceed to Part C verification.
 
