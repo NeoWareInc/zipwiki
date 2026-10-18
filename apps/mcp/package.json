@@ -21,11 +21,11 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "tsx src/stdio.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -b",
     "start": "node dist/stdio.js",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "smoke": "node --import tsx scripts/smoke-help.mjs",
-    "lint": "tsc -p tsconfig.json --noEmit"
+    "lint": "tsc -b --pretty false"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

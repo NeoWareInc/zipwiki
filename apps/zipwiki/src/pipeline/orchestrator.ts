@@ -715,7 +715,8 @@ export async function runStage(
       if (outputPath && !opts.dryRun) {
         runListCommand(outputPath, {
           verbose: true,
-          quiet: true,
+          // MCP/pack quiet must keep stdout clean for JSON-RPC.
+          quiet: opts.quiet === true,
         });
         let originalBytes = 0;
         let documentCount = 0;

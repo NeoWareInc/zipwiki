@@ -22,6 +22,9 @@ export function runListCommand(
   archive: string,
   opts: ListCommandOptions = {},
 ): void {
+  // Pack/MCP pass quiet so the listing never hits stdout (stdio MCP is
+  // JSON-RPC only; "Archive: …" there kills the transport).
+  if (opts.quiet) return;
   const path = resolve(resolveRepoPath(archive));
   if (!existsSync(path)) fail(`Archive not found: ${path}`);
   useZipHandle(path, () => {
