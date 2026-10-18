@@ -338,3 +338,4 @@ Open sequence for agents: **open → search or query → read_okf → read_parse
 - Library contract: [ZIPACCESS.md](ZIPACCESS.md)
 - MCP tools: [MCP.md](MCP.md)
 - Wire format: [ZIPWIKI_APPNOTE.md](ZIPWIKI_APPNOTE.md)
+- Proposed search upgrades: [ENHANCEMENTS.md](ENHANCEMENTS.md)
