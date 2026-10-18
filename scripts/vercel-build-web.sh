@@ -16,27 +16,48 @@ fi
 
 cd "$root"
 
-releases="$root/apps/web/public/releases"
-if [[ -f "$releases/index.json" ]]; then
+prod_releases="$root/apps/web/public/releases"
+dev_releases="$root/apps/web/public/dev-releases"
+
+# Production must never serve rehearsal tarballs (even if someone merges them).
+if [[ "${VERCEL_ENV:-}" == "production" ]]; then
+  if [[ -d "$dev_releases" ]]; then
+    echo "vercel-build-web: stripping apps/web/public/dev-releases (production)"
+    rm -rf "$dev_releases"
+  fi
+fi
+
+validate_releases_index() {
+  local dir="$1"
+  local label="$2"
+  if [[ ! -f "$dir/index.json" ]]; then
+    return 0
+  fi
   node --input-type=module -e '
     import { existsSync, readFileSync } from "node:fs";
     import { join } from "node:path";
     const dir = process.argv[1];
+    const label = process.argv[2];
     const index = JSON.parse(readFileSync(join(dir, "index.json"), "utf8"));
     const missing = (index.files ?? []).filter(
       (name) => typeof name !== "string" || !existsSync(join(dir, name)),
     );
     if (missing.length > 0) {
       console.error(
-        "vercel-build-web: index.json lists release files that are not in apps/web/public/releases:",
+        `vercel-build-web: index.json lists release files that are not in ${label}:`,
       );
       for (const name of missing) console.error(`  ${name}`);
       console.error(
-        "npm i -g https://zipwiki.ai/releases/<file> would download the website HTML.",
+        "npm i -g https://<host>/<releases-dir>/<file> would download the website HTML.",
       );
       process.exit(1);
     }
-  ' "$releases"
+  ' "$dir" "$label"
+}
+
+validate_releases_index "$prod_releases" "apps/web/public/releases"
+if [[ -d "$dev_releases" ]]; then
+  validate_releases_index "$dev_releases" "apps/web/public/dev-releases"
 fi
 
 pnpm exec turbo run build --filter=@zipwiki/web

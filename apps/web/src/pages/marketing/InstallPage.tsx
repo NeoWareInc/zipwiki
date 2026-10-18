@@ -141,14 +141,19 @@ export default function InstallPage() {
   const [published, setPublished] = useState<Set<string>>(new Set());
   const [siteOrigin, setSiteOrigin] = useState("https://zipwiki.ai");
   const [devHost, setDevHost] = useState(false);
+  /** Production: /releases. Dev rehearsal host: /dev-releases (never on zipwiki.ai). */
+  const [releasesBase, setReleasesBase] = useState("/releases");
 
   useEffect(() => {
     const origin = window.location.origin.replace(/\/$/, "");
+    const isDev = isDevHost(window.location.hostname);
+    const base = isDev ? "/dev-releases" : "/releases";
     setSiteOrigin(origin);
-    setDevHost(isDevHost(window.location.hostname));
+    setDevHost(isDev);
+    setReleasesBase(base);
 
     let cancelled = false;
-    void fetch("/releases/index.json")
+    void fetch(`${base}/index.json`)
       .then((response) => (response.ok ? response.json() : null))
       .then((body: ReleaseIndex | null) => {
         if (cancelled || !body) return;
@@ -184,8 +189,9 @@ export default function InstallPage() {
         {devHost ? (
           <p className="mt-4 max-w-3xl rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted)">
             Dev rehearsal host — install commands use{" "}
-            <code className="text-xs">{siteOrigin}</code> so the tarball comes
-            from this site, not production.
+            <code className="text-xs">{siteOrigin}/dev-releases/</code> so the
+            tarball comes from this site, not production{" "}
+            <code className="text-xs">/releases/</code>.
           </p>
         ) : null}
         <div className="mt-8 flex flex-wrap gap-3">
@@ -220,7 +226,7 @@ export default function InstallPage() {
         <div className="mt-8 grid gap-4">
           {BUILDS.map((build) => {
             const file = tarballName(version, build.platform, build.arch);
-            const href = `/releases/${file}`;
+            const href = `${releasesBase}/${file}`;
             const command = `npm i -g ${siteOrigin}${href}`;
             const ready = published.has(file);
             return (
@@ -262,7 +268,7 @@ export default function InstallPage() {
         <p className="mt-6 text-sm text-(--muted)">
           LiteParse, Tesseract, and PDFium notices:{" "}
           <a
-            href="/releases/THIRD_PARTY_NOTICES"
+            href={`${releasesBase}/THIRD_PARTY_NOTICES`}
             className="underline-offset-4 hover:underline"
           >
             THIRD_PARTY_NOTICES

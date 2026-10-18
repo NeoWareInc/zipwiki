@@ -9,7 +9,12 @@
 # Set ZIPWIKI_SITE_URL (e.g. https://dev.zipwiki.ai) to point latest.json at a
 # non-production install page. Default remains https://zipwiki.ai.
 # Prefer: pnpm build:dist:dev (dev) or pnpm build:dist (production).
-# The Install page itself always uses window.location.origin for npm one-liners.
+#
+# Artifacts land in separate public dirs so a dev merge cannot overwrite prod:
+#   build:dist     → apps/web/public/releases/      (zipwiki.ai)
+#   build:dist:dev → apps/web/public/dev-releases/  (dev.zipwiki.ai)
+# Override with ZIPWIKI_RELEASES_DIR if needed. The Install page uses
+# window.location.origin and picks /releases vs /dev-releases by host.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,6 +27,14 @@ fi
 
 SITE_URL="${ZIPWIKI_SITE_URL:-https://zipwiki.ai}"
 SITE_URL="${SITE_URL%/}"
+
+if [[ -n "${ZIPWIKI_RELEASES_DIR:-}" ]]; then
+  REL="${ZIPWIKI_RELEASES_DIR}"
+elif [[ "$SITE_URL" == "https://dev.zipwiki.ai" ]]; then
+  REL="apps/web/public/dev-releases"
+else
+  REL="apps/web/public/releases"
+fi
 
 echo "[zipwiki] building @zipwiki/api-client, @zipwiki/zipwiki, @zipwiki/mcp…"
 pnpm --filter @zipwiki/api-client build
@@ -73,8 +86,8 @@ VERSION="$(node -p "JSON.parse(require('fs').readFileSync('packages/zipwiki-bund
 LITEPARSE_VERSION="$(node -p "JSON.parse(require('fs').readFileSync('.pack/zipwiki/node_modules/@llamaindex/liteparse/package.json','utf8')).version")"
 HOST_PLATFORM="$(node -p "process.platform")"
 HOST_ARCH="$(node -p "process.arch")"
-REL="apps/web/public/releases"
 mkdir -p "$REL" .pack/native-cache
+echo "[zipwiki] website releases dir → ${REL}"
 
 # node platform/arch → npm optional package for LiteParse natives
 # linux-x64 uses glibc (gnu). Alpine/musl is not listed on the Install page.
@@ -140,21 +153,22 @@ cp packages/zipwiki-bundle/THIRD_PARTY_NOTICES "${REL}/THIRD_PARTY_NOTICES"
 
 node --input-type=module --eval '
 import { writeFileSync } from "node:fs";
-const version = process.argv[1];
-const site = process.argv[2];
-const files = process.argv.slice(3).sort();
+const rel = process.argv[1];
+const version = process.argv[2];
+const site = process.argv[3];
+const files = process.argv.slice(4).sort();
 writeFileSync(
-  "apps/web/public/releases/index.json",
+  `${rel}/index.json`,
   `${JSON.stringify({ version, files }, null, 2)}\n`,
 );
 writeFileSync(
-  "apps/web/public/releases/latest.json",
+  `${rel}/latest.json`,
   `${JSON.stringify({ version, url: `${site}/install` }, null, 2)}\n`,
 );
-' "$VERSION" "$SITE_URL" "${PUBLISHED_FILES[@]}"
+' "$REL" "$VERSION" "$SITE_URL" "${PUBLISHED_FILES[@]}"
 
 echo "[zipwiki] packed base tree at $ROOT/.pack/zipwiki"
-echo "[zipwiki] releases index updated (${#PUBLISHED_FILES[@]} platforms)"
+echo "[zipwiki] releases index updated (${#PUBLISHED_FILES[@]} platforms) in ${REL}"
 echo "[zipwiki] latest.json → ${SITE_URL}/install"
 
 HOST_TARBALL="zipwiki-${VERSION}-${HOST_PLATFORM}-${HOST_ARCH}.tgz"

@@ -21,6 +21,7 @@ out/
 .pack/
 *.tgz
 !apps/web/public/releases/*.tgz
+!apps/web/public/dev-releases/*.tgz
 
 # Environment & secrets
 .env

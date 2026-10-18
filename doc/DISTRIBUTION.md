@@ -39,6 +39,21 @@ the default library.
 
 Dependency today: `@llamaindex/liteparse` in `apps/zipwiki/package.json`.
 
+## Release directories (dev vs production)
+
+Pack scripts write **separate** website folders so rehearsal cannot land on
+`zipwiki.ai`:
+
+| Command | Folder | Public URL prefix |
+| --- | --- | --- |
+| `pnpm build:dist` | `apps/web/public/releases/` | `https://zipwiki.ai/releases/` |
+| `pnpm build:dist:dev` | `apps/web/public/dev-releases/` | `https://dev.zipwiki.ai/dev-releases/` |
+
+The Install page picks `/releases` or `/dev-releases` by host. Production
+Vercel builds delete `public/dev-releases/` before building so a mistaken
+merge cannot serve rehearsal tarballs. CLI update checks always use
+`https://zipwiki.ai/releases/latest.json`.
+
 ## Update reminder
 
 The website always serves the current deploy. The reminder is for the
