@@ -5,7 +5,7 @@
 import { readZipwikiPackageVersion } from "../config/update-check.js";
 
 /** Date shown beside the version. Change it when the version changes. */
-export const ZIPWIKI_VERSION_DATE = "2026-10-12";
+export const ZIPWIKI_VERSION_DATE = "2026-10-19";
 
 /** Version shown to users, with the beta label. Package version stays numeric. */
 export function formatZipwikiVersion(version: string): string {
