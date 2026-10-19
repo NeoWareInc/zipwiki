@@ -18,6 +18,13 @@ cd "$root"
 
 prod_releases="$root/apps/web/public/releases"
 dev_releases="$root/apps/web/public/dev-releases"
+examples_dir="$root/apps/web/public/examples"
+example_names=(
+  florida-laws-2025.zipwiki
+  earnings-2025.zipwiki
+  medical-pdfs.zipwiki
+  charles-dickens.zipwiki
+)
 
 # Production must never serve rehearsal tarballs (even if someone merges them).
 if [[ "${VERCEL_ENV:-}" == "production" ]]; then
@@ -58,6 +65,21 @@ validate_releases_index() {
 validate_releases_index "$prod_releases" "apps/web/public/releases"
 if [[ -d "$dev_releases" ]]; then
   validate_releases_index "$dev_releases" "apps/web/public/dev-releases"
+fi
+
+missing_examples=()
+for name in "${example_names[@]}"; do
+  if [[ ! -f "$examples_dir/$name" ]]; then
+    missing_examples+=("$name")
+  fi
+done
+if ((${#missing_examples[@]} > 0)); then
+  echo "vercel-build-web: missing Query sample packages in apps/web/public/examples:" >&2
+  for name in "${missing_examples[@]}"; do
+    echo "  $name" >&2
+  done
+  echo "Copy them from the ZipWiki shared Drive (or knowledge/) before deploy." >&2
+  exit 1
 fi
 
 pnpm exec turbo run build --filter=@zipwiki/web

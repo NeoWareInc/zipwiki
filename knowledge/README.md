@@ -1,6 +1,8 @@
 # knowledge/
 
 Source corpora and packed `.zipwiki` examples for pack / query smoke.
+Website Query Samples are served from `apps/web/public/examples/` (copied
+from the ZipWiki shared Drive), not from this folder.
 
 Digests below come from each package’s `ai.digest` (via ZipWiki MCP `open`).
 **Originals in package** means primary bytes are stored in the ZIP

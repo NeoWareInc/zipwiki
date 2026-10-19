@@ -40,6 +40,7 @@ coverage/
 # Archives / generated parse & pack output
 *.zipwiki
 *.nzip
+!apps/web/public/examples/*.zipwiki
 sample-output/
 sample-output/**
 !sample-output/.gitkeep

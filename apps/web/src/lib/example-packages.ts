@@ -1,4 +1,4 @@
-/** Shared example archives the Query page can open in the browser. */
+/** Query-page sample archives served from `apps/web/public/examples/`. */
 export type ExamplePackage = {
   name: string;
   title: string;

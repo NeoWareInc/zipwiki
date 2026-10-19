@@ -1,57 +1,9 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
-import type { Connect, ViteDevServer } from "vite";
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 const repoRoot = path.resolve(__dirname, "../..");
-
-const EXAMPLE_ZIPWIKI_NAMES = new Set([
-  "florida-laws-2025.zipwiki",
-  "charles-dickens.zipwiki",
-  "earnings-2025.zipwiki",
-  "medical-pdfs.zipwiki",
-]);
-
-/** Serve allowlisted knowledge/*.zipwiki files at /examples/ for the query page. */
-function serveExampleZipwikis() {
-  const dir = path.resolve(repoRoot, "knowledge");
-  const handler: Connect.NextHandleFunction = (req, res, next) => {
-    const raw = req.url?.split("?")[0] ?? "";
-    if (!raw.startsWith("/examples/")) return next();
-    let name = "";
-    try {
-      name = decodeURIComponent(raw.slice("/examples/".length));
-    } catch {
-      return next();
-    }
-    if (
-      !EXAMPLE_ZIPWIKI_NAMES.has(name) ||
-      name.includes("/") ||
-      name.includes("\\")
-    ) {
-      return next();
-    }
-    const file = path.join(dir, name);
-    if (!existsSync(file)) {
-      res.statusCode = 404;
-      res.end();
-      return;
-    }
-    res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Length", String(statSync(file).size));
-    createReadStream(file).pipe(res);
-  };
-  function attach(server: ViteDevServer) {
-    server.middlewares.use(handler);
-  }
-  return {
-    name: "serve-example-zipwikis",
-    configureServer: attach,
-    configurePreviewServer: attach,
-  };
-}
 
 function convexDeploymentUrl(raw: string | undefined): string {
   const url = raw?.trim().replace(/\/+$/, "") ?? "";
@@ -75,7 +27,7 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = apiUrl || "https://zipwiki-api-dev.fly.dev";
 
   return {
-    plugins: [react(), tailwindcss(), serveExampleZipwikis()],
+    plugins: [react(), tailwindcss()],
     base: "/",
     envDir: repoRoot,
     experimental: {
