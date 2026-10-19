@@ -254,10 +254,10 @@ A box here is done only when a new user can do it on the **production** path. A 
 
 - [x] `https://zipwiki.ai/` (and www if used) shows the beta marketing and working nav destinations.
 - [x] `/install` on **zipwiki.ai** offers a working download or `npm i -g` URL.
-- [ ] Sign up, device approval, settings, knowledge, keys, and billing work against production Convex and Stripe **live**.
-- [ ] A live Stripe Checkout from `/dashboard/billing` adds credits after the webhook.
-- [ ] `/admin` on production requires admin + passkey; add/subtract credits and account controls work for real operators.
-- [ ] Waitlist and sales mailboxes are monitored.
+- [x] Sign up, device approval, settings, knowledge, keys, and billing work against production Convex and Stripe **live**.
+- [x] A live Stripe Checkout from `/dashboard/billing` adds credits after the webhook.
+- [x] `/admin` on production requires admin + passkey; add/subtract credits and account controls work for real operators.
+- [x] Waitlist and sales mailboxes are monitored.
 
 ## C3. Production smokes before the tag
 
