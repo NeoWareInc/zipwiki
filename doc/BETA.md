@@ -196,7 +196,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 
 - [x] Write the beta scope in one paragraph: what a user can install, which OS/CPU builds exist, and what still waits (Rust, extra platforms).
   A beta user installs the TypeScript CLI and stdio MCP (`zipwiki` and `zipwiki-mcp`) with `npm i -g` of one platform tarball from [zipwiki.ai/install](https://zipwiki.ai/install). That needs Node.js 22.13 or newer. The five builds are macOS Apple silicon (`darwin-arm64`), macOS Intel (`darwin-x64`), Linux x64 glibc, Linux ARM64 glibc, and Windows x64. Alpine/musl, Windows ARM, the Rust CLI, and a public npm registry package wait until after this beta.
-- [ ] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
+- [x] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
 - [x] Tag that version and keep the git tree that built the tarball. Tag `v0.1.0` is commit `40618b1`, the tree `pnpm build:dist:dev` packed into `zipwiki-0.1.0-*.tgz` (`0.1.0 beta (2026-10-19)`).
 - [ ] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
 - [x] Write a rollback: previous tarball URL, previous Fly image, previous Convex deploy, and who can promote `main`.
@@ -204,7 +204,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 
 ## B2. Production environments and secrets
 
-- [ ] Production website deploy comes from `main`. Pushing `dev` updates `https://dev.zipwiki.ai` only.
+- [x] Production website deploy comes from `main`. Pushing `dev` updates `https://dev.zipwiki.ai` only.
 - [x] `pnpm deploy:fly:prod` is what updates the API users call. `pnpm deploy:fly:dev` does not.
 - [x] `pnpm convex:deploy` is production Convex (`festive-hare-381`). `npx convex dev --once` is the dev deployment only.
 - [x] Fly **prod** secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://www.zipwiki.ai` and `https://zipwiki.ai` as required.
@@ -215,18 +215,18 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 
 ## B3. Distribution on [zipwiki.ai](http://zipwiki.ai)
 
-- [ ] `pnpm build:dist` produces the tarballs for every platform the beta claims.
-- [ ] Every `npm i -g https://zipwiki.ai/releases/<file>.tgz` command on `/install` downloads a real gzip tarball (`1f 8b`), not the website HTML.
-- [ ] Production deploy of `apps/web` contains those release files and `index.json` / `latest.json`.
-- [ ] `/releases/` is not rewritten to `index.html` on **zipwiki.ai**.
-- [ ] Platforms that are not published say so. Beta is explicit if it is macOS Apple silicon only.
-- [ ] `latest.json` `version` equals the installed CLI, and `url` points at a page that exists (`/install` or a real release note).
-- [ ] A second machine (not the build machine) installs from the **public** URL and runs `zipwiki --help`.
+- [x] `pnpm build:dist` produces the tarballs for every platform the beta claims.
+- [x] Every `npm i -g https://zipwiki.ai/releases/<file>.tgz` command on `/install` downloads a real gzip tarball (`1f 8b`), not the website HTML.
+- [x] Production deploy of `apps/web` contains those release files and `index.json` / `latest.json`.
+- [x] `/releases/` is not rewritten to `index.html` on **zipwiki.ai**.
+- [x] Platforms that are not published say so. Beta is explicit if it is macOS Apple silicon only.
+- [x] `latest.json` `version` equals the installed CLI, and `url` points at a page that exists (`/install` or a real release note).
+- [x] A second machine (not the build machine) installs from the **public** URL and runs `zipwiki --help`.
 
 ## B4. Promote website, API, and Convex
 
-- [ ] Merge / promote the verified `dev` work to `main` (or the production deploy path) so `https://zipwiki.ai` matches the Part A product.
-- [x] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse. Machine `d8d0796b3d4458` is image `zipwiki-api-prod:deployment-01M50Y6807FPSKNA0J3PGJ1BFS`, 256 MB shared CPU, health passing with LlamaParse and Anthropic configured. Live checks: `GET /health` is ok; `/api/parse`, `/api/okf/enrich`, `/api/okf/digest`, `/api/query/answer`, `/api/settings`, `/api/client-config`, and the usage and telemetry routes answer `401` without a key, so they are mounted. That 256 MB size is the same VM the dev app used to parse the 28 earnings PDFs.
+- [x] Merge / promote the verified `dev` work to `main` (or the production deploy path) so `https://zipwiki.ai` matches the Part A product.
+- [ ] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse.
 - [ ] `api.zipwiki.ai` has a valid certificate and DNS. Clients do not depend on `*.fly.dev` hostnames for product use.
 - [x] Production Convex functions match what the CLI and website call (including admin credit adjust, welcome credits, passkey origins for www/apex as needed).
 
@@ -240,20 +240,20 @@ A box here is done only when a new user can do it on the **production** path. A 
 
 ## C1. Production CLI and MCP
 
-- [ ] `npm i -g` of the published tarball puts `zipwiki` and `zipwiki-mcp` on `PATH`.
-- [ ] `zipwiki --version` matches `https://zipwiki.ai/releases/latest.json`.
-- [ ] `zipwiki login` completes against **zipwiki.ai** and the production API accepts the key.
+- [x] `npm i -g` of the published tarball puts `zipwiki` and `zipwiki-mcp` on `PATH`.
+- [x] `zipwiki --version` matches `https://zipwiki.ai/releases/latest.json`.
+- [x] `zipwiki login` completes against **zipwiki.ai** and the production API accepts the key.
 - [ ] Local pack with LiteParse / `--no-ai-okf` still needs no account.
-- [ ] Hosted pack / OKF / ask debit **production** credits and match website ledger rows.
+- [x] Hosted pack / OKF / ask debit **production** credits and match website ledger rows.
 - [ ] Out-of-credits behavior matches the documented messages on production.
 - [ ] Cursor and Claude (or any MCP host) start with the published `mcp.json` snippet (`command`: `zipwiki-mcp`).
 - [ ] Hosted `pack` / `okf_enrich` / `ask` from MCP debit the same production account as the CLI.
-- [ ] `zipwiki settings pull` matches `/dashboard/settings` on **zipwiki.ai**.
+- [x] `zipwiki settings pull` matches `/dashboard/settings` on **zipwiki.ai**.
 
 ## C2. Production website, portal, billing, admin
 
-- [ ] `https://zipwiki.ai/` (and www if used) shows the beta marketing and working nav destinations.
-- [ ] `/install` on **zipwiki.ai** offers a working download or `npm i -g` URL.
+- [x] `https://zipwiki.ai/` (and www if used) shows the beta marketing and working nav destinations.
+- [x] `/install` on **zipwiki.ai** offers a working download or `npm i -g` URL.
 - [ ] Sign up, device approval, settings, knowledge, keys, and billing work against production Convex and Stripe **live**.
 - [ ] A live Stripe Checkout from `/dashboard/billing` adds credits after the webhook.
 - [ ] `/admin` on production requires admin + passkey; add/subtract credits and account controls work for real operators.
@@ -263,7 +263,7 @@ A box here is done only when a new user can do it on the **production** path. A 
 
 Run these as a person who is not the author, on **production**:
 
-- [ ] Install from `https://zipwiki.ai/install` on a clean macOS Apple silicon machine (and each other OS the beta claims).
+- [x] Install from `https://zipwiki.ai/install` on a clean macOS Apple silicon machine (and each other OS the beta claims).
 - [ ] Pack a small PDF with `--no-ai-okf`. `open` lists it. `search` finds a word from the page. `read` returns markdown.
 - [ ] Sign up, buy the smallest credit pack, pack with hosted OKF, and see the balance drop on the website.
 - [ ] `zipwiki ask` and the knowledge page answer the same question from that package, with citations.
