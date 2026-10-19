@@ -198,7 +198,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 
   A beta user installs the TypeScript CLI and stdio MCP (`zipwiki` and `zipwiki-mcp`) with `npm i -g` of one platform tarball from [zipwiki.ai/install](https://zipwiki.ai/install). That needs Node.js 22.13 or newer. The five builds are macOS Apple silicon (`darwin-arm64`), macOS Intel (`darwin-x64`), Linux x64 glibc, Linux ARM64 glibc, and Windows x64. Alpine/musl, Windows ARM, the Rust CLI, and a public npm registry package wait until after this beta.
 - [ ] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
-- [ ] Tag that version and keep the git tree that built the tarball.
+- [x] Tag that version and keep the git tree that built the tarball. Tag `v0.1.0` is commit `40618b1`, the tree `pnpm build:dist:dev` packed into `zipwiki-0.1.0-*.tgz` (`0.1.0 beta (2026-10-19)`).
 - [ ] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
 - [ ] Write a rollback: previous tarball URL, previous Fly image, previous Convex deploy, and who can promote `main`.
 
