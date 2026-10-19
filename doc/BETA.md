@@ -200,7 +200,9 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 - [ ] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
 - [x] Tag that version and keep the git tree that built the tarball. Tag `v0.1.0` is commit `40618b1`, the tree `pnpm build:dist:dev` packed into `zipwiki-0.1.0-*.tgz` (`0.1.0 beta (2026-10-19)`).
 - [ ] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
-- [ ] Write a rollback: previous tarball URL, previous Fly image, previous Convex deploy, and who can promote `main`.
+- [x] Write a rollback: previous tarball URL, previous Fly image, previous Convex deploy, and who can promote `main`.
+
+  Rollback for the `0.1.0 beta (2026-10-19)` cut. The previous dev tarball is commit `59693e6` (`Use /public/examples`). Restore each platform from `https://github.com/NeoWareInc/zipwiki/raw/59693e6/apps/web/public/dev-releases/zipwiki-0.1.0-darwin-arm64.tgz` (same path for `darwin-x64`, `linux-x64`, `linux-arm64`, and `win32-x64`) and redeploy the `dev` branch. Production tarballs were not replaced by that build; they remain `https://zipwiki.ai/releases/zipwiki-0.1.0-<platform>.tgz` from commit `faa258f`. The production Fly image in service is `registry.fly.io/zipwiki-api-prod:deployment-01M50Y6807FPSKNA0J3PGJ1BFS` (release v6). The previous image is `registry.fly.io/zipwiki-api-prod:deployment-01M50AGRQ8JF7QV3FRA8KDR5YE` (release v3): `fly deploy --image registry.fly.io/zipwiki-api-prod:deployment-01M50AGRQ8JF7QV3FRA8KDR5YE --config deploy/fly/fly.prod.toml`. Production Convex is `festive-hare-381`. The last function commit on `main` is `4036c70`; the one before it is `559a821`. Roll functions back by checking out `559a821` and running `pnpm convex:deploy`. GitHub user `NutecDev` is the only admin on `NeoWareInc/zipwiki` and is who promotes `main`, which publishes `https://zipwiki.ai`.
 
 ## B2. Production environments and secrets
 
