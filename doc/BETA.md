@@ -194,7 +194,9 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 
 ## B1. Release cut
 
-- [ ] Write the beta scope in one paragraph: what a user can install, which OS/CPU builds exist, and what still waits (Rust, extra platforms).
+- [x] Write the beta scope in one paragraph: what a user can install, which OS/CPU builds exist, and what still waits (Rust, extra platforms).
+
+  A beta user installs the TypeScript CLI and stdio MCP (`zipwiki` and `zipwiki-mcp`) with `npm i -g` of one platform tarball from [zipwiki.ai/install](https://zipwiki.ai/install). That needs Node.js 22.13 or newer. The five builds are macOS Apple silicon (`darwin-arm64`), macOS Intel (`darwin-x64`), Linux x64 glibc, Linux ARM64 glibc, and Windows x64. Alpine/musl, Windows ARM, the Rust CLI, and a public npm registry package wait until after this beta.
 - [ ] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
 - [ ] Tag that version and keep the git tree that built the tarball.
 - [ ] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
