@@ -206,7 +206,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 - [x] `pnpm deploy:fly:prod` is what updates the API users call. `pnpm deploy:fly:dev` does not.
 - [x] `pnpm convex:deploy` is production Convex (`festive-hare-381`). `npx convex dev --once` is the dev deployment only.
 - [x] Fly **prod** secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://www.zipwiki.ai` and `https://zipwiki.ai` as required.
-- [ ] Stripe **live** keys, webhook secret, and price/credit settings point at production Convex. Test-mode webhooks are not attached to the live site.
+- [x] Stripe **live** keys, webhook secret, and price/credit settings point at production Convex. Test-mode webhooks are not attached to the live site.
 - [x] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
 - [ ] `ZIPWIKI_API_URL` baked into the installed CLI and into the website client config is the **production** API (`https://api.zipwiki.ai`).
 - [ ] `pnpm check:fly:prod` is clean.
