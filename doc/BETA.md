@@ -195,13 +195,11 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 ## B1. Release cut
 
 - [x] Write the beta scope in one paragraph: what a user can install, which OS/CPU builds exist, and what still waits (Rust, extra platforms).
-
   A beta user installs the TypeScript CLI and stdio MCP (`zipwiki` and `zipwiki-mcp`) with `npm i -g` of one platform tarball from [zipwiki.ai/install](https://zipwiki.ai/install). That needs Node.js 22.13 or newer. The five builds are macOS Apple silicon (`darwin-arm64`), macOS Intel (`darwin-x64`), Linux x64 glibc, Linux ARM64 glibc, and Windows x64. Alpine/musl, Windows ARM, the Rust CLI, and a public npm registry package wait until after this beta.
 - [ ] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
 - [x] Tag that version and keep the git tree that built the tarball. Tag `v0.1.0` is commit `40618b1`, the tree `pnpm build:dist:dev` packed into `zipwiki-0.1.0-*.tgz` (`0.1.0 beta (2026-10-19)`).
 - [ ] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
 - [x] Write a rollback: previous tarball URL, previous Fly image, previous Convex deploy, and who can promote `main`.
-
   Rollback for the `0.1.0 beta (2026-10-19)` cut. The previous dev tarball is commit `59693e6` (`Use /public/examples`). Restore each platform from `https://github.com/NeoWareInc/zipwiki/raw/59693e6/apps/web/public/dev-releases/zipwiki-0.1.0-darwin-arm64.tgz` (same path for `darwin-x64`, `linux-x64`, `linux-arm64`, and `win32-x64`) and redeploy the `dev` branch. Production tarballs were not replaced by that build; they remain `https://zipwiki.ai/releases/zipwiki-0.1.0-<platform>.tgz` from commit `faa258f`. The production Fly image in service is `registry.fly.io/zipwiki-api-prod:deployment-01M50Y6807FPSKNA0J3PGJ1BFS` (release v6). The previous image is `registry.fly.io/zipwiki-api-prod:deployment-01M50AGRQ8JF7QV3FRA8KDR5YE` (release v3): `fly deploy --image registry.fly.io/zipwiki-api-prod:deployment-01M50AGRQ8JF7QV3FRA8KDR5YE --config deploy/fly/fly.prod.toml`. Production Convex is `festive-hare-381`. The last function commit on `main` is `4036c70`; the one before it is `559a821`. Roll functions back by checking out `559a821` and running `pnpm convex:deploy`. GitHub user `NutecDev` is the only admin on `NeoWareInc/zipwiki` and is who promotes `main`, which publishes `https://zipwiki.ai`.
 
 ## B2. Production environments and secrets
@@ -211,9 +209,9 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 - [x] `pnpm convex:deploy` is production Convex (`festive-hare-381`). `npx convex dev --once` is the dev deployment only.
 - [x] Fly **prod** secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://www.zipwiki.ai` and `https://zipwiki.ai` as required.
 - [x] Stripe **live** keys, webhook secret, and price/credit settings point at production Convex. Test-mode webhooks are not attached to the live site.
-- [x] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
-- [ ] `ZIPWIKI_API_URL` baked into the installed CLI and into the website client config is the **production** API (`https://api.zipwiki.ai`).
-- [ ] `pnpm check:fly:prod` is clean.
+- [ ] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
+- [x] `ZIPWIKI_API_URL` baked into the installed CLI and into the website client config is the **production** API (`https://api.zipwiki.ai`).
+- [x] `pnpm check:fly:prod` is clean.
 
 ## B3. Distribution on [zipwiki.ai](http://zipwiki.ai)
 
@@ -228,7 +226,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 ## B4. Promote website, API, and Convex
 
 - [ ] Merge / promote the verified `dev` work to `main` (or the production deploy path) so `https://zipwiki.ai` matches the Part A product.
-- [ ] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse.
+- [x] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse. Machine `d8d0796b3d4458` is image `zipwiki-api-prod:deployment-01M50Y6807FPSKNA0J3PGJ1BFS`, 256 MB shared CPU, health passing with LlamaParse and Anthropic configured. Live checks: `GET /health` is ok; `/api/parse`, `/api/okf/enrich`, `/api/okf/digest`, `/api/query/answer`, `/api/settings`, `/api/client-config`, and the usage and telemetry routes answer `401` without a key, so they are mounted. That 256 MB size is the same VM the dev app used to parse the 28 earnings PDFs.
 - [ ] `api.zipwiki.ai` has a valid certificate and DNS. Clients do not depend on `*.fly.dev` hostnames for product use.
 - [x] Production Convex functions match what the CLI and website call (including admin credit adjust, welcome credits, passkey origins for www/apex as needed).
 
