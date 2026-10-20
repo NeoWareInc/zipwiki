@@ -3,6 +3,8 @@ import {
   CREATE_PACKAGE,
   HOW_COMING_SOON,
   HOW_IT_WORKS_HERO,
+  HOW_PACK_FLOW,
+  HOW_QUERY_FLOW,
   OKF_FIELDS,
   OKF_INDEXING,
   OKF_SPEC_LINK_LABEL,
@@ -16,6 +18,7 @@ import {
   SAMPLE_OKF,
 } from "../../lib/marketing-copy";
 import { FeatureGrid, PageHero, PromptCard, Section } from "./MarketingUi";
+import { PackProcessorFlow, QueryExtractFlow } from "./WorkflowGraphics";
 
 /** Full-bleed band so consecutive sections alternate clearly. */
 function Band({
@@ -49,8 +52,15 @@ export default function HowItWorksPage() {
 
       <Band tone="tint">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
-          {CREATE_PACKAGE.title}
+          {HOW_PACK_FLOW.title}
         </h2>
+        <p className="mt-3 max-w-3xl text-(--muted)">{HOW_PACK_FLOW.lead}</p>
+        <div className="mt-10">
+          <PackProcessorFlow steps={HOW_PACK_FLOW.steps} />
+        </div>
+        <h3 className="mt-14 font-display text-2xl font-semibold text-(--ink)">
+          {CREATE_PACKAGE.title}
+        </h3>
         <p className="mt-3 max-w-3xl text-(--muted)">{CREATE_PACKAGE.lead}</p>
         <div className="mt-10 grid gap-8 md:grid-cols-2">
           {CREATE_PACKAGE.jobs.map((job) => (
@@ -188,8 +198,15 @@ export default function HowItWorksPage() {
 
       <Band tone="tint">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
-          {PACKAGE_ACTIONS.title}
+          {HOW_QUERY_FLOW.title}
         </h2>
+        <p className="mt-3 max-w-3xl text-(--muted)">{HOW_QUERY_FLOW.lead}</p>
+        <div className="mt-10">
+          <QueryExtractFlow steps={HOW_QUERY_FLOW.steps} />
+        </div>
+        <h3 className="mt-14 font-display text-2xl font-semibold text-(--ink)">
+          {PACKAGE_ACTIONS.title}
+        </h3>
         <p className="mt-3 max-w-3xl text-(--muted)">{PACKAGE_ACTIONS.lead}</p>
         <ul className="mt-12 grid gap-8 md:grid-cols-2">
           {PACKAGE_ACTIONS.items.map((action) => (

@@ -148,6 +148,11 @@ body {
   animation: draw-flow 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
 }
 
+/* Optional branch connectors remain dashed (no draw animation). */
+.flow-path-dashed {
+  stroke-dasharray: 5 5;
+}
+
 .flow-node {
   transform-origin: center;
   transform-box: fill-box;
@@ -285,6 +290,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .anim-rise,
   .flow-path,
+  .flow-path-dashed,
   .flow-node {
     animation: none !important;
   }

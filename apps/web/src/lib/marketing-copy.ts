@@ -116,6 +116,44 @@ export const TRUST_BULLETS = [
   },
 ] as const;
 
+/** Product page — simple query workflow (find information in place). */
+export const PRODUCT_QUERY_FLOW = {
+  title: "Query the archive in place",
+  lead: "Finding information is the primary ability. Agents open the catalog, search the OKF index, then read only the slice they need—never the whole ZIP into chat.",
+  steps: [
+    { id: "open", label: "Open", detail: "Catalog + digest" },
+    { id: "search", label: "Search", detail: "OKF, then markdown" },
+    { id: "okf", label: "Read OKF", detail: "Short concept card" },
+    { id: "parsed", label: "Read text", detail: "Extracted markdown" },
+  ],
+} as const;
+
+/** How it works — pack processor workflow. */
+export const HOW_PACK_FLOW = {
+  title: "Pack processor",
+  lead: "At pack time ZipWiki extracts compact markdown, writes an OKF index, and optionally records origin links—all inside one portable .zipwiki.",
+  steps: [
+    { id: "files", label: "Your files", detail: "PDFs, Office, scans" },
+    { id: "extract", label: "Extract", detail: "Markdown under wiki/parsed/" },
+    { id: "okf", label: "Index", detail: "OKF cards + package digest" },
+    { id: "package", label: ".zipwiki", detail: "Portable knowledge file" },
+  ],
+} as const;
+
+/** How it works — thorough query / extract workflow (deeper than Product). */
+export const HOW_QUERY_FLOW = {
+  title: "Query and extract",
+  lead: "Behind every ask is a selective read loop. Search first, skim OKF, stream extracted markdown, then fetch an origin or extract to disk only when fidelity or a filesystem path is required.",
+  steps: [
+    { id: "open", label: "Open", detail: "Catalog what’s inside" },
+    { id: "search", label: "Search", detail: "Ranked hits + read hints" },
+    { id: "okf", label: "Read OKF", detail: "Skim the concept card" },
+    { id: "parsed", label: "Read parsed", detail: "Stream markdown evidence" },
+    { id: "origin", label: "Origin", detail: "Fetch + verify CRC" },
+    { id: "disk", label: "Extract", detail: "Only when a path is needed" },
+  ],
+} as const;
+
 export const HOW_IT_WORKS_HERO = {
   title: "Turn files an AI cannot read into a catalog it can search",
   lead: "Pack once: extract compact AI-ready markdown and write an OKF index inside a portable .zipwiki. After that, agents open, search, and read only what they need—without re-parsing binaries or dumping every file into chat. You talk to the agent. The archive stays on disk.",
