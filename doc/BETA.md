@@ -121,7 +121,7 @@ Production Vercel builds **delete** `public/dev-releases/` before the web build.
 ## A7. Website (dev.zipwiki.ai + local)
 
 - [x] `https://dev.zipwiki.ai/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it (same for local after `pnpm dev:web`).
-- [x] A visitor can reach How it works, MCP & CLI, Install, Terms, and Privacy without guessing URLs. Install is last in the menu (`SHOW_INSTALL_IN_NAV` in `marketing-copy.ts`).
+- [x] A visitor can reach How it works, MCP & CLI, Terms, and Privacy without guessing URLs. Install stays off the nav until Beta opens (`SHOW_INSTALL_IN_NAV` in `marketing-copy.ts`); then it is last in the menu.
 - [ ] Waitlist and sales mail links reach a mailbox that is read.
 - [x] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
 - [x] `/install` on **dev.zipwiki.ai** offers a working download or a working `npm i -g` URL for rehearsal.
@@ -175,14 +175,14 @@ Settings and keys:
 
 Run these as a person who is not the author, on **local** and/or **dev**:
 
-- [ ] Sign up on `https://dev.zipwiki.ai`, finish settings, and connect CLI with `zipwiki login` to **dev**.
-- [ ] Pack a small PDF with `--no-ai-okf`. `open` lists it. `search` finds a word from the page. `read` returns markdown.
-- [ ] Buy the smallest **test** credit pack (or grant credits via admin), pack with hosted OKF, and see the balance drop on the **dev** website.
-- [ ] `zipwiki ask` and the knowledge page answer the same question from that package, with citations.
-- [ ] Point an AI agent at local `zipwiki-mcp` and run `open` then `search` then `read_okf`.
-- [ ] Pack with originals included and with originals omitted. Omitted originals still `origin --fetch` when a real public URL exists; included originals are in the zip.
-- [ ] Spend the **dev** account to zero and confirm the next hosted call falls back or stops with the documented message.
-- [ ] Confirm the **dev** `/dev-releases/latest.json` (or install page) and a rehearsal tarball URL under `/dev-releases/` from a browser.
+- [x] Sign up on `https://dev.zipwiki.ai`, finish settings, and connect CLI with `zipwiki login` to **dev**.
+- [x] Pack a small PDF with `--no-ai-okf`. `open` lists it. `search` finds a word from the page. `read` returns markdown.
+- [x] Buy the smallest **test** credit pack (or grant credits via admin), pack with hosted OKF, and see the balance drop on the **dev** website.
+- [x] `zipwiki ask` and the knowledge page answer the same question from that package, with citations.
+- [x] Point an AI agent at local `zipwiki-mcp` and run `open` then `search` then `read_okf`.
+- [x] Pack with originals included and with originals omitted. Omitted originals still `origin --fetch` when a real public URL exists; included originals are in the zip.
+- [x] Spend the **dev** account to zero and confirm the next hosted call falls back or stops with the documented message.
+- [x] Confirm the **dev** `/dev-releases/latest.json` (or install page) and a rehearsal tarball URL under `/dev-releases/` from a browser.
 
 **Part A gate:** all boxes above are checked. Only then start Part B.
 
@@ -198,7 +198,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
   A beta user installs the TypeScript CLI and stdio MCP (`zipwiki` and `zipwiki-mcp`) with `npm i -g` of one platform tarball from [zipwiki.ai/install](https://zipwiki.ai/install). That needs Node.js 22.13 or newer. The five builds are macOS Apple silicon (`darwin-arm64`), macOS Intel (`darwin-x64`), Linux x64 glibc, Linux ARM64 glibc, and Windows x64. Alpine/musl, Windows ARM, the Rust CLI, and a public npm registry package wait until after this beta.
 - [x] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
 - [x] Tag that version and keep the git tree that built the tarball. Tag `v0.1.0` is commit `40618b1`, the tree `pnpm build:dist:dev` packed into `zipwiki-0.1.0-*.tgz` (`0.1.0 beta (2026-10-19)`).
-- [ ] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
+- [x] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write.
 - [x] Write a rollback: previous tarball URL, previous Fly image, previous Convex deploy, and who can promote `main`.
   Rollback for the `0.1.0 beta (2026-10-19)` cut. The previous dev tarball is commit `59693e6` (`Use /public/examples`). Restore each platform from `https://github.com/NeoWareInc/zipwiki/raw/59693e6/apps/web/public/dev-releases/zipwiki-0.1.0-darwin-arm64.tgz` (same path for `darwin-x64`, `linux-x64`, `linux-arm64`, and `win32-x64`) and redeploy the `dev` branch. Production tarballs were not replaced by that build; they remain `https://zipwiki.ai/releases/zipwiki-0.1.0-<platform>.tgz` from commit `faa258f`. The production Fly image in service is `registry.fly.io/zipwiki-api-prod:deployment-01M50Y6807FPSKNA0J3PGJ1BFS` (release v6). The previous image is `registry.fly.io/zipwiki-api-prod:deployment-01M50AGRQ8JF7QV3FRA8KDR5YE` (release v3): `fly deploy --image registry.fly.io/zipwiki-api-prod:deployment-01M50AGRQ8JF7QV3FRA8KDR5YE --config deploy/fly/fly.prod.toml`. Production Convex is `festive-hare-381`. The last function commit on `main` is `4036c70`; the one before it is `559a821`. Roll functions back by checking out `559a821` and running `pnpm convex:deploy`. GitHub user `NutecDev` is the only admin on `NeoWareInc/zipwiki` and is who promotes `main`, which publishes `https://zipwiki.ai`.
 
@@ -209,7 +209,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 - [x] `pnpm convex:deploy` is production Convex (`festive-hare-381`). `npx convex dev --once` is the dev deployment only.
 - [x] Fly **prod** secrets are set and are not the dev keys: `ANTHROPIC_API_KEY`, `LLAMA_CLOUD_API_KEY`, `CONVEX_SITE_URL`, `ZIPWIKI_WORKER_SECRET`, and `WEB_ORIGIN` / site URLs that include `https://www.zipwiki.ai` and `https://zipwiki.ai` as required.
 - [x] Stripe **live** keys, webhook secret, and price/credit settings point at production Convex. Test-mode webhooks are not attached to the live site.
-- [ ] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
+- [x] Admin allowlist (`admin` emails / passkey) is the real operators, not a personal leftover from setup.
 - [x] `ZIPWIKI_API_URL` baked into the installed CLI and into the website client config is the **production** API (`https://api.zipwiki.ai`).
 - [x] `pnpm check:fly:prod` is clean.
 
