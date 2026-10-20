@@ -104,7 +104,7 @@ export default function HowItWorksPage() {
           streams when needed, not the binary. ZipWiki does not upload your
           folder to a hosted vector store.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 max-w-2xl">
           <FeatureGrid items={PARSE_ENGINES} />
         </div>
         <p className="mt-8 max-w-3xl text-sm font-medium text-(--ink)">

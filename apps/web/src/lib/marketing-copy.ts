@@ -111,7 +111,7 @@ export const PRODUCT_CAPABILITIES = [
   {
     title: "Agent-native surface",
     art: "/illustrations/spot-agent.svg",
-    body: "Local CLI and stdio MCP share one open sequence. Hosted extraction/OKF when credits apply; LiteParse and host-LLM enrichment when offline or quota-limited.",
+    body: "Local CLI and stdio MCP share one open sequence. Hosted extraction/OKF when credits apply; local parsing and host-LLM enrichment when offline or quota-limited.",
   },
 ] as const;
 
@@ -204,11 +204,11 @@ export const PARSE_PROBLEM = {
 export const PARSE_FAMILIES = [
   {
     title: "PDFs",
-    body: "Native text PDFs become compact markdown locally. Scanned or image-only PDFs need OCR. Multi-column 10-Ks, forms, and stamped deeds are the files LiteParse flags as complex—hosted LlamaParse is the upgrade when layout matters.",
+    body: "Native text PDFs become compact markdown. Scanned or image-only PDFs need OCR. Multi-column filings, forms, and stamped deeds are the hard layouts—the hosted parser is the upgrade when structure matters.",
   },
   {
     title: "Office (Word, PowerPoint, Pages)",
-    body: ".doc, .docx, .ppt, .odt, .rtf, and similar are binary packages, not markdown. Pack converts them through LibreOffice to an intermediate PDF, then extracts text documentation into wiki/parsed/*.md. Without LibreOffice, the original stays in the archive and the catalog marks markdown as missing.",
+    body: ".doc, .docx, .ppt, .odt, .rtf, and similar are binary packages, not markdown. Pack runs them through the parser into extracted markdown under wiki/parsed/*.md. If a file cannot be converted, the original stays in the archive and the catalog marks markdown as missing.",
   },
   {
     title: "Spreadsheets",
@@ -220,18 +220,11 @@ export const PARSE_FAMILIES = [
   },
 ] as const;
 
+/** How extraction is described on How it works—implementation names stay off this page. */
 export const PARSE_ENGINES = [
   {
-    title: "LiteParse (local, Free)",
-    body: "Runs on your machine. Strong on native PDFs and plain text. Office needs LibreOffice installed. Images use OCR. Unlimited and not billed. Output is whole-document markdown text documentation in wiki/parsed/—what agents actually read.",
-  },
-  {
-    title: "LibreOffice (local helper)",
-    body: "Required on the same machine to turn Word, Excel, PowerPoint, and other Office families into something LiteParse can extract. Intermediate conversion PDFs never go into the .zipwiki.",
-  },
-  {
-    title: "LlamaParse (hosted, paid)",
-    body: "Used when you want multi-format quality or LiteParse marks a file as complex (dense layout, scans, forms). Soft-falls back to LiteParse when credits run out—not a hard stop.",
+    title: "Parser",
+    body: "Extracted markdown for AI. Pack turns each document into whole-document text under wiki/parsed/—what agents actually read. Local parsing runs on your machine and is not billed. Hosted parsing handles complex layouts when you have credits, and soft-falls back to local when credits run out.",
   },
 ] as const;
 
@@ -588,7 +581,7 @@ export const HOW_PACK_FLOW: IllustratedFlowCopy = {
   lead: "Packing is the one slow step, and you pay it once. Every later search and read is fast because the hard work—turning binaries into text and writing an index—already lives inside the file.",
   image: {
     src: "/illustrations/how-pack.svg",
-    alt: "A pile of PDF, Word, Excel, PowerPoint and scanned files goes into a parse machine with LiteParse, LibreOffice, OCR and LlamaParse; out come markdown files and OKF cards with an index and digest; origin links are attached; everything is sealed into one .zipwiki containing a manifest, wiki/okf, wiki/parsed and optional originals.",
+    alt: "A pile of PDF, Word, Excel, PowerPoint and scanned files goes into a parse machine (Parser and OCR); out come markdown files and OKF cards with an index and digest; origin links are attached; everything is sealed into one .zipwiki containing a manifest, wiki/okf, wiki/parsed and optional originals.",
     width: 1200,
     height: 420,
   },
@@ -600,7 +593,7 @@ export const HOW_PACK_FLOW: IllustratedFlowCopy = {
     },
     {
       title: "Parse to markdown",
-      body: "LiteParse runs locally for text PDFs. LibreOffice converts Office files first, OCR handles scans and photos, and LlamaParse takes the complex layouts when you have credits.",
+      body: "The parser extracts markdown for AI under wiki/parsed/. OCR handles scans and photos. Local parsing covers everyday text; hosted parsing takes complex layouts when you have credits.",
     },
     {
       title: "Write the index",
