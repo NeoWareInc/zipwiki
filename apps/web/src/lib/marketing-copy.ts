@@ -16,9 +16,11 @@ const NAV_CORE = [
   { to: "/mcp", label: "MCP & CLI" },
 ] as const;
 
+const NAV_CONTACT = [{ to: "/contact", label: "Contact" }] as const;
+
 export const NAV = SHOW_INSTALL_IN_NAV
-  ? ([...NAV_CORE, { to: "/install", label: "Install" }] as const)
-  : NAV_CORE;
+  ? ([...NAV_CORE, { to: "/install", label: "Install" }, ...NAV_CONTACT] as const)
+  : ([...NAV_CORE, ...NAV_CONTACT] as const);
 
 export const PAGE_TITLES: Record<string, string> = {
   "/": `${SITE_NAME} — ${SITE_TAGLINE}`,
@@ -26,6 +28,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/mcp": `MCP & CLI — ${SITE_NAME}`,
   "/cli": `MCP & CLI — ${SITE_NAME}`,
   "/install": `Install — ${SITE_NAME}`,
+  "/contact": `Contact — ${SITE_NAME}`,
   "/download": `Install — ${SITE_NAME}`,
   "/terms": `Terms — ${SITE_NAME}`,
   "/privacy": `Privacy — ${SITE_NAME}`,

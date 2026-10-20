@@ -174,9 +174,9 @@ export function MarketingLayout() {
             <Link to="/privacy" className="hover:text-(--accent)">
               Privacy
             </Link>
-            <a href="mailto:hello@zipwiki.ai" className="hover:text-(--accent)">
+            <Link to="/contact" className="hover:text-(--accent)">
               Contact
-            </a>
+            </Link>
           </div>
         </div>
       </footer>

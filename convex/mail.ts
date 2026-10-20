@@ -1,16 +1,28 @@
 "use node";
 
-import { internalAction } from "./_generated/server";
-import { v } from "convex/values";
+import { action, internalAction } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Resend } from "resend";
 import { OPS_ALERT_EMAIL } from "./lib/adminEmails";
+import {
+  CONTACT_INBOX,
+  contactHtml,
+  contactPlainText,
+  normalizeContact,
+} from "./lib/contactForm";
 
 function fromAddress(): string {
   return process.env.AUTH_EMAIL?.trim() || "ZipWiki <onboarding@resend.dev>";
 }
 
-async function send(to: string, subject: string, text: string, html: string) {
+async function send(
+  to: string,
+  subject: string,
+  text: string,
+  html: string,
+  replyTo?: string,
+) {
   const apiKey = process.env.AUTH_RESEND_KEY?.trim();
   if (!apiKey || !to) return { ok: false as const, reason: "mail_not_configured" };
   const resend = new Resend(apiKey);
@@ -20,6 +32,7 @@ async function send(to: string, subject: string, text: string, html: string) {
     subject,
     text,
     html,
+    ...(replyTo ? { replyTo } : {}),
   });
   if (error) return { ok: false as const, reason: JSON.stringify(error) };
   return { ok: true as const };
@@ -112,5 +125,34 @@ export const sendLowProviderFloat = internalAction({
 <p style="font-family:sans-serif;font-size:16px;line-height:1.5">Top up in the vendor console and turn on their auto-reload / billing alert emails.</p>
 <p><a href="${billingUrl}">Open Admin Billing</a> (console links)</p>`,
     );
+  },
+});
+
+/** Public marketing contact form. Stores the message, then emails the inbox. */
+export const submitContact = action({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    subject: v.string(),
+    message: v.string(),
+  },
+  returns: v.object({ ok: v.literal(true) }),
+  handler: async (ctx, args) => {
+    const parsed = normalizeContact(args);
+    if (!parsed.ok) throw new ConvexError(parsed.error);
+    await ctx.runMutation(internal.contact.record, parsed.value);
+    const sent = await send(
+      CONTACT_INBOX,
+      `Contact form: ${parsed.value.subject}`,
+      contactPlainText(parsed.value),
+      contactHtml(parsed.value),
+      parsed.value.email,
+    );
+    if (!sent.ok) {
+      throw new ConvexError(
+        `We could not deliver your message by email. Please write to ${CONTACT_INBOX}.`,
+      );
+    }
+    return { ok: true as const };
   },
 });

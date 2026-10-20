@@ -252,4 +252,12 @@ export default defineSchema({
     settingsJson: v.string(),
     setupCompletedAt: v.optional(v.number()),
   }).index("by_accountId", ["accountId"]),
+
+  /** Marketing contact form. Email is stored lowercase for the hourly limit. */
+  contactMessages: defineTable({
+    name: v.string(),
+    email: v.string(),
+    subject: v.string(),
+    message: v.string(),
+  }).index("by_email", ["email"]),
 });
