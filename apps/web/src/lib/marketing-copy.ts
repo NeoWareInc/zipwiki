@@ -7,8 +7,8 @@ export const SITE_TAGLINE = "AI-Searchable Knowledge";
 export const SITE_DESCRIPTION =
   "Archival data has to stay small enough to keep and still open when needed. That reader is increasingly an AI agent. A .zipwiki holds compact extracted markdown and an OKF index so an agent can search and read the records a question requires.";
 
-/** Flip to true when Beta public downloads open. Install is last in the menu. */
-export const SHOW_INSTALL_IN_NAV = false;
+/** Install is last in the marketing menu when true. */
+export const SHOW_INSTALL_IN_NAV = true;
 
 const NAV_CORE = [
   { to: "/", label: "Product" },

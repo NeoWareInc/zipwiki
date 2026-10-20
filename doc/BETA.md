@@ -121,7 +121,7 @@ Production Vercel builds **delete** `public/dev-releases/` before the web build.
 ## A7. Website (dev.zipwiki.ai + local)
 
 - [x] `https://dev.zipwiki.ai/` shows the beta headline and subheading, and the Classic ZIP / agent comparison under it (same for local after `pnpm dev:web`).
-- [x] A visitor can reach How it works, MCP & CLI, Terms, and Privacy without guessing URLs. Install stays off the nav until Beta opens (`SHOW_INSTALL_IN_NAV` in `marketing-copy.ts`); then it is last in the menu.
+- [x] A visitor can reach How it works, MCP & CLI, Install, Terms, and Privacy without guessing URLs. Install is last in the menu (`SHOW_INSTALL_IN_NAV` in `marketing-copy.ts`).
 - [ ] Waitlist and sales mail links reach a mailbox that is read.
 - [x] Terms and privacy name ZipWiki, what is stored (account, keys, credit ledger, document bytes only on the user’s machine unless they upload for hosted parse), and Stripe.
 - [x] `/install` on **dev.zipwiki.ai** offers a working download or a working `npm i -g` URL for rehearsal.
