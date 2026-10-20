@@ -65,10 +65,18 @@ export const HOME_OUTCOMES = [
 export const CLASSIC_ZIP_PROBLEM = [
   {
     title: "Classic ZIP",
+    image: {
+      src: "/illustrations/before-classic-zip.svg",
+      alt: "An archive.zip has burst open, spilling dozens of documents across a desk while a progress bar slowly unzips 240 MB and the agent asks which file has the answer.",
+    },
     body: "Every original stays in the package. The way in is a filename, then a full extract, so the archive grows with the binaries and still has to be unpacked to read.",
   },
   {
     title: "What agents need",
+    image: {
+      src: "/illustrations/after-zipwiki.svg",
+      alt: "The .zipwiki stays closed on a sunny desk while a beam lifts out one OKF card and one short markdown slice, about 2 KB, and the agent answers with a citation.",
+    },
     body: "A compact text record of each document, search by meaning, and the original only when that record is not enough.",
   },
 ] as const;
@@ -77,26 +85,32 @@ export const CLASSIC_ZIP_PROBLEM = [
 export const PRODUCT_CAPABILITIES = [
   {
     title: "Extracted markdown for AI",
+    art: "/illustrations/spot-markdown.svg",
     body: "“Parsed” is text documentation pulled from each source—sections, tables, OCR when needed. Compact and model-native so agents answer from extracted markdown instead of chewing through binaries. Extreme speedup for models consuming the package.",
   },
   {
     title: "Knowledge index inside the archive (OKF)",
+    art: "/illustrations/spot-okf-index.svg",
     body: "Open Knowledge Format concept cards and a package index live in the file. Search prefers the OKF index, then the extracted markdown. Indexing travels with the data—no sidecar database to drift.",
   },
   {
     title: "Selective access",
+    art: "/illustrations/spot-selective.svg",
     body: "Open the catalog, search, read short OKF cards, then stream extracted markdown—and only pull an original or extract to disk when you truly need it. Never explode the whole archive into context.",
   },
   {
     title: "Compression through understanding",
+    art: "/illustrations/spot-compression.svg",
     body: "Omit originals and keep verified origin links. Extracted markdown replaces bloated document bytes—typical packs shrink text knowledge upwards of 99%, or about 1/100th the original document size.",
   },
   {
     title: "Package-level AI digest",
+    art: "/illustrations/spot-digest.svg",
     body: "A short package digest summarizes what the archive contains so catalogs, dashboards, and agents know what’s in the box before a deep read.",
   },
   {
     title: "Agent-native surface",
+    art: "/illustrations/spot-agent.svg",
     body: "Local CLI and stdio MCP share one open sequence. Hosted extraction/OKF when credits apply; LiteParse and host-LLM enrichment when offline or quota-limited.",
   },
 ] as const;
@@ -528,6 +542,7 @@ export type IllustratedFlowCopy = {
   kicker: string;
   title: string;
   lead: string;
+  /** Night version is the same path with a -dark suffix (see ThemedImage). */
   image: { src: string; alt: string; width: number; height: number };
   tone: FlowTone;
   steps: ReadonlyArray<FlowStep>;
@@ -665,3 +680,47 @@ export const HOW_EXTRACT_FLOW: IllustratedFlowCopy = {
     },
   ],
 };
+
+/* ------------------------------------------------------------------ */
+/* Product page — hero art and headline numbers                        */
+/* ------------------------------------------------------------------ */
+
+export const PRODUCT_HERO_IMAGE = {
+  src: "/illustrations/product-hero.svg",
+  alt: "On a sunlit desk, a pile of PDFs, Word files, spreadsheets and scans flies into one zippered .zipwiki package, and an agent on a tablet reads a single OKF card from it and answers with a citation.",
+  width: 1200,
+  height: 400,
+} as const;
+
+/** Headline numbers between the capability grid and the outcomes list. */
+export const PRODUCT_STATS = [
+  {
+    value: "~1/100th",
+    label: "the size of the source documents",
+    note: "Typical text knowledge once bulky originals are omitted and origin links kept.",
+  },
+  {
+    value: "1 file",
+    label: "holds index, evidence, and origins",
+    note: "Copy, sync, or back it up like any ZIP—the index can’t drift from the data.",
+  },
+  {
+    value: "0",
+    label: "hosted indexes needed to search",
+    note: "OKF cards and extracted markdown live inside the package on your disk.",
+  },
+] as const;
+
+/* ------------------------------------------------------------------ */
+/* How it works — section menu                                          */
+/* ------------------------------------------------------------------ */
+
+export const HOW_SECTIONS = [
+  { id: "pack", label: "Pack" },
+  { id: "parsing", label: "Parsing" },
+  { id: "okf", label: "OKF index" },
+  { id: "origins", label: "Origins" },
+  { id: "query-extract", label: "Query & Extract" },
+  { id: "actions", label: "What you can do" },
+  { id: "catalog", label: "Agent report" },
+] as const;

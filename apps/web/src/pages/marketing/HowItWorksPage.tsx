@@ -6,6 +6,7 @@ import {
   HOW_IT_WORKS_HERO,
   HOW_PACK_FLOW,
   HOW_QUERY_FLOW,
+  HOW_SECTIONS,
   OKF_FIELDS,
   OKF_INDEXING,
   OKF_SPEC_LINK_LABEL,
@@ -19,19 +20,26 @@ import {
   SAMPLE_OKF,
 } from "../../lib/marketing-copy";
 import {
+  CodeTabs,
   FeatureGrid,
   IllustratedFlow,
+  OnThisPage,
   PageHero,
   PromptCard,
   Section,
 } from "./MarketingUi";
 
+/** Room for the sticky site header + section menu when jumping to an anchor. */
+const SECTION_SCROLL = "scroll-mt-[calc(var(--site-header-h,4.5rem)+3.5rem)]";
+
 /** Full-bleed band so consecutive sections alternate clearly. */
 function Band({
   tone,
+  id,
   children,
 }: {
   tone: "plain" | "tint";
+  id?: string;
   children: ReactNode;
 }) {
   const shell =
@@ -40,7 +48,9 @@ function Band({
       : "border-t border-(--line) bg-transparent";
   return (
     <div className={shell}>
-      <Section>{children}</Section>
+      <Section id={id} className={SECTION_SCROLL}>
+        {children}
+      </Section>
     </div>
   );
 }
@@ -56,7 +66,9 @@ export default function HowItWorksPage() {
         />
       </Section>
 
-      <Band tone="tint">
+      <OnThisPage sections={HOW_SECTIONS} />
+
+      <Band tone="tint" id="pack">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           {CREATE_PACKAGE.title}
         </h2>
@@ -78,7 +90,7 @@ export default function HowItWorksPage() {
         </div>
       </Band>
 
-      <Band tone="plain">
+      <Band tone="plain" id="parsing">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           {PARSE_PROBLEM.title}
         </h2>
@@ -100,7 +112,7 @@ export default function HowItWorksPage() {
         </p>
       </Band>
 
-      <Band tone="tint">
+      <Band tone="tint" id="okf">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           {OKF_INDEXING.title}
         </h2>
@@ -135,7 +147,7 @@ export default function HowItWorksPage() {
         </p>
       </Band>
 
-      <Band tone="plain">
+      <Band tone="plain" id="origins">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           {ORIGIN_LINKS.title}
         </h2>
@@ -152,39 +164,31 @@ export default function HowItWorksPage() {
             </div>
           ))}
         </div>
-        <div className="mt-10 grid gap-6 lg:grid-cols-2">
-          <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
-            <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
-              .zipwiki-origins.tsv — one file, one link
-            </p>
-            <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
-              {ORIGIN_LINKS.tsvExample}
-            </pre>
-          </div>
-          <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
-            <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
-              .zipwiki-origins.json — entries map
-            </p>
-            <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
-              {ORIGIN_LINKS.jsonExample}
-            </pre>
-          </div>
-        </div>
-        <div className="mt-6 overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
-          <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
-            Patterned names (optional)
-          </p>
-          <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
-            {ORIGIN_LINKS.patternExample}
-          </pre>
-        </div>
-        <div className="mt-6 overflow-x-auto rounded-xl border border-(--border) bg-(--paper) p-5 shadow-soft">
-          <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
-            Pack with origins
-          </p>
-          <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
-            {ORIGIN_LINKS.cliExample}
-          </pre>
+        <div className="mt-10">
+          <CodeTabs
+            tabs={[
+              {
+                label: "TSV list",
+                caption: ".zipwiki-origins.tsv — one file, one link",
+                code: ORIGIN_LINKS.tsvExample,
+              },
+              {
+                label: "JSON map",
+                caption: ".zipwiki-origins.json — entries map",
+                code: ORIGIN_LINKS.jsonExample,
+              },
+              {
+                label: "Filename pattern",
+                caption: "Patterned names (optional)",
+                code: ORIGIN_LINKS.patternExample,
+              },
+              {
+                label: "Pack command",
+                caption: "Pack with origins",
+                code: ORIGIN_LINKS.cliExample,
+              },
+            ]}
+          />
         </div>
         <div className="mt-8 max-w-2xl">
           <PromptCard
@@ -199,7 +203,7 @@ export default function HowItWorksPage() {
       </Band>
 
       <div className="border-t border-(--line) bg-linear-to-br from-(--hero-glow) via-(--paper) to-(--hero-warm)">
-        <Section id="query-extract">
+        <Section id="query-extract" className={SECTION_SCROLL}>
           <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
             Query &amp; Extract
           </p>
@@ -220,7 +224,7 @@ export default function HowItWorksPage() {
         </Section>
       </div>
 
-      <Band tone="tint">
+      <Band tone="tint" id="actions">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           {PACKAGE_ACTIONS.title}
         </h2>
@@ -247,7 +251,7 @@ export default function HowItWorksPage() {
         </ul>
       </Band>
 
-      <Band tone="plain">
+      <Band tone="plain" id="catalog">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">
           What the agent should report
         </h2>

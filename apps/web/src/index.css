@@ -329,3 +329,14 @@ body {
     animation: none !important;
   }
 }
+
+/* Height of the sticky marketing header (MarketingLayout: logo h-14, sm:h-16).
+   Used by the How it works section menu and anchor scroll offsets. */
+:root {
+  --site-header-h: 85px;
+}
+@media (min-width: 40rem) {
+  :root {
+    --site-header-h: 93px;
+  }
+}

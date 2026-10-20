@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type {
   AgentPrompt,
@@ -40,7 +40,12 @@ export function FeatureGrid({
   items,
   columns = 3,
 }: {
-  items: ReadonlyArray<{ title: string; body: string; ask?: string }>;
+  items: ReadonlyArray<{
+    title: string;
+    body: string;
+    ask?: string;
+    art?: string;
+  }>;
   columns?: 2 | 3 | 4;
 }) {
   const cols =
@@ -54,8 +59,17 @@ export function FeatureGrid({
       {items.map((item) => (
         <div
           key={item.title}
-          className="rounded-xl border border-(--border) bg-(--surface)/80 p-6 shadow-soft"
+          className="overflow-hidden rounded-xl border border-(--border) bg-(--surface)/80 p-6 shadow-soft"
         >
+          {"art" in item && item.art && (
+            <ThemedImage
+              src={item.art}
+              alt=""
+              width={240}
+              height={140}
+              className="-mx-6 -mt-6 mb-5 block h-auto w-[calc(100%+3rem)] max-w-none"
+            />
+          )}
           <h2 className="font-display text-xl font-semibold text-(--ink)">
             {item.title}
           </h2>
@@ -225,13 +239,11 @@ export function IllustratedFlow({
         </div>
       )}
       <figure className="-mx-6 mt-8 overflow-x-auto px-6 pb-2 md:mx-0 md:overflow-visible md:px-0">
-        <img
+        <ThemedImage
           src={flow.image.src}
           alt={flow.image.alt}
           width={flow.image.width}
           height={flow.image.height}
-          loading="lazy"
-          decoding="async"
           className="block h-auto w-full min-w-[720px] rounded-2xl shadow-soft ring-1 ring-(--line) md:min-w-0"
         />
       </figure>
@@ -258,6 +270,229 @@ export function IllustratedFlow({
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/** "/x/name.svg" → "/x/name-dark.svg" */
+export function darkVariant(src: string) {
+  return src.replace(/\.svg$/, "-dark.svg");
+}
+
+/**
+ * Renders the day illustration in light mode and its night version in dark
+ * mode. Both are lazy, so the hidden one is never downloaded.
+ */
+export function ThemedImage({
+  src,
+  alt,
+  width,
+  height,
+  className = "",
+  eager = false,
+}: {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  className?: string;
+  eager?: boolean;
+}) {
+  const common = {
+    alt,
+    width,
+    height,
+    loading: eager ? ("eager" as const) : ("lazy" as const),
+    decoding: "async" as const,
+  };
+  return (
+    <>
+      <img {...common} src={src} className={`${className} dark:hidden`} />
+      <img
+        {...common}
+        src={darkVariant(src)}
+        className={`${className} hidden dark:block`}
+      />
+    </>
+  );
+}
+
+/** Big headline numbers on a bright band. */
+export function StatBand({
+  stats,
+}: {
+  stats: ReadonlyArray<{ value: string; label: string; note: string }>;
+}) {
+  return (
+    <dl className="grid gap-px overflow-hidden rounded-2xl bg-(--line) shadow-soft ring-1 ring-(--line) md:grid-cols-3">
+      {stats.map((stat) => (
+        <div
+          key={stat.label}
+          className="bg-linear-to-br from-(--hero-glow) to-(--surface) p-7"
+        >
+          <dt className="sr-only">{stat.label}</dt>
+          <dd>
+            <span className="block font-display text-5xl font-semibold tracking-tight text-(--accent)">
+              {stat.value}
+            </span>
+            <span className="mt-2 block font-semibold text-(--ink)">
+              {stat.label}
+            </span>
+            <span className="mt-2 block text-sm leading-relaxed text-(--muted)">
+              {stat.note}
+            </span>
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * Sticky "On this page" menu that sits under the site header and
+ * highlights the section currently in view.
+ */
+export function OnThisPage({
+  sections,
+}: {
+  sections: ReadonlyArray<{ id: string; label: string }>;
+}) {
+  const [active, setActive] = useState<string>(sections[0]?.id ?? "");
+  const navRef = useRef<HTMLElement>(null);
+
+  // Active = the last section whose top has scrolled up under the menu.
+  // Seven getBoundingClientRect calls per scroll event is cheap, so no
+  // requestAnimationFrame throttle (rAF also pauses in background tabs).
+  useEffect(() => {
+    function update() {
+      const line = (navRef.current?.getBoundingClientRect().bottom ?? 0) + 24;
+      let current = sections[0]?.id ?? "";
+      for (const s of sections) {
+        const el = document.getElementById(s.id);
+        if (el && el.getBoundingClientRect().top <= line) current = s.id;
+      }
+      // The last section is often too short to reach the menu line.
+      const atBottom =
+        window.innerHeight + window.scrollY >=
+        document.documentElement.scrollHeight - 4;
+      if (atBottom && sections.length) current = sections[sections.length - 1].id;
+      setActive(current);
+    }
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [sections]);
+
+  // Keep the active pill visible when the menu scrolls sideways on phones.
+  useEffect(() => {
+    const pill = navRef.current?.querySelector<HTMLElement>(
+      `[data-section="${active}"]`,
+    );
+    pill?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [active]);
+
+  return (
+    <nav
+      ref={navRef}
+      aria-label="On this page"
+      className="sticky top-[var(--site-header-h,4.5rem)] z-10 border-y border-(--line)/70 bg-(--paper)/90 backdrop-blur-md"
+    >
+      <div className="mx-auto flex max-w-6xl items-center gap-2 overflow-x-auto px-6 py-2.5 [scrollbar-width:none]">
+        <span className="mr-1 shrink-0 text-xs font-semibold tracking-wide text-(--muted) uppercase">
+          On this page
+        </span>
+        {sections.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            data-section={s.id}
+            aria-current={active === s.id ? "true" : undefined}
+            className={`shrink-0 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+              active === s.id
+                ? "bg-(--accent) text-white dark:text-(--paper)"
+                : "text-(--ink) hover:bg-(--paper-deep)"
+            }`}
+          >
+            {s.label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+/** Tabbed card for several related code examples. */
+export function CodeTabs({
+  tabs,
+}: {
+  tabs: ReadonlyArray<{ label: string; caption: string; code: string }>;
+}) {
+  const [index, setIndex] = useState(0);
+  const baseId = useId();
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    const last = tabs.length - 1;
+    let next = index;
+    if (e.key === "ArrowRight") next = index === last ? 0 : index + 1;
+    else if (e.key === "ArrowLeft") next = index === 0 ? last : index - 1;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = last;
+    else return;
+    e.preventDefault();
+    setIndex(next);
+    tabRefs.current[next]?.focus();
+  }
+
+  const tab = tabs[index];
+  return (
+    <div className="overflow-hidden rounded-xl border border-(--border) bg-(--paper) shadow-soft">
+      <div
+        role="tablist"
+        aria-label="Origin examples"
+        onKeyDown={onKeyDown}
+        className="flex gap-1 overflow-x-auto border-b border-(--line) bg-(--surface) px-2 pt-2"
+      >
+        {tabs.map((t, i) => (
+          <button
+            key={t.label}
+            ref={(el) => {
+              tabRefs.current[i] = el;
+            }}
+            type="button"
+            role="tab"
+            id={`${baseId}-tab-${i}`}
+            aria-selected={i === index}
+            aria-controls={`${baseId}-panel`}
+            tabIndex={i === index ? 0 : -1}
+            onClick={() => setIndex(i)}
+            className={`shrink-0 rounded-t-lg border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              i === index
+                ? "border-(--accent) bg-(--paper) text-(--ink)"
+                : "border-transparent text-(--muted) hover:text-(--ink)"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div
+        role="tabpanel"
+        id={`${baseId}-panel`}
+        aria-labelledby={`${baseId}-tab-${index}`}
+        className="p-5"
+      >
+        <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+          {tab.caption}
+        </p>
+        <pre className="mt-3 overflow-x-auto text-xs leading-relaxed text-(--ink)">
+          {tab.code}
+        </pre>
+      </div>
     </div>
   );
 }

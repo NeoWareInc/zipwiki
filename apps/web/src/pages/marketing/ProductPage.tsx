@@ -2,6 +2,8 @@ import {
   CLASSIC_ZIP_PROBLEM,
   HOME_OUTCOMES,
   PRODUCT_CAPABILITIES,
+  PRODUCT_HERO_IMAGE,
+  PRODUCT_STATS,
   PRODUCT_WORKFLOW,
   SHOW_INSTALL_IN_NAV,
   TRUST_BULLETS,
@@ -13,6 +15,8 @@ import {
   PrimaryCta,
   SecondaryCta,
   Section,
+  StatBand,
+  ThemedImage,
 } from "./MarketingUi";
 
 export default function ProductPage() {
@@ -32,14 +36,45 @@ export default function ProductPage() {
           }
           lead="Long-term archives must balance minimal storage footprints with long-term accessibility. Designed for AI-driven retrieval, ZipWiki pairs compressed document storage with pre-indexed Markdown—allowing agents to query and inspect historical records instantly."
         />
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {CLASSIC_ZIP_PROBLEM.map((col) => (
-            <div key={col.title} className="space-y-2">
-              <h2 className="font-display text-xl font-semibold text-(--ink)">
-                {col.title}
-              </h2>
-              <p className="text-sm leading-relaxed text-(--muted)">{col.body}</p>
-            </div>
+        <div className="mt-10">
+          <ThemedImage
+            eager
+            src={PRODUCT_HERO_IMAGE.src}
+            alt={PRODUCT_HERO_IMAGE.alt}
+            width={PRODUCT_HERO_IMAGE.width}
+            height={PRODUCT_HERO_IMAGE.height}
+            className="h-auto w-full rounded-3xl shadow-soft ring-1 ring-(--line)"
+          />
+        </div>
+        <div className="mt-12 grid gap-6 md:grid-cols-2">
+          {CLASSIC_ZIP_PROBLEM.map((col, i) => (
+            <figure
+              key={col.title}
+              className="overflow-hidden rounded-2xl border border-(--border) bg-(--surface) shadow-soft"
+            >
+              <ThemedImage
+                src={col.image.src}
+                alt={col.image.alt}
+                width={600}
+                height={340}
+                className="block h-auto w-full"
+              />
+              <figcaption className="space-y-2 p-6">
+                <p
+                  className={`text-xs font-semibold tracking-wide uppercase ${
+                    i === 0 ? "text-(--muted)" : "text-(--accent)"
+                  }`}
+                >
+                  {i === 0 ? "Before" : "With ZipWiki"}
+                </p>
+                <h2 className="font-display text-xl font-semibold text-(--ink)">
+                  {col.title}
+                </h2>
+                <p className="text-sm leading-relaxed text-(--muted)">
+                  {col.body}
+                </p>
+              </figcaption>
+            </figure>
           ))}
         </div>
       </Section>
@@ -66,7 +101,10 @@ export default function ProductPage() {
             server just to understand what you hold.
           </p>
           <div className="mt-10">
-            <FeatureGrid items={PRODUCT_CAPABILITIES} columns={2} />
+            <FeatureGrid items={PRODUCT_CAPABILITIES} columns={3} />
+          </div>
+          <div className="mt-14">
+            <StatBand stats={PRODUCT_STATS} />
           </div>
         </Section>
       </section>

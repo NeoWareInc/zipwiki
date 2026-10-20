@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="hx-title hx-desc" font-family="Sora, 'Segoe UI', system-ui, sans-serif">
+  <title id="hx-title">How ZipWiki extracts originals by subject</title>
+  <desc id="hx-desc">The agent finds documents about homestead exemption through the OKF index, selects only those members of the .zipwiki, copies stored originals out or fetches omitted originals from their origin URL, checks CRC-32 on each, and writes them to an output folder while the rest of the archive stays packed.</desc>
+  <defs>
+    <linearGradient id="hx-sky" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f2229"/><stop offset=".5" stop-color="#101a21"/><stop offset="1" stop-color="#221e17"/></linearGradient>
+    <radialGradient id="hx-sun" cx=".9" cy=".05" r=".5"><stop offset="0" stop-color="#4ecdc4" stop-opacity=".16"/><stop offset="1" stop-color="#4ecdc4" stop-opacity="0"/></radialGradient>
+    <linearGradient id="hx-desk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3226"/><stop offset="1" stop-color="#2b251c"/></linearGradient>
+    <linearGradient id="hx-crate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1aa59e"/><stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <linearGradient id="hx-crate-side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0c5a57"/><stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <linearGradient id="hx-globe" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7fb2ff"/><stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="hx-glow" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#ffe7a8" stop-opacity=".9"/><stop offset="1" stop-color="#ffe7a8" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="hx-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#1f3a44" flood-opacity=".16"/>
+    </filter>
+    <filter id="hx-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#1f3a44" flood-opacity=".14"/>
+    </filter>
+    <marker id="hx-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#c2620c"/>
+    </marker>
+    <marker id="hx-arrow-blue" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#1d4ed8"/>
+    </marker>
+    <g id="hx-pdf">
+      <path d="M6 0 h44 l16 16 v62 a6 6 0 0 1 -6 6 H6 a6 6 0 0 1 -6 -6 V6 a6 6 0 0 1 6 -6 z" fill="#fff"/>
+      <path d="M50 0 v12 a4 4 0 0 0 4 4 h12" fill="#e7e0d1"/>
+      <rect x="7" y="10" width="28" height="13" rx="3" fill="#d64545"/>
+      <text x="21" y="20" font-size="8" font-weight="800" fill="#fff" text-anchor="middle">PDF</text>
+      <rect x="7" y="32" width="50" height="4" rx="2" fill="#c5d2d8"/><rect x="7" y="41" width="42" height="4" rx="2" fill="#c5d2d8"/><rect x="7" y="50" width="48" height="4" rx="2" fill="#c5d2d8"/>
+    </g>
+    <g id="hx-check">
+      <circle r="13" fill="#0f6e6a"/>
+      <path d="M-6 0 l4 4 l8 -8" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </defs>
+
+  <rect width="1200" height="420" rx="28" fill="url(#hx-sky)"/><g fill="#fff" opacity=".55"><circle cx="90" cy="40" r="1.2"/><circle cx="180" cy="96" r="1"/><circle cx="340" cy="30" r="1.4"/><circle cx="470" cy="70" r="1"/><circle cx="560" cy="22" r="1.1"/><circle cx="700" cy="50" r="1.3"/><circle cx="820" cy="28" r="1"/><circle cx="960" cy="60" r="1.2"/><circle cx="1080" cy="34" r="1.4"/><circle cx="1150" cy="90" r="1"/></g>
+  <rect width="1200" height="420" rx="28" fill="url(#hx-sun)"/>
+  <g fill="#9fb4bd" opacity=".10">
+    <ellipse cx="260" cy="52" rx="64" ry="13"/><ellipse cx="300" cy="44" rx="40" ry="15"/>
+    <ellipse cx="720" cy="40" rx="50" ry="11"/>
+  </g>
+  <path d="M0 304 Q600 284 1200 304 V392 a28 28 0 0 1 -28 28 H28 a28 28 0 0 1 -28 -28 z" fill="url(#hx-desk)"/>
+  <path d="M0 304 Q600 284 1200 304" fill="none" stroke="#4a3f2f" stroke-width="2"/>
+
+  <!-- header -->
+  <rect x="40" y="26" width="118" height="28" rx="14" fill="#b45309"/>
+  <text x="99" y="45" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="2.5" fill="#fff">EXTRACT</text>
+  <text x="174" y="45" font-size="14" fill="#c5d2d8">Pull the real files you need. Leave the rest packed.</text>
+
+  <!-- arrows -->
+  <g fill="none" stroke="#c2620c" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" marker-end="url(#hx-arrow)">
+    <path d="M262 214 C 282 186, 300 186, 316 204"/>
+    <path d="M528 170 C 560 136, 590 128, 620 132"/>
+    <path d="M868 150 C 896 160, 912 180, 928 196"/>
+    <path d="M868 262 C 896 256, 912 244, 928 232"/>
+  </g>
+  <path d="M528 236 C 560 262, 590 270, 620 266" fill="none" stroke="#1d4ed8" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" marker-end="url(#hx-arrow-blue)"/>
+
+  <!-- ===== 1 MATCH BY SUBJECT ===== -->
+  <g transform="translate(40 76)">
+    <g filter="url(#hx-soft)">
+      <path d="M14 0 h192 a14 14 0 0 1 14 14 v44 a14 14 0 0 1 -14 14 h-130 l-18 16 v-16 h-44 a14 14 0 0 1 -14 -14 v-44 a14 14 0 0 1 14 -14 z" fill="#fff"/>
+    </g>
+    <text x="16" y="26" font-size="11.5" fill="#15202b" font-weight="600">Extract the homestead laws</text>
+    <text x="16" y="44" font-size="11.5" fill="#15202b" font-weight="600">to <tspan font-family="'JetBrains Mono', ui-monospace, monospace" font-size="10.5" fill="#b45309">./out/homestead/</tspan></text>
+    <!-- matched cards -->
+    <g transform="translate(14 104)" filter="url(#hx-soft)">
+      <rect width="196" height="44" rx="9" fill="#fffaf1" stroke="#e0a54b" stroke-width="2"/>
+      <text x="12" y="19" font-size="10" font-weight="700" fill="#15202b">Ch. 2025-42</text>
+      <text x="12" y="34" font-size="8.5" fill="#b45309">tags: homestead · stored</text>
+      <use href="#hx-check" transform="translate(176 22) scale(.8)"/>
+    </g>
+    <g transform="translate(14 156)" filter="url(#hx-soft)">
+      <rect width="196" height="44" rx="9" fill="#fffaf1" stroke="#e0a54b" stroke-width="2"/>
+      <text x="12" y="19" font-size="10" font-weight="700" fill="#15202b">Ch. 2024-168</text>
+      <text x="12" y="34" font-size="8.5" fill="#1d4ed8">original omitted · origin link</text>
+      <use href="#hx-check" transform="translate(176 22) scale(.8)"/>
+    </g>
+  </g>
+
+  <!-- ===== 2 SELECT MEMBERS ===== -->
+  <g transform="translate(316 70)">
+    <!-- glow above crate -->
+    <path d="M60 150 L80 20 H150 L170 150 z" fill="url(#hx-glow)"/>
+    <!-- lifted docs -->
+    <g transform="translate(70 20) rotate(-8)" filter="url(#hx-soft)"><use href="#hx-pdf"/></g>
+    <g transform="translate(118 30) rotate(7)" filter="url(#hx-soft)">
+      <path d="M6 0 h44 l16 16 v62 a6 6 0 0 1 -6 6 H6 a6 6 0 0 1 -6 -6 V6 a6 6 0 0 1 6 -6 z" fill="#eef3ff" stroke="#1d4ed8" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <circle cx="33" cy="38" r="12" fill="none" stroke="#1d4ed8" stroke-width="2"/>
+      <path d="M27 38 a6 6 0 0 1 12 0 M21 38 h24 M33 26 v24" stroke="#1d4ed8" stroke-width="1.4" fill="none"/>
+      <text x="33" y="68" font-size="7" font-weight="700" fill="#1d4ed8" text-anchor="middle">origin</text>
+    </g>
+    <!-- crate -->
+    <g filter="url(#hx-shadow)">
+      <path d="M10 132 L110 110 L210 132 L110 154 z" fill="#3fbdb5"/>
+      <path d="M10 132 L110 154 V236 L10 214 z" fill="url(#hx-crate-side)"/>
+      <path d="M210 132 L110 154 V236 L210 214 z" fill="url(#hx-crate)"/>
+      <path d="M160 143 V225" stroke="#e8f7f5" stroke-width="5" stroke-dasharray="3 3"/>
+      <rect x="153" y="166" width="14" height="22" rx="4" fill="#ffd27a" stroke="#b45309" stroke-width="1.5"/>
+    </g>
+    <!-- packed members peeking in lid -->
+    <g opacity=".9">
+      <rect x="44" y="124" width="22" height="7" rx="2" fill="#dff0ef"/><rect x="72" y="120" width="22" height="7" rx="2" fill="#dff0ef"/>
+      <rect x="132" y="122" width="22" height="7" rx="2" fill="#dff0ef"/><rect x="160" y="128" width="22" height="7" rx="2" fill="#dff0ef"/>
+    </g>
+    <g transform="translate(20 240)">
+      <rect width="180" height="24" rx="12" fill="#fff" opacity=".9"/>
+      <text x="90" y="16" text-anchor="middle" font-size="10" font-weight="600" fill="#0f6e6a">2 of 86 members · rest stays packed</text>
+    </g>
+  </g>
+
+  <!-- ===== 3a STORED ORIGINAL ===== -->
+  <g transform="translate(624 84)">
+    <g filter="url(#hx-shadow)"><rect width="240" height="92" rx="14" fill="#fff"/></g>
+    <g transform="translate(14 10) scale(.85)"><use href="#hx-pdf"/></g>
+    <text x="84" y="28" font-size="11" font-weight="700" fill="#15202b">Stored original</text>
+    <text x="84" y="45" font-size="9.5" fill="#5a6b78">copied out of the zip</text>
+    <rect x="84" y="56" width="104" height="22" rx="11" fill="#dff0ef"/>
+    <text x="136" y="71" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f6e6a">CRC-32 ✓</text>
+    <use href="#hx-check" transform="translate(214 67)"/>
+  </g>
+
+  <!-- ===== 3b OMITTED → FETCH ORIGIN ===== -->
+  <g transform="translate(624 206)">
+    <g filter="url(#hx-shadow)"><rect width="240" height="92" rx="14" fill="#fff"/></g>
+    <!-- globe -->
+    <g transform="translate(40 46)">
+      <circle r="28" fill="url(#hx-globe)"/>
+      <path d="M-16 -14 q10 -6 18 2 q6 6 -2 12 q-8 4 -4 12 q-10 -2 -14 -10 z" fill="#5cc28a"/>
+      <path d="M8 6 q10 -4 14 4 q-2 10 -12 10 q-4 -8 -2 -14 z" fill="#5cc28a"/>
+      <ellipse rx="28" ry="10" fill="none" stroke="#fff" stroke-opacity=".5"/>
+      <path d="M-6 -24 a26 26 0 0 1 22 8" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>
+    </g>
+    <text x="84" y="28" font-size="11" font-weight="700" fill="#15202b">Omitted original</text>
+    <text x="84" y="45" font-size="9.5" fill="#1d4ed8" font-family="'JetBrains Mono', ui-monospace, monospace">fetched via 0x014F</text>
+    <rect x="84" y="56" width="104" height="22" rx="11" fill="#dff0ef"/>
+    <text x="136" y="71" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f6e6a">CRC-32 ✓</text>
+    <use href="#hx-check" transform="translate(214 67)"/>
+  </g>
+
+  <!-- ===== 4 ON DISK ===== -->
+  <g transform="translate(932 96)">
+    <g filter="url(#hx-shadow)">
+      <path d="M0 50 h70 l14 -16 h132 a10 10 0 0 1 10 10 v140 a10 10 0 0 1 -10 10 H10 a10 10 0 0 1 -10 -10 z" fill="#e4a64a"/>
+    </g>
+    <g transform="translate(38 0) rotate(-8)" filter="url(#hx-soft)"><use href="#hx-pdf"/></g>
+    <g transform="translate(112 6) rotate(6)" filter="url(#hx-soft)"><use href="#hx-pdf"/></g>
+    <path d="M0 84 h226 v110 a10 10 0 0 1 -10 10 H10 a10 10 0 0 1 -10 -10 z" fill="#f6bf5f"/>
+    <text x="18" y="118" font-size="12" font-weight="700" fill="#7a3e06" font-family="'JetBrains Mono', ui-monospace, monospace">./out/homestead/</text>
+    <text x="18" y="140" font-size="10" fill="#7a3e06">Ch_2025-042.pdf</text>
+    <text x="18" y="156" font-size="10" fill="#7a3e06">Ch_2024-168.pdf</text>
+    <g transform="translate(192 170)">
+      <circle r="22" fill="#fff"/><use href="#hx-check" transform="scale(1.3)"/>
+    </g>
+  </g>
+
+  <!-- step markers -->
+  <g font-size="14" font-weight="700">
+    <g transform="translate(150 380)"><circle r="17" fill="#fff"/><circle r="14" fill="#b45309"/><text y="5" text-anchor="middle" fill="#fff">1</text></g>
+    <g transform="translate(426 380)"><circle r="17" fill="#fff"/><circle r="14" fill="#b45309"/><text y="5" text-anchor="middle" fill="#fff">2</text></g>
+    <g transform="translate(744 380)"><circle r="17" fill="#fff"/><circle r="14" fill="#b45309"/><text y="5" text-anchor="middle" fill="#fff">3</text></g>
+    <g transform="translate(1045 380)"><circle r="17" fill="#fff"/><circle r="14" fill="#b45309"/><text y="5" text-anchor="middle" fill="#fff">4</text></g>
+  </g>
+</svg>
