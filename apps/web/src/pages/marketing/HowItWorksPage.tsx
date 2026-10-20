@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import {
   CREATE_PACKAGE,
   HOW_COMING_SOON,
+  HOW_EXTRACT_FLOW,
   HOW_IT_WORKS_HERO,
+  HOW_PACK_FLOW,
+  HOW_QUERY_FLOW,
   OKF_FIELDS,
   OKF_INDEXING,
   OKF_SPEC_LINK_LABEL,
@@ -15,7 +18,13 @@ import {
   SAMPLE_CATALOG,
   SAMPLE_OKF,
 } from "../../lib/marketing-copy";
-import { FeatureGrid, PageHero, PromptCard, Section } from "./MarketingUi";
+import {
+  FeatureGrid,
+  IllustratedFlow,
+  PageHero,
+  PromptCard,
+  Section,
+} from "./MarketingUi";
 
 /** Full-bleed band so consecutive sections alternate clearly. */
 function Band({
@@ -63,6 +72,9 @@ export default function HowItWorksPage() {
               </p>
             </div>
           ))}
+        </div>
+        <div className="mt-16">
+          <IllustratedFlow flow={HOW_PACK_FLOW} headingLevel={3} />
         </div>
       </Band>
 
@@ -185,6 +197,28 @@ export default function HowItWorksPage() {
           />
         </div>
       </Band>
+
+      <div className="border-t border-(--line) bg-linear-to-br from-(--hero-glow) via-(--paper) to-(--hero-warm)">
+        <Section id="query-extract">
+          <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+            Query &amp; Extract
+          </p>
+          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-(--ink)">
+            The two moves agents make on a package
+          </h2>
+          <p className="mt-3 max-w-3xl leading-relaxed text-(--muted)">
+            Query answers from the index and extracted markdown. Extract
+            writes real originals to disk. Both open the .zipwiki
+            selectively—neither unpacks the whole archive.
+          </p>
+          <div className="mt-14">
+            <IllustratedFlow flow={HOW_QUERY_FLOW} headingLevel={3} />
+          </div>
+          <div className="mt-20">
+            <IllustratedFlow flow={HOW_EXTRACT_FLOW} headingLevel={3} />
+          </div>
+        </Section>
+      </div>
 
       <Band tone="tint">
         <h2 className="font-display text-3xl font-semibold text-(--ink)">

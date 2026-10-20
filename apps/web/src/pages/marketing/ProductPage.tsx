@@ -2,11 +2,13 @@ import {
   CLASSIC_ZIP_PROBLEM,
   HOME_OUTCOMES,
   PRODUCT_CAPABILITIES,
+  PRODUCT_WORKFLOW,
   SHOW_INSTALL_IN_NAV,
   TRUST_BULLETS,
 } from "../../lib/marketing-copy";
 import {
   FeatureGrid,
+  IllustratedFlow,
   PageHero,
   PrimaryCta,
   SecondaryCta,
@@ -41,6 +43,17 @@ export default function ProductPage() {
           ))}
         </div>
       </Section>
+
+      <section className="border-t border-(--line) bg-linear-to-br from-(--hero-glow) via-(--paper) to-(--hero-warm)">
+        <Section>
+          <IllustratedFlow flow={PRODUCT_WORKFLOW} />
+          <div className="mt-10">
+            <SecondaryCta to="/how-it-works">
+              See each step in detail
+            </SecondaryCta>
+          </div>
+        </Section>
+      </section>
 
       <section className="border-t border-(--line) bg-(--surface)/50">
         <Section>

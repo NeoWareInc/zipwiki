@@ -509,3 +509,159 @@ export const DOWNLOAD_PREREQS: readonly DownloadPrereq[] = [
     ],
   },
 ];
+
+/* ------------------------------------------------------------------ */
+/* Illustrated workflows (Product + How it works)                      */
+/* Images live in apps/web/public/illustrations/.                      */
+/* ------------------------------------------------------------------ */
+
+export type FlowTone = "query" | "extract" | "pack";
+
+export type FlowStep = {
+  title: string;
+  body: string;
+  /** Badge color for the step number; defaults to the flow's tone. */
+  tone?: FlowTone;
+};
+
+export type IllustratedFlowCopy = {
+  kicker: string;
+  title: string;
+  lead: string;
+  image: { src: string; alt: string; width: number; height: number };
+  tone: FlowTone;
+  steps: ReadonlyArray<FlowStep>;
+};
+
+/** Product page — the two everyday moves in one picture. */
+export const PRODUCT_WORKFLOW: IllustratedFlowCopy = {
+  kicker: "Query → Extract",
+  title: "From question to file, without unpacking the archive",
+  lead: "Agents make two moves on a .zipwiki. Query answers from the embedded index and extracted markdown. Extract pulls a real original to disk—only when you actually need the file.",
+  image: {
+    src: "/illustrations/query-extract-workflow.svg",
+    alt: "Four steps: an agent asks a question, ZipWiki searches OKF cards inside the .zipwiki, reads only the matching markdown, then extracts the original PDF to a folder with a CRC-32 check.",
+    width: 1200,
+    height: 420,
+  },
+  tone: "query",
+  steps: [
+    {
+      title: "Ask",
+      body: "Your agent asks in plain words—“What does Chapter 2025-1 cover?”—through MCP or the CLI.",
+    },
+    {
+      title: "Search the index",
+      body: "OKF cards inside the package are ranked first. No unzip, no hosted vector store.",
+    },
+    {
+      title: "Read the slice",
+      body: "Only the matching section of extracted markdown is streamed, so the answer arrives with a citation.",
+    },
+    {
+      title: "Extract the original",
+      body: "Need the actual PDF? Pull just that member to disk, verified against its CRC-32.",
+      tone: "extract",
+    },
+  ],
+};
+
+/** How it works — what pack time produces. */
+export const HOW_PACK_FLOW: IllustratedFlowCopy = {
+  kicker: "Pack",
+  title: "What happens when you pack a folder",
+  lead: "Packing is the one slow step, and you pay it once. Every later search and read is fast because the hard work—turning binaries into text and writing an index—already lives inside the file.",
+  image: {
+    src: "/illustrations/how-pack.svg",
+    alt: "A pile of PDF, Word, Excel, PowerPoint and scanned files goes into a parse machine with LiteParse, LibreOffice, OCR and LlamaParse; out come markdown files and OKF cards with an index and digest; origin links are attached; everything is sealed into one .zipwiki containing a manifest, wiki/okf, wiki/parsed and optional originals.",
+    width: 1200,
+    height: 420,
+  },
+  tone: "pack",
+  steps: [
+    {
+      title: "Gather the folder",
+      body: "Point zipwiki pack at any folder: native and scanned PDFs, Word, PowerPoint, spreadsheets, images. Mixed is normal.",
+    },
+    {
+      title: "Parse to markdown",
+      body: "LiteParse runs locally for text PDFs. LibreOffice converts Office files first, OCR handles scans and photos, and LlamaParse takes the complex layouts when you have credits.",
+    },
+    {
+      title: "Write the index",
+      body: "An LLM writes one OKF card per document—title, type, tags, key facts—plus wiki/okf/index.md and a short package digest.",
+    },
+    {
+      title: "Attach origins",
+      body: "A TSV, JSON map, filename pattern or sidecar gives each document its canonical URL. The list itself is never packed.",
+    },
+    {
+      title: "Seal one file",
+      body: "Manifest, OKF cards, extracted markdown and (optionally) originals go into a standard zstd ZIP. Omit originals and text knowledge often shrinks to about 1/100th of the source size.",
+    },
+  ],
+};
+
+/** How it works — Query in detail. */
+export const HOW_QUERY_FLOW: IllustratedFlowCopy = {
+  kicker: "Query",
+  title: "Query, step by step",
+  lead: "A query never dumps the archive into chat. ZipWiki reads the smallest thing that can answer the question, and every answer points back to where it came from.",
+  image: {
+    src: "/illustrations/how-query.svg",
+    alt: "An agent asks which laws cover the homestead exemption; ZipWiki shows ranked OKF hits with matching tags and scores, streams one highlighted section of a markdown file, and returns an answer citing the OKF card, the markdown section and the origin URL.",
+    width: 1200,
+    height: 420,
+  },
+  tone: "query",
+  steps: [
+    {
+      title: "Ask in plain words",
+      body: "Talk to your agent, or run zipwiki search from the CLI. The package stays on disk and nothing is unzipped.",
+    },
+    {
+      title: "Rank the OKF index",
+      body: "Title, type, tags and description are matched first. Extracted markdown is scanned too, at a lower weight, so a strong card beats a passing mention.",
+    },
+    {
+      title: "Stream only the slice",
+      body: "The agent reads the OKF card, then opens the matching markdown section only if it needs a quote—a couple of kilobytes, not the whole chapter.",
+    },
+    {
+      title: "Answer with citations",
+      body: "Every answer names the OKF card, the markdown file and section, and the document’s origin link, so you can check it yourself.",
+    },
+  ],
+};
+
+/** How it works — Extract in detail. */
+export const HOW_EXTRACT_FLOW: IllustratedFlowCopy = {
+  kicker: "Extract",
+  title: "Extract, step by step",
+  lead: "When you need real files—to print, hand to another tool, or file with a court—extract by subject instead of unpacking everything.",
+  image: {
+    src: "/illustrations/how-extract.svg",
+    alt: "An agent is asked to extract homestead laws; two OKF matches are selected; two members lift out of the .zipwiki while the rest stays packed; a stored original is copied out and an omitted original is fetched from its origin URL, both pass a CRC-32 check, and land in ./out/homestead/.",
+    width: 1200,
+    height: 420,
+  },
+  tone: "extract",
+  steps: [
+    {
+      title: "Match by subject",
+      body: "Ask for a topic, not a filename. The OKF index finds the documents that are actually about it.",
+    },
+    {
+      title: "Select just those members",
+      body: "Only the matching entries are touched. The other documents in the archive stay compressed and untouched.",
+    },
+    {
+      title: "Copy or fetch, then verify",
+      body: "Stored originals are copied straight out. Omitted ones are fetched from the origin URL kept in Extra Field 0x014F. Both are checked against CRC-32.",
+    },
+    {
+      title: "Land on disk",
+      body: "Verified files are written to the folder you name—./out/homestead/—ready for any other tool.",
+    },
+  ],
+};

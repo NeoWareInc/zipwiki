@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-labelledby="qe-title qe-desc" font-family="Sora, 'Segoe UI', system-ui, sans-serif">
+  <title id="qe-title">ZipWiki Query and Extract workflow</title>
+  <desc id="qe-desc">An agent asks a question, ZipWiki searches the OKF index inside the .zipwiki package, reads only the matching extracted markdown, and extracts the original file to disk only when it is needed.</desc>
+  <defs>
+    <linearGradient id="qe-sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e6f6f4"/>
+      <stop offset=".55" stop-color="#f7fbfa"/>
+      <stop offset="1" stop-color="#fbf1df"/>
+    </linearGradient>
+    <radialGradient id="qe-sun" cx=".82" cy=".12" r=".45">
+      <stop offset="0" stop-color="#ffe7a8" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#ffe7a8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="qe-desk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3e7cf"/>
+      <stop offset="1" stop-color="#e7d4ae"/>
+    </linearGradient>
+    <linearGradient id="qe-crate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1aa59e"/>
+      <stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <linearGradient id="qe-crate-side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0c5a57"/>
+      <stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <linearGradient id="qe-screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22343f"/>
+      <stop offset="1" stop-color="#15202b"/>
+    </linearGradient>
+    <linearGradient id="qe-pdf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f1ede4"/>
+    </linearGradient>
+    <filter id="qe-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#1f3a44" flood-opacity=".18"/>
+    </filter>
+    <filter id="qe-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#1f3a44" flood-opacity=".15"/>
+    </filter>
+    <marker id="qe-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#14948e"/>
+    </marker>
+    <marker id="qe-arrow-amber" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#c2620c"/>
+    </marker>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="1200" height="420" rx="28" fill="url(#qe-sky)"/>
+  <rect width="1200" height="420" rx="28" fill="url(#qe-sun)"/>
+  <g opacity=".5" fill="#ffffff">
+    <ellipse cx="190" cy="70" rx="70" ry="16"/><ellipse cx="240" cy="60" rx="46" ry="18"/>
+    <ellipse cx="760" cy="52" rx="60" ry="13"/><ellipse cx="800" cy="44" rx="38" ry="15"/>
+  </g>
+  <!-- desk surface -->
+  <path d="M0 312 Q600 290 1200 312 V392 a28 28 0 0 1 -28 28 H28 a28 28 0 0 1 -28 -28 z" fill="url(#qe-desk)"/>
+  <path d="M0 312 Q600 290 1200 312" fill="none" stroke="#dcc497" stroke-width="2"/>
+
+  <!-- phase brackets -->
+  <g font-size="13" font-weight="700" letter-spacing="2.5">
+    <path d="M60 36 H800" stroke="#14948e" stroke-width="3" stroke-linecap="round"/>
+    <rect x="370" y="22" width="92" height="28" rx="14" fill="#0f6e6a"/>
+    <text x="416" y="41" text-anchor="middle" fill="#fff">QUERY</text>
+    <path d="M870 36 H1140" stroke="#d97706" stroke-width="3" stroke-linecap="round"/>
+    <rect x="958" y="22" width="102" height="28" rx="14" fill="#b45309"/>
+    <text x="1009" y="41" text-anchor="middle" fill="#fff">EXTRACT</text>
+  </g>
+
+  <!-- connecting path -->
+  <path d="M245 255 C 285 200, 315 200, 345 235" fill="none" stroke="#14948e" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" marker-end="url(#qe-arrow)"/>
+  <path d="M545 255 C 585 200, 615 200, 645 235" fill="none" stroke="#14948e" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" marker-end="url(#qe-arrow)"/>
+  <path d="M835 255 C 875 200, 905 200, 935 235" fill="none" stroke="#c2620c" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" marker-end="url(#qe-arrow-amber)"/>
+
+  <!-- ===== 1. ASK : laptop + chat bubble ===== -->
+  <g transform="translate(60 120)">
+    <g filter="url(#qe-shadow)">
+      <rect x="10" y="80" width="170" height="112" rx="10" fill="#cfd8dc"/>
+      <rect x="18" y="88" width="154" height="96" rx="5" fill="url(#qe-screen)"/>
+      <path d="M-8 192 H198 l-14 22 H6 z" fill="#b8c4c9"/>
+      <rect x="72" y="196" width="46" height="5" rx="2.5" fill="#9aa8ae"/>
+    </g>
+    <!-- terminal lines -->
+    <g font-family="'JetBrains Mono', ui-monospace, monospace" font-size="9">
+      <text x="28" y="108" fill="#4ecdc4">$ zipwiki ask</text>
+      <rect x="28" y="118" width="96" height="5" rx="2.5" fill="#5a6b78"/>
+      <rect x="28" y="130" width="120" height="5" rx="2.5" fill="#5a6b78"/>
+      <rect x="28" y="142" width="70" height="5" rx="2.5" fill="#14948e"/>
+      <rect x="28" y="158" width="8" height="12" fill="#4ecdc4" opacity=".85"/>
+    </g>
+    <!-- speech bubble -->
+    <g filter="url(#qe-soft)">
+      <path d="M0 0 h176 a14 14 0 0 1 14 14 v38 a14 14 0 0 1 -14 14 h-110 l-18 16 v-16 h-48 a14 14 0 0 1 -14 -14 v-38 a14 14 0 0 1 14 -14 z" fill="#fff"/>
+    </g>
+    <text x="16" y="27" font-size="12.5" fill="#15202b" font-weight="600">What does Chapter</text>
+    <text x="16" y="46" font-size="12.5" fill="#15202b" font-weight="600">2025-1 cover?</text>
+    <circle cx="170" cy="22" r="11" fill="#dff0ef"/><path d="M170 14 Q171.5 20.5 178 22 Q171.5 23.5 170 30 Q168.5 23.5 162 22 Q168.5 20.5 170 14 z" fill="#14948e"/>
+  </g>
+
+  <!-- ===== 2. SEARCH : .zipwiki crate with OKF cards + magnifier ===== -->
+  <g transform="translate(345 120)">
+    <!-- fanned OKF cards -->
+    <g filter="url(#qe-soft)">
+      <g transform="rotate(-16 70 120)"><rect x="30" y="20" width="84" height="108" rx="7" fill="#fff7ea" stroke="#e7c48a"/><rect x="40" y="32" width="40" height="7" rx="3.5" fill="#b45309"/><rect x="40" y="48" width="62" height="4" rx="2" fill="#d9c8a9"/><rect x="40" y="58" width="50" height="4" rx="2" fill="#d9c8a9"/></g>
+      <g transform="rotate(14 130 120)"><rect x="92" y="20" width="84" height="108" rx="7" fill="#fff7ea" stroke="#e7c48a"/><rect x="102" y="32" width="46" height="7" rx="3.5" fill="#b45309"/><rect x="102" y="48" width="62" height="4" rx="2" fill="#d9c8a9"/><rect x="102" y="58" width="44" height="4" rx="2" fill="#d9c8a9"/></g>
+      <g><rect x="58" y="4" width="88" height="114" rx="7" fill="#fffdf8" stroke="#e0a54b" stroke-width="2"/>
+        <text x="68" y="24" font-size="9" font-weight="700" fill="#b45309" letter-spacing="1">OKF CARD</text>
+        <text x="68" y="42" font-size="10" font-weight="700" fill="#15202b">Ch. 2025-1</text>
+        <rect x="68" y="50" width="34" height="11" rx="5.5" fill="#fde9c8"/><text x="85" y="58.5" font-size="7" text-anchor="middle" fill="#b45309">Session_Law</text>
+        <rect x="68" y="70" width="66" height="4" rx="2" fill="#d9c8a9"/><rect x="68" y="80" width="56" height="4" rx="2" fill="#d9c8a9"/><rect x="68" y="90" width="62" height="4" rx="2" fill="#d9c8a9"/></g>
+    </g>
+    <!-- crate -->
+    <g filter="url(#qe-shadow)">
+      <path d="M10 112 L100 92 L190 112 L100 132 z" fill="#3fbdb5"/>
+      <path d="M10 112 L100 132 V214 L10 194 z" fill="url(#qe-crate-side)"/>
+      <path d="M190 112 L100 132 V214 L190 194 z" fill="url(#qe-crate)"/>
+      <!-- zipper -->
+      <path d="M145 122 V204" stroke="#e8f7f5" stroke-width="5" stroke-dasharray="3 3"/>
+      <rect x="138" y="150" width="14" height="22" rx="4" fill="#ffd27a" stroke="#b45309" stroke-width="1.5"/>
+      <text x="55" y="174" font-size="11" font-weight="700" fill="#dff0ef" transform="skewY(12) translate(0 -14)">.zipwiki</text>
+    </g>
+    <!-- magnifier -->
+    <g transform="translate(150 40)" filter="url(#qe-soft)">
+      <circle cx="22" cy="22" r="22" fill="#e6fbf9" fill-opacity=".55" stroke="#1f3a44" stroke-width="6"/>
+      <path d="M38 38 L60 60" stroke="#1f3a44" stroke-width="9" stroke-linecap="round"/>
+      <path d="M10 14 a14 14 0 0 1 12 -6" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- ===== 3. READ : markdown sheet with highlights ===== -->
+  <g transform="translate(650 112)">
+    <g filter="url(#qe-shadow)">
+      <rect x="22" y="14" width="150" height="196" rx="10" fill="#e9f4f3" transform="rotate(5 97 112)"/>
+      <rect x="20" y="8" width="150" height="200" rx="10" fill="#fff"/>
+    </g>
+    <rect x="20" y="8" width="150" height="30" rx="10" fill="#0f6e6a"/>
+    <rect x="20" y="28" width="150" height="10" fill="#0f6e6a"/>
+    <text x="34" y="28" font-size="11" font-weight="700" fill="#fff" font-family="'JetBrains Mono', ui-monospace, monospace">Ch_2025-001.md</text>
+    <g font-family="'JetBrains Mono', ui-monospace, monospace" font-size="12" font-weight="700" fill="#0f6e6a">
+      <text x="34" y="62">#</text><text x="34" y="122">##</text>
+    </g>
+    <rect x="50" y="53" width="96" height="8" rx="4" fill="#15202b"/>
+    <rect x="34" y="74" width="120" height="5" rx="2.5" fill="#c5d2d8"/>
+    <rect x="30" y="85" width="134" height="16" rx="4" fill="#4ecdc4" opacity=".35"/>
+    <rect x="34" y="90" width="112" height="5" rx="2.5" fill="#0f6e6a"/>
+    <rect x="58" y="113" width="74" height="7" rx="3.5" fill="#15202b"/>
+    <rect x="34" y="134" width="118" height="5" rx="2.5" fill="#c5d2d8"/>
+    <rect x="34" y="145" width="100" height="5" rx="2.5" fill="#c5d2d8"/>
+    <rect x="34" y="158" width="38" height="20" rx="3" fill="none" stroke="#9fb4bd"/><rect x="72" y="158" width="38" height="20" fill="none" stroke="#9fb4bd"/><rect x="110" y="158" width="38" height="20" rx="3" fill="none" stroke="#9fb4bd"/>
+    <rect x="34" y="188" width="88" height="5" rx="2.5" fill="#c5d2d8"/>
+    <!-- answer chip -->
+    <g transform="translate(96 176)" filter="url(#qe-soft)">
+      <rect width="104" height="40" rx="20" fill="#14948e"/>
+      <path d="M18 20 l7 7 l13 -14" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="46" y="18" font-size="10" font-weight="700" fill="#fff">Answer</text>
+      <text x="46" y="31" font-size="9" fill="#dff0ef">+ citation</text>
+    </g>
+  </g>
+
+  <!-- ===== 4. EXTRACT : original PDF into folder ===== -->
+  <g transform="translate(930 110)">
+    <!-- folder back -->
+    <g filter="url(#qe-shadow)">
+      <path d="M0 96 h66 l14 -16 h120 a10 10 0 0 1 10 10 v126 a10 10 0 0 1 -10 10 H10 a10 10 0 0 1 -10 -10 z" fill="#e4a64a"/>
+    </g>
+    <!-- PDF lifting out -->
+    <g transform="rotate(-7 105 60)" filter="url(#qe-soft)">
+      <path d="M50 0 h88 l26 26 v128 a8 8 0 0 1 -8 8 H50 a8 8 0 0 1 -8 -8 V8 a8 8 0 0 1 8 -8 z" fill="url(#qe-pdf)"/>
+      <path d="M138 0 v20 a6 6 0 0 0 6 6 h20" fill="#e7e0d1"/>
+      <rect x="56" y="18" width="40" height="18" rx="4" fill="#d64545"/>
+      <text x="76" y="31" font-size="10" font-weight="800" fill="#fff" text-anchor="middle">PDF</text>
+      <rect x="56" y="48" width="92" height="5" rx="2.5" fill="#c5d2d8"/><rect x="56" y="60" width="80" height="5" rx="2.5" fill="#c5d2d8"/><rect x="56" y="72" width="88" height="5" rx="2.5" fill="#c5d2d8"/>
+      <path d="M60 128 q12 -14 24 0 t24 0" stroke="#1d4ed8" stroke-width="2" fill="none"/>
+    </g>
+    <!-- folder front -->
+    <path d="M0 122 h210 v94 a10 10 0 0 1 -10 10 H10 a10 10 0 0 1 -10 -10 z" fill="#f6bf5f"/>
+    <text x="18" y="160" font-size="12" font-weight="700" fill="#7a3e06" font-family="'JetBrains Mono', ui-monospace, monospace">./out/homestead/</text>
+    <!-- verified badge -->
+    <g transform="translate(150 168)" filter="url(#qe-soft)">
+      <circle r="26" cx="26" cy="26" fill="#fff"/>
+      <circle r="21" cx="26" cy="26" fill="#0f6e6a"/>
+      <path d="M16 26 l7 7 l13 -14" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="18" y="190" font-size="10" fill="#7a3e06">CRC-32 verified</text>
+  </g>
+
+  <!-- step markers -->
+  <g transform="translate(155 378)"><circle r="17" fill="#fff"/><circle r="14" fill="#0f6e6a"/><text y="5" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">1</text></g><g transform="translate(445 378)"><circle r="17" fill="#fff"/><circle r="14" fill="#0f6e6a"/><text y="5" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">2</text></g><g transform="translate(745 378)"><circle r="17" fill="#fff"/><circle r="14" fill="#0f6e6a"/><text y="5" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">3</text></g><g transform="translate(1035 378)"><circle r="17" fill="#fff"/><circle r="14" fill="#b45309"/><text y="5" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">4</text></g>
+</svg>

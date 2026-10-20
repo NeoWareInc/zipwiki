@@ -1,6 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import type { AgentPrompt } from "../../lib/marketing-copy";
+import type {
+  AgentPrompt,
+  FlowTone,
+  IllustratedFlowCopy,
+} from "../../lib/marketing-copy";
 
 export function PageHero({
   kicker,
@@ -164,5 +168,96 @@ export function Section({
     >
       {children}
     </section>
+  );
+}
+
+const FLOW_BADGE: Record<FlowTone, string> = {
+  query: "bg-[#0f6e6a] text-white dark:bg-[#2bb5ae] dark:text-[#0f161c]",
+  extract: "bg-[#b45309] text-white dark:bg-[#f59e0b] dark:text-[#1a1206]",
+  pack: "bg-[#1f3a44] text-white dark:bg-[#c5d2d8] dark:text-[#15202b]",
+};
+
+const FLOW_KICKER: Record<FlowTone, string> = {
+  query: "text-(--accent)",
+  extract: "text-(--usage-okf)",
+  pack: "text-(--usage-query)",
+};
+
+const FLOW_COLS: Record<number, string> = {
+  3: "md:grid-cols-3",
+  4: "md:grid-cols-2 lg:grid-cols-4",
+  5: "md:grid-cols-3 lg:grid-cols-5",
+};
+
+/**
+ * Illustrated workflow: a wide scene image with numbered markers, then the
+ * matching numbered steps as real text (readable on phones, indexable).
+ * On narrow screens the image scrolls sideways instead of shrinking to
+ * an unreadable strip.
+ */
+export function IllustratedFlow({
+  flow,
+  headingLevel = 2,
+  showHeader = true,
+}: {
+  flow: IllustratedFlowCopy;
+  headingLevel?: 2 | 3;
+  showHeader?: boolean;
+}) {
+  const Heading = headingLevel === 2 ? "h2" : "h3";
+  const StepHeading = headingLevel === 2 ? "h3" : "h4";
+  const headingSize = headingLevel === 2 ? "text-3xl" : "text-2xl";
+  return (
+    <div>
+      {showHeader && (
+        <div className="max-w-3xl">
+          <p
+            className={`text-xs font-semibold tracking-wide uppercase ${FLOW_KICKER[flow.tone]}`}
+          >
+            {flow.kicker}
+          </p>
+          <Heading
+            className={`mt-2 font-display font-semibold tracking-tight text-(--ink) ${headingSize}`}
+          >
+            {flow.title}
+          </Heading>
+          <p className="mt-3 leading-relaxed text-(--muted)">{flow.lead}</p>
+        </div>
+      )}
+      <figure className="-mx-6 mt-8 overflow-x-auto px-6 pb-2 md:mx-0 md:overflow-visible md:px-0">
+        <img
+          src={flow.image.src}
+          alt={flow.image.alt}
+          width={flow.image.width}
+          height={flow.image.height}
+          loading="lazy"
+          decoding="async"
+          className="block h-auto w-full min-w-[720px] rounded-2xl shadow-soft ring-1 ring-(--line) md:min-w-0"
+        />
+      </figure>
+      <ol
+        className={`mt-8 grid gap-6 ${FLOW_COLS[flow.steps.length] ?? "md:grid-cols-2"}`}
+      >
+        {flow.steps.map((step, i) => (
+          <li key={step.title} className="flex gap-3">
+            <span
+              aria-hidden="true"
+              className={`mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-bold ${FLOW_BADGE[step.tone ?? flow.tone]}`}
+            >
+              {i + 1}
+            </span>
+            <div className="space-y-1">
+              <StepHeading className="font-display text-lg font-semibold text-(--ink)">
+                <span className="sr-only">Step {i + 1}: </span>
+                {step.title}
+              </StepHeading>
+              <p className="text-sm leading-relaxed text-(--muted)">
+                {step.body}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
