@@ -204,9 +204,56 @@ export default function InstallPage() {
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             What you need
           </h2>
-          <ul className="mt-4 max-w-3xl list-disc space-y-2 pl-5 text-(--muted)">
-            {DOWNLOAD_PREREQS.map((item) => (
-              <li key={item}>{item}</li>
+          <ul className="mt-4 max-w-3xl space-y-4">
+            {DOWNLOAD_PREREQS.map((prereq) => (
+              <li key={prereq.title}>
+                <p className="text-(--muted)">
+                  <span className="font-medium text-(--ink)">{prereq.title}</span>
+                  {" — "}
+                  {prereq.blurb}
+                </p>
+                <details className="mt-2 group">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-(--accent) underline-offset-4 hover:underline [&::-webkit-details-marker]:hidden">
+                    <span className="inline-flex items-center gap-1.5">
+                      How to install
+                      <span
+                        aria-hidden="true"
+                        className="transition-transform group-open:rotate-90"
+                      >
+                        ›
+                      </span>
+                    </span>
+                  </summary>
+                  <div className="mt-3 space-y-4 border-l border-(--border) pl-4">
+                    {prereq.docsHref && prereq.docsLabel ? (
+                      <p className="text-sm text-(--muted)">
+                        Download an installer from{" "}
+                        <a
+                          href={prereq.docsHref}
+                          className="underline-offset-4 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {prereq.docsLabel}
+                        </a>
+                        , or use a package manager:
+                      </p>
+                    ) : null}
+                    {prereq.installs.map((install) => (
+                      <div key={install.label}>
+                        <p className="text-sm font-medium text-(--ink)">
+                          {install.label}
+                        </p>
+                        <ScriptBlock
+                          value={install.command}
+                          label={`Copy ${install.label} command`}
+                          className="mt-2"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              </li>
             ))}
           </ul>
         </Section>

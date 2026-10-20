@@ -461,7 +461,51 @@ export const ADVANCED_CLI = `zipwiki pack ./florida-laws -o knowledge/florida-la
 zipwiki open knowledge/florida-laws.zipwiki
 zipwiki search knowledge/florida-laws.zipwiki "homestead exemption"`;
 
-export const DOWNLOAD_PREREQS = [
-  "Node.js 22.13 or newer (TypeScript CLI and MCP runtime).",
-  "LibreOffice on the same machine if you pack Word, Excel, or PowerPoint. PDF and text do not need it.",
-] as const;
+export type DownloadPrereq = {
+  title: string;
+  /** Always-visible one-liner under What you need. */
+  blurb: string;
+  /** Optional absolute URL for the official installer or docs. */
+  docsHref?: string;
+  docsLabel?: string;
+  installs: readonly { label: string; command: string }[];
+};
+
+export const DOWNLOAD_PREREQS: readonly DownloadPrereq[] = [
+  {
+    title: "Node.js 22.13 or newer",
+    blurb: "TypeScript CLI and MCP runtime.",
+    docsHref: "https://nodejs.org/",
+    docsLabel: "nodejs.org",
+    installs: [
+      { label: "macOS (Homebrew)", command: "brew install node@22" },
+      {
+        label: "Linux (NodeSource, Debian/Ubuntu)",
+        command:
+          "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -\nsudo apt-get install -y nodejs",
+      },
+      {
+        label: "Windows (winget)",
+        command: "winget install OpenJS.NodeJS.LTS",
+      },
+    ],
+  },
+  {
+    title: "LibreOffice",
+    blurb:
+      "On the same machine if you pack Word, Excel, or PowerPoint. PDF and text do not need it.",
+    docsHref: "https://www.libreoffice.org/download/",
+    docsLabel: "libreoffice.org",
+    installs: [
+      { label: "macOS (Homebrew)", command: "brew install --cask libreoffice" },
+      {
+        label: "Linux (Debian/Ubuntu)",
+        command: "sudo apt-get install -y libreoffice",
+      },
+      {
+        label: "Windows (Chocolatey)",
+        command: "choco install libreoffice-fresh -y",
+      },
+    ],
+  },
+];
