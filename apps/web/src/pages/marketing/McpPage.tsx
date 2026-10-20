@@ -37,7 +37,7 @@ export default function McpPage() {
         )}
       </Section>
 
-      <section id="mcp" className="border-t border-(--line) bg-white/50">
+      <section id="mcp" className="border-t border-(--line) bg-(--surface)/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             MCP — tools for coding agents
@@ -88,7 +88,7 @@ export default function McpPage() {
         </div>
       </Section>
 
-      <section id="cli" className="border-t border-(--line) bg-white/50">
+      <section id="cli" className="border-t border-(--line) bg-(--surface)/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             CLI — pack and query from a terminal

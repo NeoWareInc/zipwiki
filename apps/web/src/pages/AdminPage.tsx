@@ -165,7 +165,7 @@ export default function AdminPage() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-(--border) bg-white shadow-soft p-4">
+    <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-4">
       <p className="text-xs text-(--muted)">{label}</p>
       <p className="mt-1 text-2xl font-semibold">{value}</p>
     </div>
@@ -209,7 +209,7 @@ function AccountTable({
   return (
     <div className="space-y-2">
       <h2 className="font-display text-lg font-semibold">{title}</h2>
-      <div className="overflow-hidden rounded-xl border border-(--border) bg-white shadow-soft">
+      <div className="overflow-hidden rounded-xl border border-(--border) bg-(--surface) shadow-soft">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-(--border) bg-(--paper)">
             <tr>
@@ -256,7 +256,7 @@ function AccountTable({
                           onCreditDraftChange(a.id, e.target.value)
                         }
                         aria-label={`Credit amount for ${a.email}`}
-                        className="w-20 rounded-md border border-(--border) bg-white px-2 py-1 text-xs text-(--ink)"
+                        className="w-20 rounded-md border border-(--border) bg-(--surface) px-2 py-1 text-xs text-(--ink)"
                       />
                       <button
                         type="button"

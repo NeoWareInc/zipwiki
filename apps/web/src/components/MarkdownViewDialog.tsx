@@ -93,7 +93,7 @@ export function MarkdownViewDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="flex max-h-[min(85vh,900px)] w-full max-w-3xl flex-col rounded-xl border border-(--border) bg-white shadow-soft"
+        className="flex max-h-[min(85vh,900px)] w-full max-w-3xl flex-col rounded-xl border border-(--border) bg-(--surface) shadow-soft"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-3 border-b border-(--border) px-4 py-3">

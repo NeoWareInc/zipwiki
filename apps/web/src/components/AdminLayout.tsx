@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
+import { ThemeToggler } from "./ThemeToggler";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive
@@ -8,7 +9,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export function AdminLayout() {
   return (
     <div className="min-h-screen bg-(--paper)">
-      <header className="border-b border-(--border) bg-white">
+      <header className="border-b border-(--border) bg-(--surface)">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-4">
           <span className="font-display text-lg font-semibold">ZipWiki Admin</span>
           <nav className="flex items-center gap-4 text-sm">
@@ -22,12 +23,15 @@ export function AdminLayout() {
               Billing
             </NavLink>
           </nav>
-          <Link
-            to="/dashboard"
-            className="ml-auto text-sm font-medium text-(--muted) hover:text-(--accent)"
-          >
-            Back to portal
-          </Link>
+          <div className="ml-auto flex items-center gap-3">
+            <ThemeToggler />
+            <Link
+              to="/dashboard"
+              className="text-sm font-medium text-(--muted) hover:text-(--accent)"
+            >
+              Back to portal
+            </Link>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-7xl px-6 py-8">

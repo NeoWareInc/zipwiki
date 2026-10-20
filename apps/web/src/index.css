@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --paper: #f4f7f8;
   --paper-deep: #e4ecee;
+  --surface: #ffffff;
   --ink: #15202b;
   --muted: #5a6b78;
   --line: #c5d2d8;
@@ -17,6 +20,8 @@
   --sand: #d9c8a9;
   --flow-fill: #ffffff;
   --flow-stroke: #1f3a44;
+  --hero-glow: #dff0ef;
+  --hero-warm: #efe6d4;
   /* Usage / credit kinds (Dashboard + admin) */
   --usage-parse: #4ecdc4;
   --usage-parse-ink: #0f6e6a;
@@ -25,10 +30,37 @@
 
   color: var(--ink);
   background: var(--paper);
+  color-scheme: light;
   font-family: "Sora", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+.dark {
+  --paper: #0f161c;
+  --paper-deep: #1a2330;
+  --surface: #15202b;
+  --ink: #e8eef2;
+  --muted: #9aabb8;
+  --line: #2a3a44;
+  --border: #2a3a44;
+  --accent: #2bb5ae;
+  --accent-bright: #3dcdc5;
+  --link-origin: #60a5fa;
+  --link-origin-hover: #93c5fd;
+  --link-package: #2bb5ae;
+  --link-package-hover: #3dcdc5;
+  --sand: #6b5f45;
+  --flow-fill: #1a2330;
+  --flow-stroke: #c5d2d8;
+  --hero-glow: #143836;
+  --hero-warm: #2a2418;
+  --usage-parse: #4ecdc4;
+  --usage-parse-ink: #9aeee8;
+  --usage-okf: #f59e0b;
+  --usage-query: #c5d2d8;
+  color-scheme: dark;
 }
 
 * {
@@ -67,8 +99,16 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -10%, #dff0ef 0%, transparent 58%),
-    radial-gradient(ellipse 50% 40% at 100% 30%, #efe6d4 0%, transparent 45%),
+    radial-gradient(
+      ellipse 90% 55% at 50% -10%,
+      var(--hero-glow) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 100% 30%,
+      var(--hero-warm) 0%,
+      transparent 45%
+    ),
     linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
 }
 

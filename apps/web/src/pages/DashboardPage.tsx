@@ -237,7 +237,7 @@ export default function DashboardPage() {
       )}
 
       {usage && (
-        <div className="space-y-6 rounded-xl border border-(--border) bg-white shadow-soft p-6">
+        <div className="space-y-6 rounded-xl border border-(--border) bg-(--surface) shadow-soft p-6">
           <CreditBar
             parseCredits={parseCredits}
             okfCredits={okfCredits}

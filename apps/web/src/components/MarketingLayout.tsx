@@ -9,6 +9,7 @@ import {
   SITE_TAGLINE,
 } from "../lib/marketing-copy";
 import { Logo } from "./Logo";
+import { ThemeToggler } from "./ThemeToggler";
 
 export function MarketingLayout() {
   const location = useLocation();
@@ -68,6 +69,7 @@ export function MarketingLayout() {
           </nav>
 
           <div className="hidden items-center gap-3 text-sm lg:flex">
+            <ThemeToggler />
             <Link
               to="/login"
               className="font-medium text-(--muted) transition-colors hover:text-(--accent)"
@@ -82,32 +84,41 @@ export function MarketingLayout() {
             </Link>
           </div>
 
-          <button
-            type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-(--border) text-(--ink) lg:hidden"
-            aria-expanded={open}
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((v) => !v)}
-          >
-            <span className="sr-only">Menu</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-              {open ? (
-                <path
-                  d="M6 6l12 12M18 6L6 18"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              ) : (
-                <path
-                  d="M4 7h16M4 12h16M4 17h16"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              )}
-            </svg>
-          </button>
+          <div className="flex items-center gap-1 lg:hidden">
+            <ThemeToggler />
+            <button
+              type="button"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-(--border) text-(--ink)"
+              aria-expanded={open}
+              aria-label={open ? "Close menu" : "Open menu"}
+              onClick={() => setOpen((v) => !v)}
+            >
+              <span className="sr-only">Menu</span>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                {open ? (
+                  <path
+                    d="M6 6l12 12M18 6L6 18"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                ) : (
+                  <path
+                    d="M4 7h16M4 12h16M4 17h16"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
 
         {open && (
@@ -148,7 +159,7 @@ export function MarketingLayout() {
 
       <Outlet />
 
-      <footer className="border-t border-(--line) bg-white/40">
+      <footer className="border-t border-(--line) bg-(--surface)/40">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 text-sm text-(--muted) sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="font-medium text-(--ink)">

@@ -1,7 +1,19 @@
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+
 const ASSETS = {
-  lockup: { src: "/zipwiki-logo.svg", width: 442, height: 148 },
-  wordmark: { src: "/zipwiki-logo-wordmark.svg", width: 442, height: 118 },
-  mark: { src: "/zipwiki-mark.svg", width: 180, height: 180 },
+  lockup: {
+    light: { src: "/zipwiki-logo.svg", width: 442, height: 148 },
+    dark: { src: "/zipwiki-logo-dark.svg", width: 442, height: 148 },
+  },
+  wordmark: {
+    light: { src: "/zipwiki-logo-wordmark.svg", width: 442, height: 118 },
+    dark: { src: "/zipwiki-logo-dark.svg", width: 442, height: 148 },
+  },
+  mark: {
+    light: { src: "/zipwiki-mark.svg", width: 180, height: 180 },
+    dark: { src: "/zipwiki-mark.svg", width: 180, height: 180 },
+  },
 } as const;
 
 type LogoVariant = keyof typeof ASSETS;
@@ -15,7 +27,17 @@ export function Logo({
   className?: string;
   alt?: string;
 }) {
-  const asset = ASSETS[variant];
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const mode =
+    mounted && resolvedTheme === "dark" ? ("dark" as const) : ("light" as const);
+  const asset = ASSETS[variant][mode];
+
   return (
     <img
       src={asset.src}

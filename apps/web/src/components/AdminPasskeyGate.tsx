@@ -81,7 +81,7 @@ export function AdminPasskeyGate() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-(--paper) px-6">
-      <div className="w-full max-w-md space-y-4 rounded-xl border border-(--border) bg-white p-6 shadow-soft">
+      <div className="w-full max-w-md space-y-4 rounded-xl border border-(--border) bg-(--surface) p-6 shadow-soft">
         <h1 className="font-display text-2xl font-semibold">Admin passkey</h1>
         <p className="text-sm text-(--muted)">
           {registering

@@ -84,7 +84,7 @@ export default function BillingPage() {
         </p>
       )}
 
-      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 space-y-3">
+      <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-6 space-y-3">
         <h2 className="font-display text-xl font-semibold">Credit balance</h2>
         {unlimited ? (
           <p className="text-sm">
@@ -131,7 +131,7 @@ export default function BillingPage() {
         )}
       </div>
 
-      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 space-y-4">
+      <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-6 space-y-4">
         <h2 className="font-display text-xl font-semibold">Automatic restock</h2>
         <p className="text-sm text-(--muted)">
           When your balance falls under the threshold, ZipWiki charges the card
@@ -158,7 +158,7 @@ export default function BillingPage() {
               min={0}
               value={reloadThreshold}
               onChange={(e) => setReloadThreshold(e.target.value)}
-              className="w-36 rounded-md border border-(--border) bg-white px-3 py-2"
+              className="w-36 rounded-md border border-(--border) bg-(--surface) px-3 py-2"
             />
           </label>
           <label className="block space-y-1 text-sm">
@@ -170,7 +170,7 @@ export default function BillingPage() {
               step="0.01"
               value={reloadUsd}
               onChange={(e) => setReloadUsd(e.target.value)}
-              className="w-36 rounded-md border border-(--border) bg-white px-3 py-2"
+              className="w-36 rounded-md border border-(--border) bg-(--surface) px-3 py-2"
             />
           </label>
         </div>
@@ -200,7 +200,7 @@ export default function BillingPage() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 space-y-4">
+      <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-6 space-y-4">
         <h2 className="font-display text-xl font-semibold">Buy credits</h2>
         <p className="text-sm text-(--muted)">
           ${MIN_USD.toFixed(2)}–${MAX_USD.toLocaleString()} · 100 credits per
@@ -238,7 +238,7 @@ export default function BillingPage() {
               setUsd(clamped);
               setCustom(String(clamped));
             }}
-            className="w-full max-w-xs rounded-md border border-(--border) bg-white px-3 py-2"
+            className="w-full max-w-xs rounded-md border border-(--border) bg-(--surface) px-3 py-2"
           />
         </label>
 

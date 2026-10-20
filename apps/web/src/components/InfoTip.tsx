@@ -43,7 +43,7 @@ export function InfoTip({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-(--border) bg-white text-[10px] font-semibold leading-none text-(--muted) hover:border-(--ink) hover:text-(--ink)"
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-(--border) bg-(--surface) text-[10px] font-semibold leading-none text-(--muted) hover:border-(--ink) hover:text-(--ink)"
       >
         i
       </button>
@@ -51,7 +51,7 @@ export function InfoTip({
         <span
           id={tipId}
           role="tooltip"
-          className="absolute top-full left-0 z-30 mt-1.5 w-64 rounded-lg border border-(--border) bg-white p-3 text-left text-xs leading-relaxed font-normal text-(--ink) shadow-soft sm:w-72"
+          className="absolute top-full left-0 z-30 mt-1.5 w-64 rounded-lg border border-(--border) bg-(--surface) p-3 text-left text-xs leading-relaxed font-normal text-(--ink) shadow-soft sm:w-72"
         >
           {children}
         </span>

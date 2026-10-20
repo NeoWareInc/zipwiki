@@ -27,7 +27,7 @@ function Band({
 }) {
   const shell =
     tone === "tint"
-      ? "border-t border-(--line) bg-white"
+      ? "border-t border-(--line) bg-(--surface)"
       : "border-t border-(--line) bg-transparent";
   return (
     <div className={shell}>
@@ -227,7 +227,7 @@ export default function HowItWorksPage() {
           . Scans without extracted markdown still appear so you can see what
           needs a better extraction or a hosted pass.
         </p>
-        <div className="mt-8 overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+        <div className="mt-8 overflow-x-auto rounded-xl border border-(--border) bg-(--surface) shadow-soft">
           <table className="w-full min-w-[40rem] text-left text-sm">
             <thead className="border-b border-(--line) text-(--muted)">
               <tr>

@@ -89,7 +89,7 @@ export default function KeysPage() {
             page.
           </p>
           <div className="mt-2 flex items-start gap-2">
-            <code className="block flex-1 break-all rounded-md bg-white/70 p-3 text-xs">
+            <code className="block flex-1 break-all rounded-md bg-(--surface)/70 p-3 text-xs">
               {newKey}
             </code>
             <CopyButton value={newKey} label="Copy API key" />
@@ -102,7 +102,7 @@ export default function KeysPage() {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-(--border) bg-white shadow-soft">
+      <div className="overflow-hidden rounded-xl border border-(--border) bg-(--surface) shadow-soft">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-(--border) bg-(--paper)">
             <tr>
@@ -200,7 +200,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       onClick={() => void copy()}
       title={copied ? "Copied" : label}
       aria-label={copied ? "Copied" : label}
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-(--border) bg-white text-(--ink) hover:bg-(--paper)"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-(--border) bg-(--surface) text-(--ink) hover:bg-(--paper)"
     >
       {copied ? <CheckIcon /> : <ClipboardIcon />}
     </button>

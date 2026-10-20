@@ -10,6 +10,7 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { MeResponse } from "../lib/api";
 import { AccountMenu } from "./AccountMenu";
+import { ThemeToggler } from "./ThemeToggler";
 
 function LowCreditsBanner() {
   const location = useLocation();
@@ -180,6 +181,9 @@ function SidebarBody({
         />
       </div>
       <div className="border-t border-(--border) p-3">
+        <div className="mb-2 flex justify-end px-1">
+          <ThemeToggler />
+        </div>
         <AccountMenu me={me} onNavigate={onNavigate} />
       </div>
     </>
@@ -224,7 +228,7 @@ export function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen bg-(--paper)">
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-(--border) bg-white shadow-[1px_0_0_rgba(21,32,43,0.02)] md:flex">
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-(--border) bg-(--surface) shadow-[1px_0_0_rgba(21,32,43,0.02)] md:flex">
         <SidebarBody
           isAdmin={Boolean(isAdmin)}
           me={me}
@@ -233,7 +237,7 @@ export function DashboardLayout() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-(--border) bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-(--border) bg-(--surface)/90 px-4 py-3 backdrop-blur md:hidden">
           <button
             type="button"
             className="rounded-lg border border-(--border) px-2.5 py-1.5 text-sm"
@@ -256,6 +260,9 @@ export function DashboardLayout() {
             />
             ZipWiki
           </Link>
+          <div className="ml-auto">
+            <ThemeToggler />
+          </div>
         </header>
 
         {mobileOpen && (
@@ -268,7 +275,7 @@ export function DashboardLayout() {
             />
             <aside
               id="mobile-sidebar"
-              className="absolute inset-y-0 left-0 flex w-60 max-w-[85vw] flex-col bg-white shadow-xl"
+              className="absolute inset-y-0 left-0 flex w-60 max-w-[85vw] flex-col bg-(--surface) shadow-xl"
             >
               <SidebarBody
                 isAdmin={Boolean(isAdmin)}

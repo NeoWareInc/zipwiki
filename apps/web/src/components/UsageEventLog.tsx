@@ -102,7 +102,7 @@ function CreateDetailsModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[85vh] w-full max-w-5xl overflow-hidden rounded-xl border border-(--border) bg-white shadow-soft"
+        className="max-h-[85vh] w-full max-w-5xl overflow-hidden rounded-xl border border-(--border) bg-(--surface) shadow-soft"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-(--border) px-4 py-3">
@@ -151,7 +151,7 @@ function CreateDetailsModal({
         </div>
         <div className="max-h-[60vh] overflow-auto">
           <table className="w-full min-w-4xl text-left text-xs">
-            <thead className="sticky top-0 bg-white">
+            <thead className="sticky top-0 bg-(--surface)">
               <tr className="border-b border-(--border) text-(--muted)">
                 <th className="px-3 py-2 font-medium">When</th>
                 <th className="px-3 py-2 font-medium">Step</th>
@@ -279,7 +279,7 @@ export function UsageEventLog({
         <label className="flex flex-col gap-1">
           <span className="text-xs text-(--muted)">Status</span>
           <select
-            className="rounded-md border border-(--border) bg-white px-2 py-1.5"
+            className="rounded-md border border-(--border) bg-(--surface) px-2 py-1.5"
             value={status}
             onChange={(e) =>
               setStatus(e.target.value as "all" | "success" | "fail")
@@ -293,7 +293,7 @@ export function UsageEventLog({
         <label className="flex flex-col gap-1">
           <span className="text-xs text-(--muted)">Type</span>
           <select
-            className="rounded-md border border-(--border) bg-white px-2 py-1.5"
+            className="rounded-md border border-(--border) bg-(--surface) px-2 py-1.5"
             value={type}
             onChange={(e) => setType(e.target.value as LogTypeFilter)}
           >
@@ -305,7 +305,7 @@ export function UsageEventLog({
         <label className="flex flex-col gap-1">
           <span className="text-xs text-(--muted)">Engine / anomaly</span>
           <select
-            className="min-w-48 rounded-md border border-(--border) bg-white px-2 py-1.5"
+            className="min-w-48 rounded-md border border-(--border) bg-(--surface) px-2 py-1.5"
             value={engine}
             onChange={(e) => setEngine(e.target.value)}
           >
@@ -321,7 +321,7 @@ export function UsageEventLog({
           <label className="flex flex-col gap-1">
             <span className="text-xs text-(--muted)">Account</span>
             <select
-              className="min-w-56 rounded-md border border-(--border) bg-white px-2 py-1.5"
+              className="min-w-56 rounded-md border border-(--border) bg-(--surface) px-2 py-1.5"
               value={accountId}
               onChange={(e) =>
                 setAccountId((e.target.value || "") as Id<"accounts"> | "")
@@ -337,7 +337,7 @@ export function UsageEventLog({
           </label>
         ) : null}
       </div>
-      <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+      <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--surface) shadow-soft">
         <table className="w-full min-w-4xl text-left text-sm">
           <thead>
             <tr className="border-b border-(--border) text-(--muted)">

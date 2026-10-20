@@ -78,7 +78,7 @@ function CopyIconButton({ value, label }: { value: string; label: string }) {
       onClick={() => void copy()}
       title={copied ? "Copied" : label}
       aria-label={copied ? "Copied" : label}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-(--muted) hover:bg-white hover:text-(--ink)"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-(--muted) hover:bg-(--surface) hover:text-(--ink)"
     >
       {copied ? <CheckIcon /> : <ClipboardIcon />}
     </button>
@@ -199,7 +199,7 @@ export default function InstallPage() {
         </div>
       </Section>
 
-      <section className="border-t border-(--line) bg-white/50">
+      <section className="border-t border-(--line) bg-(--surface)/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             What you need
@@ -279,7 +279,7 @@ export default function InstallPage() {
             return (
               <article
                 key={build.id}
-                className="rounded-xl border border-(--border) bg-white p-5 shadow-soft"
+                className="rounded-xl border border-(--border) bg-(--surface) p-5 shadow-soft"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="font-display text-xl font-semibold text-(--ink)">
@@ -325,7 +325,7 @@ export default function InstallPage() {
         </p>
       </Section>
 
-      <section className="border-t border-(--line) bg-white/50">
+      <section className="border-t border-(--line) bg-(--surface)/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             After install

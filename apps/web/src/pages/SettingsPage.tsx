@@ -594,7 +594,7 @@ function Select({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full rounded-md border border-(--border) bg-white px-3 py-2"
+        className="mt-1 w-full rounded-md border border-(--border) bg-(--surface) px-3 py-2"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -666,7 +666,7 @@ export default function SettingsPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-(--muted)">{SETTINGS_PAGE.lead}</p>
       </div>
-      <div className="rounded-xl border border-(--border) bg-white shadow-soft p-6 md:p-8">
+      <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-6 md:p-8">
         <AccountSettingsForm />
       </div>
       <p className="text-sm text-(--muted)">

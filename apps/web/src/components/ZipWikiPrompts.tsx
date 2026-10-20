@@ -22,7 +22,7 @@ export function PromptSection({
 
 function PromptCard({ prompt }: { prompt: ZipWikiPrompt }) {
   return (
-    <article className="space-y-3 rounded-xl border border-(--border) bg-white p-5 shadow-soft">
+    <article className="space-y-3 rounded-xl border border-(--border) bg-(--surface) p-5 shadow-soft">
       <div className="min-w-0 space-y-1">
         <h3 className="font-display text-base font-semibold">{prompt.title}</h3>
         <p className="text-sm text-(--muted)">{prompt.description}</p>
@@ -68,7 +68,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
     <button
       type="button"
       onClick={() => void copy()}
-      className="shrink-0 rounded-md border border-(--border) bg-white px-3 py-1.5 text-xs font-semibold text-(--ink) hover:bg-(--paper)"
+      className="shrink-0 rounded-md border border-(--border) bg-(--surface) px-3 py-1.5 text-xs font-semibold text-(--ink) hover:bg-(--paper)"
     >
       {copied ? "Copied" : label}
     </button>

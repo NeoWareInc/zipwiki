@@ -60,7 +60,7 @@ export function AccountMenu({ me, onNavigate }: Props) {
         <div
           id={menuId}
           role="menu"
-          className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-2xl border border-(--border) bg-white shadow-lg"
+          className="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-2xl border border-(--border) bg-(--surface) shadow-lg"
         >
           <MenuItem
             icon={<GearIcon />}

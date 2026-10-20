@@ -121,7 +121,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-(--border) bg-white/80 p-6 shadow-soft">
+          <div className="rounded-xl border border-(--border) bg-(--surface)/80 p-6 shadow-soft">
             <div className="flex items-center gap-2">
               <EnvelopeIcon />
               <h2 className="font-display text-2xl font-semibold text-(--ink)">

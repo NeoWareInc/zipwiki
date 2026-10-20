@@ -18,7 +18,7 @@ export function AdminCreditsLock() {
   }
 
   return (
-    <div className="rounded-xl border border-(--border) bg-white p-4 shadow-soft">
+    <div className="rounded-xl border border-(--border) bg-(--surface) p-4 shadow-soft">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-medium">Lock all ZipWiki credits</p>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Link } from "react-router-dom";
+import { ThemeToggler } from "./ThemeToggler";
 
 const ERROR_MESSAGES: Record<string, string> = {
   oauth_state: "Sign-in expired. Try Google again.",
@@ -43,7 +44,7 @@ export function GoogleSignInButton({
           redirectTo: `${window.location.origin}/signed-in`,
         });
       }}
-      className="flex w-full items-center justify-center gap-2 rounded-md border border-(--border) bg-white px-4 py-2.5 text-sm font-medium text-(--ink) transition-colors hover:bg-(--paper)"
+      className="flex w-full items-center justify-center gap-2 rounded-md border border-(--border) bg-(--surface) px-4 py-2.5 text-sm font-medium text-(--ink) transition-colors hover:bg-(--paper)"
     >
       <GoogleGlyph />
       {label}
@@ -87,7 +88,10 @@ export function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-12">
+    <div className="relative flex min-h-screen items-center justify-center bg-(--surface) px-4 py-12">
+      <div className="absolute top-4 right-4">
+        <ThemeToggler />
+      </div>
       <div className="w-full max-w-[22rem] space-y-6">
         <div className="flex flex-col items-center space-y-3 text-center">
           <Link to="/" aria-label="ZipWiki home">
@@ -167,7 +171,7 @@ export function AuthField({
 }
 
 export function authInputClassName() {
-  return "w-full rounded-md border border-(--ink)/25 bg-white px-3 py-2.5 text-sm text-(--ink) outline-none placeholder:text-(--muted)/70 focus:border-(--ink)/55";
+  return "w-full rounded-md border border-(--ink)/25 bg-(--surface) px-3 py-2.5 text-sm text-(--ink) outline-none placeholder:text-(--muted)/70 focus:border-(--ink)/55";
 }
 
 export function authPrimaryButtonClassName() {

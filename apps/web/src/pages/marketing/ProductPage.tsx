@@ -42,7 +42,7 @@ export default function ProductPage() {
         </div>
       </Section>
 
-      <section className="border-t border-(--line) bg-white/50">
+      <section className="border-t border-(--line) bg-(--surface)/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             Differentiating capabilities
@@ -89,7 +89,7 @@ export default function ProductPage() {
         </div>
       </Section>
 
-      <section className="border-t border-(--line) bg-white/50">
+      <section className="border-t border-(--line) bg-(--surface)/50">
         <Section>
           <h2 className="font-display text-3xl font-semibold text-(--ink)">
             Trust the archive, not a hosted index

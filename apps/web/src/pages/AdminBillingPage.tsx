@@ -34,7 +34,7 @@ export default function AdminBillingPage() {
         </p>
       </div>
 
-      <section className="rounded-xl border border-(--border) bg-white p-5 shadow-soft space-y-4">
+      <section className="rounded-xl border border-(--border) bg-(--surface) p-5 shadow-soft space-y-4">
         <div>
           <h2 className="font-display text-lg font-semibold">Vendor credits</h2>
           <p className="mt-1 text-sm text-(--muted)">
@@ -66,7 +66,7 @@ export default function AdminBillingPage() {
       <section className="space-y-3">
         <h2 className="font-display text-xl font-semibold">Customer credits</h2>
         <AdminCreditsLock />
-        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white">
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--surface)">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-(--border) text-(--muted)">
               <tr>

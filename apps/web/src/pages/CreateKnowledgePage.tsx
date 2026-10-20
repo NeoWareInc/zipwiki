@@ -102,7 +102,7 @@ export default function CreateKnowledgePage() {
                   placeholder={
                     i === 0 ? "./knowledge" : "./knowledge/other"
                   }
-                  className="min-w-0 flex-1 rounded-md border border-(--border) bg-white px-3 py-2 font-mono text-sm"
+                  className="min-w-0 flex-1 rounded-md border border-(--border) bg-(--surface) px-3 py-2 font-mono text-sm"
                 />
                 {state.sourcePaths.length > 1 ? (
                   <button
@@ -146,7 +146,7 @@ export default function CreateKnowledgePage() {
               value={state.output}
               onChange={(e) => patch({ output: e.target.value })}
               placeholder="./knowledge/my-docs.zipwiki"
-              className="w-full rounded-md border border-(--border) bg-white px-3 py-2 font-mono text-sm"
+              className="w-full rounded-md border border-(--border) bg-(--surface) px-3 py-2 font-mono text-sm"
             />
           </label>
         </div>
@@ -271,7 +271,7 @@ export default function CreateKnowledgePage() {
                     patch({ originUrlTemplate: e.target.value })
                   }
                   placeholder="https://host/{year}/{chapter}"
-                  className="w-full rounded-md border border-(--border) bg-white px-3 py-2 font-mono text-sm"
+                  className="w-full rounded-md border border-(--border) bg-(--surface) px-3 py-2 font-mono text-sm"
                 />
               </label>
               <label className="block space-y-1 text-sm">
@@ -292,7 +292,7 @@ export default function CreateKnowledgePage() {
                   value={state.originPattern}
                   onChange={(e) => patch({ originPattern: e.target.value })}
                   placeholder={"Ch_(?<year>\\d{4})-(?<chapter>\\d+)"}
-                  className="w-full rounded-md border border-(--border) bg-white px-3 py-2 font-mono text-sm"
+                  className="w-full rounded-md border border-(--border) bg-(--surface) px-3 py-2 font-mono text-sm"
                 />
               </label>
               <Checkbox
@@ -331,7 +331,7 @@ export default function CreateKnowledgePage() {
                 onChange={(e) =>
                   patch({ compression: e.target.value as CompressionAlg })
                 }
-                className="w-full rounded-md border border-(--border) bg-white px-3 py-2"
+                className="w-full rounded-md border border-(--border) bg-(--surface) px-3 py-2"
               >
                 <option value="zstd">zstd</option>
                 <option value="deflate">deflate</option>
@@ -360,7 +360,7 @@ export default function CreateKnowledgePage() {
                     ),
                   })
                 }
-                className="w-full rounded-md border border-(--border) bg-white px-3 py-2"
+                className="w-full rounded-md border border-(--border) bg-(--surface) px-3 py-2"
               />
             </label>
             <label className="block space-y-1 text-sm">
@@ -381,7 +381,7 @@ export default function CreateKnowledgePage() {
                 onChange={(e) =>
                   patch({ okfProfile: e.target.value as OkfProfile })
                 }
-                className="w-full rounded-md border border-(--border) bg-white px-3 py-2"
+                className="w-full rounded-md border border-(--border) bg-(--surface) px-3 py-2"
               >
                 {OKF_PROFILES.map((p) => (
                   <option key={p} value={p}>
@@ -443,7 +443,7 @@ export default function CreateKnowledgePage() {
                   onChange={(e) =>
                     patch({ cliPrefix: e.target.value as CliPrefix })
                   }
-                  className="rounded-md border border-(--border) bg-white px-2 py-1 text-xs text-(--ink)"
+                  className="rounded-md border border-(--border) bg-(--surface) px-2 py-1 text-xs text-(--ink)"
                 >
                   {CLI_PREFIXES.map((p) => (
                     <option key={p} value={p}>

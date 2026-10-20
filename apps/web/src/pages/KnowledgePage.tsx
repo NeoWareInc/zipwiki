@@ -895,7 +895,7 @@ export default function KnowledgePage() {
             className={`rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
               dragging
                 ? "border-(--accent) bg-(--paper-deep)"
-                : "border-(--border) bg-white"
+                : "border-(--border) bg-(--surface)"
             }`}
           >
             <div
@@ -940,7 +940,7 @@ export default function KnowledgePage() {
                     <button
                       type="button"
                       disabled={loading}
-                      className="flex h-full w-full flex-col items-center gap-2 rounded-lg border border-(--border) bg-white px-4 py-5 text-center hover:border-(--accent) disabled:opacity-60"
+                      className="flex h-full w-full flex-col items-center gap-2 rounded-lg border border-(--border) bg-(--surface) px-4 py-5 text-center hover:border-(--accent) disabled:opacity-60"
                       onClick={() => void openExample(example.name)}
                     >
                       <span className="font-display text-lg font-semibold text-(--ink)">
@@ -999,7 +999,7 @@ export default function KnowledgePage() {
             </div>
           </div>
 
-          <dl className="grid gap-3 rounded-xl border border-(--border) bg-white p-5 text-sm sm:grid-cols-2">
+          <dl className="grid gap-3 rounded-xl border border-(--border) bg-(--surface) p-5 text-sm sm:grid-cols-2">
             {summary.notice || openedExample?.notice ? (
               <OverviewRow
                 className="sm:col-span-2"
@@ -1091,7 +1091,7 @@ export default function KnowledgePage() {
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
                 placeholder="Ask about the concepts in this package"
-                className="min-w-0 flex-1 rounded-md border border-(--border) bg-white px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-md border border-(--border) bg-(--surface) px-3 py-2 text-sm"
               />
               <button
                 type="submit"
@@ -1117,7 +1117,7 @@ export default function KnowledgePage() {
                   asking !== null ||
                   (!question && !answer && !packageQuery && !askError)
                 }
-                className="rounded-md border border-(--border) bg-white px-4 py-2 text-sm font-semibold text-(--ink) disabled:opacity-60"
+                className="rounded-md border border-(--border) bg-(--surface) px-4 py-2 text-sm font-semibold text-(--ink) disabled:opacity-60"
               >
                 Clear
               </button>
@@ -1159,7 +1159,7 @@ export default function KnowledgePage() {
               </p>
             )}
             {answer && (
-              <div className="mt-4 rounded-xl border border-(--border) bg-white p-4">
+              <div className="mt-4 rounded-xl border border-(--border) bg-(--surface) p-4">
                 <AnswerText
                   text={answer.text}
                   paths={(summary?.entries ?? [])
@@ -1708,7 +1708,7 @@ function ContentsSection({
           </button>
         ) : null}
       </div>
-      <div className="mt-3 rounded-xl border border-(--border) bg-white p-4">
+      <div className="mt-3 rounded-xl border border-(--border) bg-(--surface) p-4">
         {children}
       </div>
     </section>

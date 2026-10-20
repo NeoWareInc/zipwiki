@@ -53,7 +53,7 @@ export default function AdminAccountPage() {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-(--border) bg-white shadow-soft p-4 space-y-3">
+        <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-4 space-y-3">
           <p>
             Credits:{" "}
             <strong className="tabular-nums">
@@ -77,7 +77,7 @@ export default function AdminAccountPage() {
                 step={1}
                 value={creditAmount}
                 onChange={(e) => setCreditAmount(e.target.value)}
-                className="min-w-0 flex-1 rounded-md border border-(--border) bg-white px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-md border border-(--border) bg-(--surface) px-3 py-2 text-sm"
               />
               <button
                 type="button"
@@ -140,7 +140,7 @@ export default function AdminAccountPage() {
             Billing is prepaid credits. Unlimited is admin/sales assigned.
           </p>
         </div>
-        <div className="rounded-xl border border-(--border) bg-white shadow-soft p-4 space-y-2">
+        <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-4 space-y-2">
           <p>
             Role: <strong>{a.role}</strong> · Status:{" "}
             <strong>
@@ -218,7 +218,7 @@ export default function AdminAccountPage() {
 
       <section className="space-y-2">
         <h2 className="font-display text-lg font-semibold">Credit ledger</h2>
-        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--surface) shadow-soft">
           <table className="w-full min-w-xl text-left text-sm">
             <thead>
               <tr className="border-b border-(--border) text-(--muted)">
@@ -267,7 +267,7 @@ export default function AdminAccountPage() {
 
       <section className="space-y-2">
         <h2 className="font-display text-lg font-semibold">Admin actions</h2>
-        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--surface) shadow-soft">
           <table className="w-full min-w-xl text-left text-sm">
             <thead>
               <tr className="border-b border-(--border) text-(--muted)">
@@ -310,7 +310,7 @@ export default function AdminAccountPage() {
 
       <section className="space-y-2">
         <h2 className="font-display text-lg font-semibold">API keys</h2>
-        <ul className="rounded-xl border border-(--border) bg-white shadow-soft divide-y divide-(--border)">
+        <ul className="rounded-xl border border-(--border) bg-(--surface) shadow-soft divide-y divide-(--border)">
           {data.keys.map((k: {
             id: string;
             name: string;
@@ -330,7 +330,7 @@ export default function AdminAccountPage() {
 
       <section className="space-y-2">
         <h2 className="font-display text-lg font-semibold">Usage periods</h2>
-        <ul className="rounded-xl border border-(--border) bg-white shadow-soft divide-y divide-(--border)">
+        <ul className="rounded-xl border border-(--border) bg-(--surface) shadow-soft divide-y divide-(--border)">
           {data.periods.map((p) => (
             <li key={p.periodStart} className="px-4 py-3 text-sm space-y-1">
               <p className="font-medium">
@@ -363,7 +363,7 @@ export default function AdminAccountPage() {
 
       <section className="space-y-2">
         <h2 className="font-display text-lg font-semibold">Recent events</h2>
-        <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+        <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--surface) shadow-soft">
           <table className="w-full min-w-xl text-left text-sm">
             <thead>
               <tr className="border-b border-(--border) text-(--muted)">

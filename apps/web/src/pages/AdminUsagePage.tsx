@@ -44,7 +44,7 @@ export default function AdminUsagePage() {
         </ul>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-(--border) bg-white shadow-soft">
+      <div className="overflow-x-auto rounded-xl border border-(--border) bg-(--surface) shadow-soft">
         <table className="w-full min-w-5xl text-left text-sm">
           <thead>
             <tr className="border-b border-(--border) text-(--muted)">

@@ -50,7 +50,7 @@ export function FeatureGrid({
       {items.map((item) => (
         <div
           key={item.title}
-          className="rounded-xl border border-(--border) bg-white/80 p-6 shadow-soft"
+          className="rounded-xl border border-(--border) bg-(--surface)/80 p-6 shadow-soft"
         >
           <h2 className="font-display text-xl font-semibold text-(--ink)">
             {item.title}
@@ -79,7 +79,7 @@ export function PromptCard({ item }: { item: AgentPrompt }) {
   }
 
   return (
-    <div className="rounded-xl border border-(--border) bg-white/80 p-5 shadow-soft">
+    <div className="rounded-xl border border-(--border) bg-(--surface)/80 p-5 shadow-soft">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-lg font-semibold text-(--ink)">
