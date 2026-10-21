@@ -17,9 +17,14 @@ export const INVITE_ONLY_MESSAGE =
 
 export const CAPACITY_TITLE = "ZipWiki beta is at capacity";
 
-export function capacityMessage(limit: number): string {
+/** Public copy — never include the numeric seat cap. */
+export const LIMITED_SEATS_MESSAGE =
+  "During beta development, a limited number of account seats are available.";
+
+export function capacityMessage(): string {
   return (
-    `We've reached our initial limit of ${limit.toLocaleString()} beta accounts. ` +
+    `${LIMITED_SEATS_MESSAGE} ` +
+    `We've filled the current cohort. ` +
     `You can still install the CLI and pack or query .zipwiki packages on your machine. ` +
     `Leave your email below and we'll notify you when a seat opens or the next cohort starts. ` +
     `You can also write to ${CONTACT_INBOX}.`
@@ -71,11 +76,11 @@ export function inviteOnlyDenial(): BetaGateDenial {
   };
 }
 
-export function capacityDenial(limit: number): BetaGateDenial {
+export function capacityDenial(_limit?: number): BetaGateDenial {
   return {
     code: "capacity",
     title: CAPACITY_TITLE,
-    message: capacityMessage(limit),
+    message: capacityMessage(),
   };
 }
 

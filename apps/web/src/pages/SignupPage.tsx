@@ -159,9 +159,7 @@ export default function SignupPage() {
       title="Create your ZipWiki account"
       subtitle={
         step === "email"
-          ? access.limit != null
-            ? `Beta seats: ${access.accountCount ?? 0} of ${access.limit}. Enter your email — we'll send a one-time code.`
-            : "Enter your email — we'll send a one-time code to verify it."
+          ? "During beta development, a limited number of account seats are available. Enter your email — we'll send a one-time code."
           : `Enter the code we sent to ${email.trim()}.`
       }
       footer={

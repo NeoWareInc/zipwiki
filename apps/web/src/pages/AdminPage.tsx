@@ -180,10 +180,7 @@ function AdminBetaInvites() {
       <div className="rounded-xl border border-(--border) bg-(--surface) p-4 shadow-soft">
         <h2 className="font-display text-lg font-semibold">Beta access</h2>
         <p className="mt-1 text-sm text-(--muted)">
-          This deployment is open beta
-          {status.limit != null
-            ? ` (${status.accountCount ?? 0} / ${status.limit} accounts).`
-            : "."}
+          This deployment is open beta with a limited number of account seats.
         </p>
       </div>
     );

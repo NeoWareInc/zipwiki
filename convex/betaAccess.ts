@@ -61,13 +61,14 @@ export const status = query({
     }
     const accountCount = await accountCountForLimit(ctx, limit);
     const canJoin = accountCount < limit;
+    // Do not expose numeric seat counts on the public status API.
     return {
       mode: "open" as const,
       canJoin,
-      limit,
-      accountCount: Math.min(accountCount, limit),
+      limit: null,
+      accountCount: null,
       title: canJoin ? null : CAPACITY_TITLE,
-      message: canJoin ? null : capacityMessage(limit),
+      message: canJoin ? null : capacityMessage(),
       requestEnabled: !canJoin,
     };
   },

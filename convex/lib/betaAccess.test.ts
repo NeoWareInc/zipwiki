@@ -5,6 +5,7 @@ import {
   CAPACITY_TITLE,
   INVITE_ONLY_MESSAGE,
   INVITE_ONLY_TITLE,
+  LIMITED_SEATS_MESSAGE,
   resolveBetaAccessMode,
   resolveBetaUserLimit,
 } from "./betaAccess.js";
@@ -52,10 +53,12 @@ describe("resolveBetaUserLimit", () => {
 });
 
 describe("messages", () => {
-  it("names invite-only and capacity clearly", () => {
+  it("names invite-only and capacity clearly without seat counts", () => {
     assert.match(INVITE_ONLY_TITLE, /invite-only/i);
     assert.match(INVITE_ONLY_MESSAGE, /invited/i);
     assert.match(CAPACITY_TITLE, /capacity/i);
-    assert.match(capacityMessage(500), /500/);
+    assert.match(LIMITED_SEATS_MESSAGE, /limited number of account seats/i);
+    assert.match(capacityMessage(), /limited number of account seats/i);
+    assert.doesNotMatch(capacityMessage(), /\d/);
   });
 });
