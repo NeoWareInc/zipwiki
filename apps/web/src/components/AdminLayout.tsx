@@ -1,5 +1,4 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { ThemeToggler } from "./ThemeToggler";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   isActive
@@ -23,8 +22,7 @@ export function AdminLayout() {
               Billing
             </NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-3">
-            <ThemeToggler />
+          <div className="ml-auto">
             <Link
               to="/dashboard"
               className="text-sm font-medium text-(--muted) hover:text-(--accent)"

@@ -10,8 +10,6 @@ import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { MeResponse } from "../lib/api";
 import { AccountMenu } from "./AccountMenu";
-import { ThemeToggler } from "./ThemeToggler";
-
 function LowCreditsBanner() {
   const location = useLocation();
   const usage = useQuery(api.usage.myUsage);
@@ -181,9 +179,6 @@ function SidebarBody({
         />
       </div>
       <div className="border-t border-(--border) p-3">
-        <div className="mb-2 flex justify-end px-1">
-          <ThemeToggler />
-        </div>
         <AccountMenu me={me} onNavigate={onNavigate} />
       </div>
     </>
@@ -260,9 +255,6 @@ export function DashboardLayout() {
             />
             ZipWiki
           </Link>
-          <div className="ml-auto">
-            <ThemeToggler />
-          </div>
         </header>
 
         {mobileOpen && (
