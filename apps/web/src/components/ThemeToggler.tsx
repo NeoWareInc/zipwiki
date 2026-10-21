@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MoonIcon, SunIcon } from "@radix-ui/react-icons";
-import { useTheme } from "next-themes";
+import { useTheme } from "./ThemeProvider";
 
 function SystemIcon() {
   return (

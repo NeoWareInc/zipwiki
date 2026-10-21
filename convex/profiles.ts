@@ -4,13 +4,14 @@ import {
   query,
   type MutationCtx,
 } from "./_generated/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Id } from "./_generated/dataModel";
 import {
   bootstrapAdminEmails,
   isBootstrapAdminEmail,
 } from "./lib/adminEmails";
+import { denialForNewAccount } from "./betaAccess";
 import { creditsLockedFor } from "./lib/creditLock";
 import { creditSnapshot, WELCOME_CREDITS } from "./lib/credits";
 
@@ -77,6 +78,14 @@ export const ensureProfileAndAccount = mutation({
       .unique();
 
     if (!account) {
+      const denial = await denialForNewAccount(ctx, normalized);
+      if (denial) {
+        throw new ConvexError({
+          code: denial.code,
+          title: denial.title,
+          message: denial.message,
+        });
+      }
       const accountId = await createAccountWithWelcomeCredits(
         ctx,
         userId,

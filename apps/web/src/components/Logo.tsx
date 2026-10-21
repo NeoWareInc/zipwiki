@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "./ThemeProvider";
 
 const ASSETS = {
   lockup: {

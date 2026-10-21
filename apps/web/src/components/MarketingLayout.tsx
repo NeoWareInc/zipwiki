@@ -8,12 +8,21 @@ import {
   SITE_NAME,
   SITE_TAGLINE,
 } from "../lib/marketing-copy";
+import { useBetaAccessStatus } from "./BetaAccessGate";
 import { Logo } from "./Logo";
 import { ThemeToggler } from "./ThemeToggler";
 
 export function MarketingLayout() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const access = useBetaAccessStatus();
+  const joinLabel =
+    access?.mode === "invite"
+      ? "Request invite"
+      : access && !access.canJoin
+        ? "Join waitlist"
+        : "Sign up";
+  const joinTo = "/signup";
 
   useEffect(() => {
     const title = PAGE_TITLES[location.pathname] ?? SITE_NAME;
@@ -77,10 +86,10 @@ export function MarketingLayout() {
               Sign in
             </Link>
             <Link
-              to="/signup"
+              to={joinTo}
               className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--accent-bright)"
             >
-              Sign up
+              {joinLabel}
             </Link>
           </div>
 
@@ -146,10 +155,10 @@ export function MarketingLayout() {
                   Sign in
                 </Link>
                 <Link
-                  to="/signup"
+                  to={joinTo}
                   className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white"
                 >
-                  Sign up
+                  {joinLabel}
                 </Link>
               </div>
             </nav>

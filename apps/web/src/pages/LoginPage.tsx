@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import {
+  Link,
   Navigate,
   useNavigate,
   useSearchParams,
@@ -19,6 +20,10 @@ import {
   authInputClassName,
   authPrimaryButtonClassName,
 } from "../components/AuthChrome";
+import {
+  parseBetaAccessError,
+  useBetaAccessStatus,
+} from "../components/BetaAccessGate";
 import { AuthBusy, takeAuthNext, useAuthSettling } from "../components/AuthSession";
 
 const KNOWN_CODES = new Set([
@@ -35,14 +40,19 @@ type Step = "email" | "code";
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn } = useAuthActions();
+  const { signIn, signOut } = useAuthActions();
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
+  const access = useBetaAccessStatus();
   const [params] = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState(params.get("error") ?? "");
   const [pending, setPending] = useState(false);
+  const [gateNotice, setGateNotice] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const { settling, isAuthenticated } = useAuthSettling();
   const from =
@@ -52,8 +62,18 @@ export default function LoginPage() {
 
   async function finishSignIn() {
     sessionStorage.removeItem("zipwiki.auth.next");
-    await ensure({});
-    navigate(safeFrom);
+    try {
+      await ensure({});
+      navigate(safeFrom);
+    } catch (err) {
+      const gate = parseBetaAccessError(err);
+      if (gate) {
+        setGateNotice({ title: gate.title, message: gate.message });
+        void signOut();
+        return;
+      }
+      throw err;
+    }
   }
 
   async function onSendCode(e: FormEvent) {
@@ -82,20 +102,32 @@ export default function LoginPage() {
       });
       await finishSignIn();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Invalid or expired code — try again",
-      );
+      const gate = parseBetaAccessError(err);
+      if (gate) {
+        setGateNotice({ title: gate.title, message: gate.message });
+      } else {
+        setError(
+          err instanceof Error ? err.message : "Invalid or expired code — try again",
+        );
+      }
     } finally {
       setPending(false);
     }
   }
 
   if (settling) return <AuthBusy label="Finishing sign-in…" />;
-  if (isAuthenticated) {
+  if (isAuthenticated && !gateNotice) {
     const next =
       (location.state as { from?: string } | null)?.from || takeAuthNext();
     return <Navigate to={next.startsWith("/") ? next : "/dashboard"} replace />;
   }
+
+  const signupAction =
+    access?.mode === "invite"
+      ? "Request Invite"
+      : access && !access.canJoin
+        ? "Join the waitlist"
+        : "Create an account";
 
   return (
     <>
@@ -105,17 +137,35 @@ export default function LoginPage() {
           step === "email"
             ? cliLogin
               ? "Sign in as the account this CLI should use. We'll send a one-time code."
-              : "Enter your email — we'll send a one-time code."
+              : access?.mode === "invite"
+                ? "Invite-only development site. Sign in with an invited email."
+                : "Enter your email — we'll send a one-time code."
             : `Enter the code we sent to ${email.trim()}.`
         }
         footer={
           <AuthSwitchLink
             to="/signup"
             prompt="New here?"
-            action="Create an account"
+            action={signupAction}
           />
         }
       >
+        {gateNotice ? (
+          <div className="mb-4 rounded-lg border border-(--border) bg-(--paper) p-4 text-left">
+            <p className="text-sm font-semibold text-(--ink)">{gateNotice.title}</p>
+            <p className="mt-1 text-sm leading-relaxed text-(--muted)">
+              {gateNotice.message}
+            </p>
+            <p className="mt-3 text-sm">
+              <Link
+                to="/signup"
+                className="font-medium text-(--accent) hover:underline"
+              >
+                Request Invite
+              </Link>
+            </p>
+          </div>
+        ) : null}
         {step === "email" ? (
           <form onSubmit={onSendCode} className="space-y-4">
             {KNOWN_CODES.has(error) ? (

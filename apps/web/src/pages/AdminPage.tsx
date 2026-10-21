@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -116,6 +116,7 @@ export default function AdminPage() {
       )}
 
       <AdminCreditsLock />
+      <AdminBetaInvites />
 
       {actionError && <p className="text-sm text-red-600">{actionError}</p>}
 
@@ -159,6 +160,113 @@ export default function AdminPage() {
         onSetUnlimited={(id, unlimited) => void toggleUnlimited(id, unlimited)}
         onSetLocked={(id, locked) => void toggleLocked(id, locked)}
       />
+    </div>
+  );
+}
+
+function AdminBetaInvites() {
+  const status = useQuery(api.betaAccess.status);
+  const invites = useQuery(api.betaAccess.listInvites);
+  const addInvite = useMutation(api.betaAccess.addInvite);
+  const removeInvite = useMutation(api.betaAccess.removeInvite);
+  const [email, setEmail] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  if (status === undefined) return null;
+  if (status.mode !== "invite") {
+    return (
+      <div className="rounded-xl border border-(--border) bg-(--surface) p-4 shadow-soft">
+        <h2 className="font-display text-lg font-semibold">Beta access</h2>
+        <p className="mt-1 text-sm text-(--muted)">
+          This deployment is open beta
+          {status.limit != null
+            ? ` (${status.accountCount ?? 0} / ${status.limit} accounts).`
+            : "."}
+        </p>
+      </div>
+    );
+  }
+
+  async function onAdd(e: FormEvent) {
+    e.preventDefault();
+    setPending(true);
+    setError("");
+    try {
+      await addInvite({ email: email.trim(), note: note.trim() || undefined });
+      setEmail("");
+      setNote("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add invite");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-(--border) bg-(--surface) p-4 shadow-soft">
+      <div>
+        <h2 className="font-display text-lg font-semibold">Beta invites</h2>
+        <p className="mt-1 text-sm text-(--muted)">
+          Development access is invite-only. Bootstrap admin emails are always
+          allowed. Add other testers here before they sign in.
+        </p>
+      </div>
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      <form onSubmit={onAdd} className="flex flex-wrap items-end gap-2">
+        <label className="text-sm">
+          <span className="mb-1 block text-(--muted)">Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="rounded-md border border-(--border) px-3 py-2 text-sm"
+            required
+          />
+        </label>
+        <label className="text-sm">
+          <span className="mb-1 block text-(--muted)">Note (optional)</span>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className="rounded-md border border-(--border) px-3 py-2 text-sm"
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={pending || !email.trim()}
+          className="rounded-md bg-(--accent) px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {pending ? "Adding…" : "Add invite"}
+        </button>
+      </form>
+      <ul className="divide-y divide-(--border) text-sm">
+        {(invites ?? []).map((row) => (
+          <li
+            key={row.id}
+            className="flex flex-wrap items-center justify-between gap-2 py-2"
+          >
+            <div>
+              <p className="font-medium text-(--ink)">{row.email}</p>
+              {row.note ? (
+                <p className="text-xs text-(--muted)">{row.note}</p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="text-xs text-red-600 hover:underline"
+              onClick={() => void removeInvite({ email: row.email })}
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+        {(invites ?? []).length === 0 ? (
+          <li className="py-3 text-(--muted)">No invites yet.</li>
+        ) : null}
+      </ul>
     </div>
   );
 }

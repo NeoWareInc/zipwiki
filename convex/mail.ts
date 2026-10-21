@@ -156,3 +156,71 @@ export const submitContact = action({
     return { ok: true as const };
   },
 });
+
+/** Beta invite / capacity waitlist request from login or signup. */
+export const submitAccessRequest = action({
+  args: {
+    name: v.string(),
+    email: v.string(),
+    message: v.string(),
+  },
+  returns: v.object({ ok: v.literal(true) }),
+  handler: async (ctx, args) => {
+    const { resolveBetaAccessMode, resolveBetaUserLimit } = await import(
+      "./lib/betaAccess"
+    );
+    const mode = resolveBetaAccessMode();
+    const reason = mode === "invite" ? "invite_only" : "capacity";
+    if (mode === "open") {
+      const limit = resolveBetaUserLimit();
+      if (limit > 0) {
+        const count: number = await ctx.runQuery(
+          internal.betaAccess.accountCount,
+          {},
+        );
+        if (count < limit) {
+          throw new ConvexError(
+            "Beta seats are available — create an account from Sign up instead.",
+          );
+        }
+      }
+    }
+    const stored = await ctx.runMutation(
+      internal.betaAccess.recordAccessRequest,
+      {
+        name: args.name,
+        email: args.email,
+        message: args.message,
+        reason,
+      },
+    );
+    const label =
+      reason === "invite_only"
+        ? "Dev invite request"
+        : "Beta capacity waitlist";
+    const sent = await send(
+      CONTACT_INBOX,
+      `${label}: ${stored.email}`,
+      [
+        `Reason: ${reason}`,
+        `Name: ${stored.name}`,
+        `Email: ${stored.email}`,
+        "",
+        stored.message,
+      ].join("\n"),
+      contactHtml({
+        name: stored.name,
+        email: stored.email,
+        subject: label,
+        message: stored.message,
+      }),
+      stored.email,
+    );
+    if (!sent.ok) {
+      throw new ConvexError(
+        `We could not deliver your request by email. Please write to ${CONTACT_INBOX}.`,
+      );
+    }
+    return { ok: true as const };
+  },
+});

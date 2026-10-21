@@ -1,24 +1,57 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { MeResponse } from "../lib/api";
+import {
+  BetaAccessClosedPage,
+  parseBetaAccessError,
+  useBetaAccessStatus,
+} from "./BetaAccessGate";
 import { AuthBusy } from "./AuthSession";
 
 function EnsureProfile() {
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
   const me = useQuery(api.profiles.me);
+  const access = useBetaAccessStatus();
+  const { signOut } = useAuthActions();
+  const [denial, setDenial] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     void (async () => {
       try {
         await ensure({});
-      } catch {
+      } catch (err) {
+        const gate = parseBetaAccessError(err);
+        if (gate) {
+          setDenial({ title: gate.title, message: gate.message });
+          void signOut();
+          return;
+        }
         /* profile may already exist */
       }
     })();
-  }, [ensure]);
+  }, [ensure, signOut]);
+
+  if (denial) {
+    return (
+      <BetaAccessClosedPage
+        status={{
+          mode: access?.mode ?? "invite",
+          canJoin: false,
+          limit: access?.limit ?? null,
+          accountCount: access?.accountCount ?? null,
+          title: denial.title,
+          message: denial.message,
+          requestEnabled: true,
+        }}
+      />
+    );
+  }
 
   if (me === undefined) {
     return <AuthBusy label="Loading…" />;

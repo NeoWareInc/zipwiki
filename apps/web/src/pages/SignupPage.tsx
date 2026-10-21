@@ -1,8 +1,13 @@
 import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import {
+  BetaAccessClosedPage,
+  parseBetaAccessError,
+  useBetaAccessStatus,
+} from "../components/BetaAccessGate";
 import {
   AuthCard,
   AuthDivider,
@@ -13,6 +18,7 @@ import {
   authInputClassName,
   authPrimaryButtonClassName,
 } from "../components/AuthChrome";
+import { AuthBusy } from "../components/AuthSession";
 
 type Step = "email" | "code";
 
@@ -21,12 +27,17 @@ export default function SignupPage() {
   const { signIn } = useAuthActions();
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
   const createKey = useMutation(api.apiKeys.createMine);
+  const access = useBetaAccessStatus();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [denied, setDenied] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   async function afterAuth() {
     await ensure({});
@@ -60,12 +71,35 @@ export default function SignupPage() {
       });
       await afterAuth();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Invalid or expired code — try again",
-      );
+      const gate = parseBetaAccessError(err);
+      if (gate) {
+        setDenied({ title: gate.title, message: gate.message });
+      } else {
+        setError(
+          err instanceof Error ? err.message : "Invalid or expired code — try again",
+        );
+      }
     } finally {
       setPending(false);
     }
+  }
+
+  if (access === undefined) {
+    return <AuthBusy label="Checking beta access…" />;
+  }
+
+  if (!access.canJoin || denied) {
+    return (
+      <BetaAccessClosedPage
+        status={{
+          ...access,
+          canJoin: false,
+          title: denied?.title ?? access.title,
+          message: denied?.message ?? access.message,
+          requestEnabled: true,
+        }}
+      />
+    );
   }
 
   if (apiKey) {
@@ -106,7 +140,9 @@ export default function SignupPage() {
       title="Create your ZipWiki account"
       subtitle={
         step === "email"
-          ? "Enter your email — we'll send a one-time code to verify it."
+          ? access.limit != null
+            ? `Beta seats: ${access.accountCount ?? 0} of ${access.limit}. Enter your email — we'll send a one-time code.`
+            : "Enter your email — we'll send a one-time code to verify it."
           : `Enter the code we sent to ${email.trim()}.`
       }
       footer={
@@ -136,10 +172,13 @@ export default function SignupPage() {
             {pending ? "Sending…" : "Send sign-in code"}
           </button>
           <AuthDivider label="or" />
-          <GoogleSignInButton
-            label="Continue with Google"
-            returnPath="/dashboard/settings?onboarding=1"
-          />
+          <GoogleSignInButton label="Continue with Google" returnPath="/signup" />
+          <p className="text-center text-xs text-(--muted)">
+            Prefer the CLI first?{" "}
+            <Link to="/install" className="text-(--accent) hover:underline">
+              Install ZipWiki
+            </Link>
+          </p>
         </form>
       ) : (
         <form onSubmit={onVerifyCode} className="space-y-4">
@@ -147,65 +186,32 @@ export default function SignupPage() {
           <AuthField id="signup-code" label="Verification code">
             <input
               id="signup-code"
-              type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="8-digit code"
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-              className={`${authInputClassName()} tracking-[0.2em]`}
+              onChange={(e) => setCode(e.target.value)}
+              className={authInputClassName()}
               required
-              minLength={8}
-              maxLength={8}
-              autoFocus
             />
           </AuthField>
           <button
             type="submit"
-            disabled={pending || code.trim().length < 8}
+            disabled={pending || !code.trim()}
             className={authPrimaryButtonClassName()}
           >
-            {pending ? "Verifying…" : "Verify email"}
+            {pending ? "Creating…" : "Create account"}
           </button>
-          <div className="flex flex-col items-center gap-2 text-sm">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                setError("");
-                setPending(true);
-                void signIn("resend-otp", { email: email.trim() })
-                  .catch((err) =>
-                    setError(
-                      err instanceof Error
-                        ? err.message
-                        : "Could not resend code",
-                    ),
-                  )
-                  .finally(() => setPending(false));
-              }}
-              className="font-medium text-(--accent) hover:underline disabled:opacity-60"
-            >
-              Resend code
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                setStep("email");
-                setCode("");
-                setError("");
-              }}
-              className="text-(--muted) hover:text-(--ink) hover:underline"
-            >
-              Use a different email
-            </button>
-          </div>
-          <AuthDivider label="or" />
-          <GoogleSignInButton
-            label="Continue with Google"
-            returnPath="/dashboard/settings?onboarding=1"
-          />
+          <button
+            type="button"
+            className="w-full text-sm text-(--muted) hover:text-(--ink)"
+            onClick={() => {
+              setStep("email");
+              setCode("");
+              setError("");
+            }}
+          >
+            Use a different email
+          </button>
         </form>
       )}
     </AuthCard>

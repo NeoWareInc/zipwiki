@@ -69,4 +69,13 @@ Convex `SITE_URL` / `WEB_ORIGIN` (passkeys, auth redirects, mail links):
 | Dev (`dashing-cod-224`) | `https://dev.zipwiki.ai` | `dev.zipwiki.ai`, Vercel alias, `localhost:5173` |
 | Prod (`festive-hare-381`) | `https://zipwiki.ai` | `zipwiki.ai`, `www.zipwiki.ai`, Vercel alias, `localhost:5173` |
 
+Beta access (Convex env on each deployment):
+
+| Variable | Dev | Production |
+| --- | --- | --- |
+| `BETA_ACCESS_MODE` | `invite` (default when `SITE_URL` is `dev.zipwiki.ai`) | `open` |
+| `BETA_USER_LIMIT` | ignored | `500` (default when unset) |
+
+Invite-only: new accounts need a row in `betaInvites` (Admin → Users) or a bootstrap admin email. At capacity: `/signup` shows a waitlist form that emails `hello@zipwiki.ai`.
+
 Restart `pnpm dev:web` after changing env. Do not put `AUTH_*` in `VITE_*`.

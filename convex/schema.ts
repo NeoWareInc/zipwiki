@@ -260,4 +260,19 @@ export default defineSchema({
     subject: v.string(),
     message: v.string(),
   }).index("by_email", ["email"]),
+
+  /** Invite-only beta (dev): emails allowed to create an account. */
+  betaInvites: defineTable({
+    email: v.string(),
+    note: v.optional(v.string()),
+    invitedByEmail: v.optional(v.string()),
+  }).index("by_email", ["email"]),
+
+  /** Access requests when invite-only or the open-beta seat limit is reached. */
+  betaAccessRequests: defineTable({
+    name: v.string(),
+    email: v.string(),
+    message: v.string(),
+    reason: v.union(v.literal("invite_only"), v.literal("capacity")),
+  }).index("by_email", ["email"]),
 });
