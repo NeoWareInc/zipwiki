@@ -27,13 +27,26 @@ export function useBetaAccessStatus(): BetaAccessStatus | undefined {
   return useQuery(api.betaAccess.status) ?? undefined;
 }
 
+function convexErrorData(err: unknown): unknown {
+  if (err instanceof ConvexError) return err.data;
+  // Bundled duplicates can break `instanceof`; Convex marks errors with a symbol.
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { name?: string }).name === "ConvexError" &&
+    "data" in err
+  ) {
+    return (err as { data: unknown }).data;
+  }
+  return undefined;
+}
+
 export function parseBetaAccessError(err: unknown): {
   code: string;
   title: string;
   message: string;
 } | null {
-  if (!(err instanceof ConvexError)) return null;
-  const data = err.data;
+  const data = convexErrorData(err);
   if (
     data &&
     typeof data === "object" &&

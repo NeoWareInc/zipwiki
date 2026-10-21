@@ -11,7 +11,7 @@ import {
   bootstrapAdminEmails,
   isBootstrapAdminEmail,
 } from "./lib/adminEmails";
-import { denialForNewAccount } from "./betaAccess";
+import { denialForNewAccount } from "./lib/betaAccess";
 import { creditsLockedFor } from "./lib/creditLock";
 import { creditSnapshot, WELCOME_CREDITS } from "./lib/credits";
 
@@ -99,6 +99,65 @@ export const ensureProfileAndAccount = mutation({
       accountId: account._id,
       email: profile.email,
       role: profile.role,
+    };
+  },
+});
+
+/**
+ * Create profile + account for an auth user that signed in but never finished
+ * ensureProfileAndAccount (e.g. client error after OTP). Dashboard / CLI only.
+ */
+export const repairOrphanedAuthUser = internalMutation({
+  args: { email: v.string() },
+  returns: v.object({
+    ok: v.boolean(),
+    reason: v.optional(v.string()),
+    profileId: v.optional(v.id("profiles")),
+    accountId: v.optional(v.id("accounts")),
+  }),
+  handler: async (ctx, { email }) => {
+    const normalized = email.trim().toLowerCase();
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", normalized))
+      .unique();
+    if (!user) return { ok: false, reason: "user_not_found" };
+
+    let profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+    if (!profile) {
+      const admin = isBootstrapAdminEmail(normalized);
+      const profileId = await ctx.db.insert("profiles", {
+        userId: user._id,
+        email: normalized,
+        role: admin ? "admin" : "customer",
+      });
+      profile = (await ctx.db.get(profileId))!;
+    }
+
+    let account = await ctx.db
+      .query("accounts")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .unique();
+    if (!account) {
+      const denial = await denialForNewAccount(ctx, normalized);
+      if (denial) {
+        return { ok: false, reason: denial.code };
+      }
+      const accountId = await createAccountWithWelcomeCredits(
+        ctx,
+        user._id,
+        normalized.split("@")[0] || "My account",
+      );
+      account = (await ctx.db.get(accountId))!;
+    }
+
+    return {
+      ok: true,
+      profileId: profile._id,
+      accountId: account._id,
     };
   },
 });

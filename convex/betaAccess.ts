@@ -4,22 +4,16 @@ import {
   internalQuery,
   mutation,
   query,
-  type MutationCtx,
-  type QueryCtx,
 } from "./_generated/server";
 import { requireAdmin } from "./lib/admin";
 import {
-  capacityDenial,
+  accountCountForLimit,
   capacityMessage,
   CAPACITY_TITLE,
-  inviteOnlyDenial,
   INVITE_ONLY_MESSAGE,
   INVITE_ONLY_TITLE,
-  isAlwaysAllowedEmail,
   resolveBetaAccessMode,
   resolveBetaUserLimit,
-  type BetaAccessMode,
-  type BetaGateDenial,
 } from "./lib/betaAccess";
 import {
   CONTACT_MAX_PER_EMAIL,
@@ -27,25 +21,6 @@ import {
   contactRateLimited,
   normalizeContact,
 } from "./lib/contactForm";
-
-type DbCtx = MutationCtx | QueryCtx;
-
-async function countAccountsUpTo(ctx: DbCtx, limit: number): Promise<number> {
-  if (limit <= 0) {
-    const all = await ctx.db.query("accounts").collect();
-    return all.length;
-  }
-  const rows = await ctx.db.query("accounts").take(limit + 1);
-  return rows.length;
-}
-
-async function emailHasInvite(ctx: DbCtx, email: string): Promise<boolean> {
-  const invite = await ctx.db
-    .query("betaInvites")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .unique();
-  return Boolean(invite);
-}
 
 /** Public beta gate status for login / signup UI. */
 export const status = query({
@@ -84,7 +59,7 @@ export const status = query({
         requestEnabled: false,
       };
     }
-    const accountCount = await countAccountsUpTo(ctx, limit);
+    const accountCount = await accountCountForLimit(ctx, limit);
     const canJoin = accountCount < limit;
     return {
       mode: "open" as const,
@@ -103,33 +78,12 @@ export const accountCount = internalQuery({
   returns: v.number(),
   handler: async (ctx) => {
     const limit = resolveBetaUserLimit();
-    return await countAccountsUpTo(ctx, limit > 0 ? limit : Number.MAX_SAFE_INTEGER);
+    return await accountCountForLimit(
+      ctx,
+      limit > 0 ? limit : Number.MAX_SAFE_INTEGER,
+    );
   },
 });
-
-/**
- * Decide whether a new account may be created for this email.
- * Existing accounts always pass (checked by the caller).
- */
-export async function denialForNewAccount(
-  ctx: MutationCtx,
-  email: string,
-): Promise<BetaGateDenial | null> {
-  const normalized = email.trim().toLowerCase();
-  if (isAlwaysAllowedEmail(normalized)) return null;
-
-  const mode: BetaAccessMode = resolveBetaAccessMode();
-  if (mode === "invite") {
-    if (await emailHasInvite(ctx, normalized)) return null;
-    return inviteOnlyDenial();
-  }
-
-  const limit = resolveBetaUserLimit();
-  if (limit <= 0) return null;
-  const count = await countAccountsUpTo(ctx, limit);
-  if (count < limit) return null;
-  return capacityDenial(limit);
-}
 
 export const listInvites = query({
   args: {},

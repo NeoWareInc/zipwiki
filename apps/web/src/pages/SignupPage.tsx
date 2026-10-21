@@ -40,7 +40,22 @@ export default function SignupPage() {
   } | null>(null);
 
   async function afterAuth() {
-    await ensure({});
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await ensure({});
+        lastErr = undefined;
+        break;
+      } catch (err) {
+        lastErr = err;
+        const gate = parseBetaAccessError(err);
+        if (gate) throw err;
+        const msg = err instanceof Error ? err.message : "";
+        if (!msg.includes("Not authenticated") || attempt === 2) throw err;
+        await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+      }
+    }
+    if (lastErr) throw lastErr;
     const key = await createKey({ name: "Default" });
     setApiKey(key.apiKey);
   }
@@ -65,10 +80,14 @@ export default function SignupPage() {
     setError("");
     setPending(true);
     try {
-      await signIn("resend-otp", {
+      const result = await signIn("resend-otp", {
         email: email.trim(),
         code: code.trim(),
       });
+      if (!result.signingIn) {
+        setError("Could not verify that code. Request a new one and try again.");
+        return;
+      }
       await afterAuth();
     } catch (err) {
       const gate = parseBetaAccessError(err);

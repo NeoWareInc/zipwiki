@@ -1,7 +1,10 @@
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { isBootstrapAdminEmail } from "./adminEmails";
 import { CONTACT_INBOX } from "./contactForm";
 
 export type BetaAccessMode = "invite" | "open";
+
+type DbCtx = MutationCtx | QueryCtx;
 
 export const DEFAULT_OPEN_USER_LIMIT = 500;
 
@@ -74,4 +77,54 @@ export function capacityDenial(limit: number): BetaGateDenial {
     title: CAPACITY_TITLE,
     message: capacityMessage(limit),
   };
+}
+
+async function countAccountsUpTo(ctx: DbCtx, limit: number): Promise<number> {
+  if (limit <= 0) {
+    const all = await ctx.db.query("accounts").collect();
+    return all.length;
+  }
+  const rows = await ctx.db.query("accounts").take(limit + 1);
+  return rows.length;
+}
+
+async function emailHasInvite(ctx: DbCtx, email: string): Promise<boolean> {
+  const invite = await ctx.db
+    .query("betaInvites")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .unique();
+  return Boolean(invite);
+}
+
+/**
+ * Decide whether a new account may be created for this email.
+ * Existing accounts always pass (checked by the caller).
+ * Lives in lib/ so profiles.ts does not import a Convex functions module.
+ */
+export async function denialForNewAccount(
+  ctx: MutationCtx,
+  email: string,
+): Promise<BetaGateDenial | null> {
+  const normalized = email.trim().toLowerCase();
+  if (isAlwaysAllowedEmail(normalized)) return null;
+
+  const mode: BetaAccessMode = resolveBetaAccessMode();
+  if (mode === "invite") {
+    if (await emailHasInvite(ctx, normalized)) return null;
+    return inviteOnlyDenial();
+  }
+
+  const limit = resolveBetaUserLimit();
+  if (limit <= 0) return null;
+  const count = await countAccountsUpTo(ctx, limit);
+  if (count < limit) return null;
+  return capacityDenial(limit);
+}
+
+/** Shared with betaAccess.status for open-mode capacity UI. */
+export async function accountCountForLimit(
+  ctx: DbCtx,
+  limit: number,
+): Promise<number> {
+  return countAccountsUpTo(ctx, limit);
 }
