@@ -16,9 +16,10 @@ export function MarketingLayout() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const access = useBetaAccessStatus();
+  const joinReady = access !== undefined;
   const joinLabel =
     access?.mode === "invite"
-      ? "Request invite"
+      ? "Request Invite"
       : access && !access.canJoin
         ? "Join waitlist"
         : "Sign up";
@@ -85,12 +86,14 @@ export function MarketingLayout() {
             >
               Sign in
             </Link>
-            <Link
-              to={joinTo}
-              className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--accent-bright)"
-            >
-              {joinLabel}
-            </Link>
+            {joinReady ? (
+              <Link
+                to={joinTo}
+                className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--accent-bright)"
+              >
+                {joinLabel}
+              </Link>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-1 lg:hidden">
@@ -154,12 +157,14 @@ export function MarketingLayout() {
                 >
                   Sign in
                 </Link>
-                <Link
-                  to={joinTo}
-                  className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white"
-                >
-                  {joinLabel}
-                </Link>
+                {joinReady ? (
+                  <Link
+                    to={joinTo}
+                    className="inline-flex items-center justify-center rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    {joinLabel}
+                  </Link>
+                ) : null}
               </div>
             </nav>
           </div>

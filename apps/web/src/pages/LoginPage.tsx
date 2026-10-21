@@ -143,11 +143,13 @@ export default function LoginPage() {
             : `Enter the code we sent to ${email.trim()}.`
         }
         footer={
-          <AuthSwitchLink
-            to="/signup"
-            prompt="New here?"
-            action={signupAction}
-          />
+          access ? (
+            <AuthSwitchLink
+              to="/signup"
+              prompt="New here?"
+              action={signupAction}
+            />
+          ) : null
         }
       >
         {gateNotice ? (
