@@ -31,7 +31,6 @@ export default function SignupPage() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [apiKey, setApiKey] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [denied, setDenied] = useState<{
@@ -56,8 +55,10 @@ export default function SignupPage() {
       }
     }
     if (lastErr) throw lastErr;
-    const key = await createKey({ name: "Default" });
-    setApiKey(key.apiKey);
+    await createKey({ name: "Default" }).catch(() => {
+      /* CLI mints its own key via `zipwiki login` */
+    });
+    navigate("/dashboard/settings?onboarding=1", { replace: true });
   }
 
   async function onSendCode(e: FormEvent) {
@@ -118,39 +119,6 @@ export default function SignupPage() {
           requestEnabled: true,
         }}
       />
-    );
-  }
-
-  if (apiKey) {
-    return (
-      <AuthCard
-        title="Account created"
-        subtitle="Copy your API key now — it won't be shown again."
-        footer={
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/settings?onboarding=1")}
-            className="font-medium text-(--accent) hover:underline"
-          >
-            Continue to settings
-          </button>
-        }
-      >
-        <p className="text-sm text-(--muted)">
-          The CLI connects with <code className="text-xs">zipwiki login</code>.
-          Next, finish pack preferences on Settings.
-        </p>
-        <code className="block rounded-md border border-(--border) bg-(--paper) p-3 text-xs break-all">
-          {apiKey}
-        </code>
-        <button
-          type="button"
-          onClick={() => navigate("/dashboard/settings?onboarding=1")}
-          className={authPrimaryButtonClassName()}
-        >
-          Continue to settings
-        </button>
-      </AuthCard>
     );
   }
 

@@ -113,7 +113,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
       if (embedded) {
         // CliSetupPage (and other embeds) own post-save UI via onSaved.
       } else if (onboarding) {
-        navigate("/dashboard/keys?welcome=1");
+        navigate("/dashboard");
       } else {
         // Leave Settings: prefer the page that opened it, else dashboard.
         const idx = (window.history.state as { idx?: number } | null)?.idx;
