@@ -259,63 +259,63 @@ export const OKF_FIELDS = [
 /** Things you ask an AI agent (or CLI) to do on an existing .zipwiki — not a mandatory checklist. */
 export const PACKAGE_ACTIONS = {
   title: "What you can do with a package",
-  lead: "Once a .zipwiki exists, you do not run a fixed sequence of steps. Ask your AI agent for what you need—or use the same operations from the CLI. Behind the scenes the tools open, search, and read selectively so the whole archive never lands in chat.",
+  lead: "Once a .zipwiki exists, start with a simple ask and follow up as you go. Your agent opens, searches, and reads selectively across PDFs, Office docs, spreadsheets, books, and scans.",
   items: [
     {
       title: "Search by subject or query",
       detail:
-        "Find documents that match a topic, phrase, or question. Search prefers the OKF index, then extracted markdown, and returns short hits—not every chapter body.",
+        "Find documents that match a topic, phrase, or question. Search checks the OKF index first, then extracted markdown, and returns concise hits.",
       prompt:
-        'Using ZipWiki, search ./knowledge/florida-laws.zipwiki for "homestead exemption" and show the top hits with short snippets.',
+        "Search florida-laws-2025.zipwiki for beach erosion control.",
     },
     {
       title: "Ask a question",
       detail:
-        "Get an answer grounded in the package. The agent uses the index and evidence inside the archive instead of guessing from filenames.",
+        "Get an answer grounded in the package, whether the sources are SEC filings, clinical PDFs, novels, or spreadsheets.",
       prompt:
-        "Using ZipWiki on ./knowledge/florida-laws.zipwiki, what does Chapter 2025-1 cover? Cite the OKF and only open extracted markdown if you need a quote.",
+        "In earnings-2025.zipwiki, what revenue did Apple, Microsoft, and Alphabet report?",
     },
     {
       title: "See what’s inside",
       detail:
-        "Open a catalog of titles, types, whether OKF and extracted markdown exist, and origin links—not a raw zip file listing.",
+        "Open a catalog of titles, document types, OKF cards, extracted markdown, and origin links across PDFs, Word files, spreadsheets, and text.",
       prompt:
-        "Using ZipWiki, open ./knowledge/florida-laws.zipwiki and summarize what’s inside (titles, types, OKF index, extracted markdown, origin URLs).",
+        "Give me a summary of medical-pdfs.zipwiki.",
     },
     {
       title: "Read a document’s summary or evidence",
       detail:
-        "Skim the OKF card first; stream the compact extracted markdown only when you need detail. Prefer that over dumping the original PDF or Office file.",
+        "Skim the OKF card for a quick summary, then follow up for a quote or section from the extracted markdown.",
       prompt:
-        "Using ZipWiki on ./knowledge/florida-laws.zipwiki, read the OKF for Chapter 2025-1 and give a short summary. Read the extracted markdown only if you still need evidence.",
+        'In charles-dickens.zipwiki, summarize "The Wreck of the Golden Mary".',
     },
     {
       title: "Extract originals by subject",
       detail:
-        "When you need real files on disk—for printing, another tool, or legal fidelity—extract the matching original(s) (or fetch omitted originals via origin) instead of unpacking the whole archive.",
+        "Pull matching PDFs, Word docs, spreadsheets, or scans to a folder on disk when you need the original files for printing or another tool.",
       prompt:
-        'Using ZipWiki on ./knowledge/florida-laws.zipwiki, find documents about homestead exemption and extract their original files (or fetch origins) to ./out/homestead/.',
+        "From medical-pdfs.zipwiki, extract the hospice admission notes to ./out/hospice/.",
     },
     {
       title: "Verify integrity",
       detail:
-        "Confirm the package is well-formed and members check out (ZIP CRC-32). Useful after copy, download, or before you rely on the archive.",
+        "Confirm the package is well-formed and every member passes its ZIP CRC-32 check after a copy or download.",
       prompt:
-        "Using ZipWiki, test ./knowledge/florida-laws.zipwiki and tell me if the package integrity checks pass.",
+        "Verify the integrity of earnings-2025.zipwiki.",
     },
     {
       title: "Fetch or verify an origin",
       detail:
-        "When originals were omitted at pack time, Extra Field 0x014F can hold a URL. Fetch that origin and verify CRC so you know the remote file still matches.",
+        "When a package records origin URLs in Extra Field 0x014F, fetch the source file from its link and verify its CRC-32.",
       prompt:
-        "Using ZipWiki on ./knowledge/florida-laws.zipwiki, show the origin URL for Ch_2025-001 and fetch it to verify CRC-32.",
+        "In earnings-2025.zipwiki, fetch the original SEC filing for Uber’s latest quarterly report.",
     },
     {
       title: "Update the archive",
       detail:
-        "Add, replace, or remove documents and refresh parse/OKF for what changed—without rebuilding from scratch when you do not need to.",
+        "Add, replace, or remove a PDF, Word doc, slide deck, or spreadsheet and refresh its parsed markdown and OKF card.",
       prompt:
-        "Using ZipWiki, update ./knowledge/florida-laws.zipwiki by adding ./new-laws/Ch_2025-099.pdf and refreshing OKF for that document.",
+        "Add ./notes/q4-summary.docx and ./notes/kpi-table.xlsx to earnings-2025.zipwiki.",
     },
   ],
 } as const;
