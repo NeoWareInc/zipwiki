@@ -192,7 +192,7 @@ function formatWhen(ms: number | null | undefined) {
 }
 
 function AdminBetaInvites() {
-  const status = useQuery(api.betaAccess.status);
+  const status = useQuery(api.betaAccess.adminSeatStatus);
   const invites = useQuery(api.betaAccess.listInvites);
   const requests = useQuery(api.betaAccess.listRequests);
   const addInvite = useMutation(api.betaAccess.addInvite);
@@ -206,6 +206,13 @@ function AdminBetaInvites() {
   const [busyEmail, setBusyEmail] = useState<string | null>(null);
 
   if (status === undefined) return null;
+
+  const seatsLabel =
+    status.mode === "invite"
+      ? null
+      : status.limit == null
+        ? `${status.accountCount.toLocaleString()} accounts · no seat limit`
+        : `${status.accountCount.toLocaleString()} / ${status.limit.toLocaleString()} seats used`;
 
   const modeLabel =
     status.mode === "invite"
@@ -278,6 +285,14 @@ function AdminBetaInvites() {
       <div>
         <h2 className="font-display text-lg font-semibold">Beta access</h2>
         <p className="mt-1 text-sm text-(--muted)">{modeLabel}</p>
+        {seatsLabel ? (
+          <p className="mt-2 text-sm font-medium text-(--ink)">{seatsLabel}</p>
+        ) : (
+          <p className="mt-2 text-sm font-medium text-(--ink)">
+            {status.accountCount.toLocaleString()} accounts (invite mode — seat
+            limit not applied)
+          </p>
+        )}
       </div>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 

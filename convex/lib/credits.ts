@@ -5,8 +5,8 @@ export const MIN_USD_CENTS = 500; // $5.00
 export const MAX_USD_CENTS = 1_000_000; // $10,000.00
 export const DEFAULT_USD_CENTS = 1_000; // $10.00
 /** Prepaid credits granted when a new account is created. */
-export const WELCOME_CREDITS = 100;
-export const LOW_CREDITS_THRESHOLD = 500; // $5 equivalent
+export const WELCOME_CREDITS = 500;
+export const LOW_CREDITS_THRESHOLD = 100; // $1 equivalent
 export const CREDIT_COST_PARSE = 1;
 /** Fallback hosted OKF debit when token counts are missing. */
 export const CREDIT_COST_LLM = 1;
@@ -250,10 +250,11 @@ export function creditsSpendBlocked(args: {
 
 export function isLowCredits(remaining: number, unlimited?: boolean): boolean {
   if (unlimited) return false;
-  return remaining <= LOW_CREDITS_THRESHOLD;
+  // Warn strictly below the threshold so a full welcome grant is not flagged.
+  return remaining < LOW_CREDITS_THRESHOLD;
 }
 
-/** A debit that moves the balance from above the warning line to at or below it. */
+/** A debit that moves the balance from at/above the warning line to below it. */
 export function crossedLowCreditThreshold(args: {
   before: number;
   after: number;
@@ -263,7 +264,7 @@ export function crossedLowCreditThreshold(args: {
   if (args.unlimited) return false;
   if (args.notifiedAt) return false;
   return (
-    args.before > LOW_CREDITS_THRESHOLD && args.after <= LOW_CREDITS_THRESHOLD
+    args.before >= LOW_CREDITS_THRESHOLD && args.after < LOW_CREDITS_THRESHOLD
   );
 }
 

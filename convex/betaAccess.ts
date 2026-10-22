@@ -88,6 +88,48 @@ export const accountCount = internalQuery({
   },
 });
 
+/**
+ * Admin-only seat snapshot. Public `status` deliberately omits numeric counts.
+ */
+export const adminSeatStatus = query({
+  args: {},
+  returns: v.object({
+    mode: v.union(v.literal("invite"), v.literal("open")),
+    canJoin: v.boolean(),
+    limit: v.union(v.number(), v.null()),
+    accountCount: v.number(),
+  }),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const mode = resolveBetaAccessMode();
+    const accounts = await ctx.db.query("accounts").collect();
+    const accountCount = accounts.length;
+    if (mode === "invite") {
+      return {
+        mode: "invite" as const,
+        canJoin: false,
+        limit: null,
+        accountCount,
+      };
+    }
+    const limit = resolveBetaUserLimit();
+    if (limit <= 0) {
+      return {
+        mode: "open" as const,
+        canJoin: true,
+        limit: null,
+        accountCount,
+      };
+    }
+    return {
+      mode: "open" as const,
+      canJoin: accountCount < limit,
+      limit,
+      accountCount,
+    };
+  },
+});
+
 export const listInvites = query({
   args: {},
   handler: async (ctx) => {

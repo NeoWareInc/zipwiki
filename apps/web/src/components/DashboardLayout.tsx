@@ -255,7 +255,7 @@ export function DashboardLayout() {
     : undefined;
   const isAdmin = me?.user.role === "admin";
   const setupRequired =
-    settings !== undefined && settings.setupComplete !== true;
+    settings != null && settings.setupComplete !== true;
 
   useEffect(() => {
     if (!setupRequired) return;

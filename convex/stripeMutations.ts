@@ -199,7 +199,7 @@ export const grantCreditsFromCheckout = internalMutation({
       creditsPurchased: purchased,
       status: "active",
       ...(clearReloadPending ? { autoReloadPending: false, autoReloadLastError: "" } : {}),
-      ...(remaining > LOW_CREDITS_THRESHOLD ? { lowCreditNotifiedAt: 0 } : {}),
+      ...(remaining >= LOW_CREDITS_THRESHOLD ? { lowCreditNotifiedAt: 0 } : {}),
     });
     await ctx.db.insert("creditLedger", {
       accountId,

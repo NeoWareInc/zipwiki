@@ -679,7 +679,7 @@ async function applyCreditAdjustment(
   const nextRemaining = Math.max(0, nextPurchased - spent);
   await ctx.db.patch(id, {
     creditsPurchased: nextPurchased,
-    ...(applied > 0 && nextRemaining > LOW_CREDITS_THRESHOLD
+    ...(applied > 0 && nextRemaining >= LOW_CREDITS_THRESHOLD
       ? { lowCreditNotifiedAt: 0 }
       : {}),
   });

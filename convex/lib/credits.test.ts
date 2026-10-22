@@ -30,9 +30,9 @@ import {
 } from "./credits.js";
 
 describe("credits", () => {
-  it("grants 100 welcome credits to new accounts", () => {
-    assert.equal(WELCOME_CREDITS, 100);
-    assert.equal(remainingCredits({ creditsPurchased: WELCOME_CREDITS }), 100);
+  it("grants 500 welcome credits to new accounts", () => {
+    assert.equal(WELCOME_CREDITS, 500);
+    assert.equal(remainingCredits({ creditsPurchased: WELCOME_CREDITS }), 500);
   });
 
   it("clamps to $5–$10,000", () => {
@@ -163,9 +163,9 @@ describe("credits", () => {
     assert.equal(creditsSpendBlocked({ globalLocked: true }), true);
   });
 
-  it("flags low balance at ≤500", () => {
-    assert.equal(isLowCredits(LOW_CREDITS_THRESHOLD), true);
-    assert.equal(isLowCredits(501), false);
+  it("flags low balance strictly below 100", () => {
+    assert.equal(isLowCredits(LOW_CREDITS_THRESHOLD), false);
+    assert.equal(isLowCredits(LOW_CREDITS_THRESHOLD - 1), true);
     assert.equal(isLowCredits(0, true), false);
   });
 
@@ -183,23 +183,27 @@ describe("credits", () => {
 
   it("emails once when a debit crosses the low-credit line", () => {
     assert.equal(
-      crossedLowCreditThreshold({ before: 501, after: 500 }),
+      crossedLowCreditThreshold({ before: 100, after: 99 }),
       true,
     );
     assert.equal(
-      crossedLowCreditThreshold({ before: 400, after: 399 }),
+      crossedLowCreditThreshold({ before: 101, after: 100 }),
+      false,
+    );
+    assert.equal(
+      crossedLowCreditThreshold({ before: 50, after: 49 }),
       false,
     );
     assert.equal(
       crossedLowCreditThreshold({
-        before: 501,
-        after: 500,
+        before: 100,
+        after: 99,
         notifiedAt: 1,
       }),
       false,
     );
     assert.equal(
-      crossedLowCreditThreshold({ before: 501, after: 500, unlimited: true }),
+      crossedLowCreditThreshold({ before: 100, after: 99, unlimited: true }),
       false,
     );
   });
