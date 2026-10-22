@@ -46,6 +46,7 @@ sample-output/**
 !sample-output/.gitkeep
 knowledge/.stage/
 knowledge/.output/
+tmp/
 
 # OS / editor
 .DS_Store
