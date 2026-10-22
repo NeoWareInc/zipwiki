@@ -279,10 +279,52 @@ export function registerTools(server: McpServer): void {
     "pack",
     {
       description:
-        "Pack a local file/directory into a .zipwiki. AI OKF runs during pack by default. Pass noAiOkf true to skip and enrich later via okf_enrich. Parse may use ZipWiki API (billable) or BYO LlamaParse.",
+        "Pack a local file/directory into a .zipwiki. Default: return a markdown table plan (displayForUser) — paste that table into the chat and STOP for the human. After they approve in a later message, call again with confirm:true and humanApproved:true. Do not invent humanApproved in the same turn. Large files + hosted LlamaParse often 413 — prefer parser=liteparse for big PDFs.",
       inputSchema: {
         source: z.string().describe("File or directory to pack"),
         output: z.string().optional().describe("Output .zipwiki path"),
+        confirm: z
+          .boolean()
+          .optional()
+          .describe(
+            "Default false: show the markdown table plan only. true: pack after humanApproved.",
+          ),
+        humanApproved: z
+          .boolean()
+          .optional()
+          .describe(
+            "Set true only after the human approved the table in a later chat message. Required with confirm:true.",
+          ),
+        previewOnly: z
+          .boolean()
+          .optional()
+          .describe(
+            "Deprecated alias for confirm:false (markdown table plan only).",
+          ),
+        parser: z
+          .enum(["liteparse", "llamaparse"])
+          .optional()
+          .describe(
+            "Document parser. liteparse = local (free). llamaparse = hosted or BYO. Overrides account default for this pack.",
+          ),
+        parseCredential: z
+          .enum(["local", "zipwiki", "llama"])
+          .optional()
+          .describe(
+            "Parse credentials: local (LiteParse), zipwiki (hosted API + credits), llama (LLAMA_CLOUD_API_KEY on this machine).",
+          ),
+        llamaTier: z
+          .string()
+          .optional()
+          .describe(
+            "LlamaParse tier when parser is llamaparse: cost_effective|agentic|agentic_plus|quick",
+          ),
+        omitOriginal: z
+          .boolean()
+          .optional()
+          .describe(
+            "When true, keep only parsed text in the archive (original via origin URI). Default from account settings.",
+          ),
         noAiOkf: z
           .boolean()
           .optional()
@@ -322,6 +364,12 @@ export function registerTools(server: McpServer): void {
           .boolean()
           .optional()
           .describe("Store file: URI on each parse via Extra Field 0x014F"),
+        originDrive: z
+          .boolean()
+          .optional()
+          .describe(
+            "Store each file's Google Drive URL (Drive for desktop) as Extra Field 0x014F",
+          ),
         originRecord: z
           .enum(["manifest", "cd", "both"])
           .optional()

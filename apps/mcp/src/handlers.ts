@@ -45,6 +45,11 @@ import {
   invalidatePackageCache,
   withCachedPackage,
 } from "./package-cache.js";
+import {
+  isPackPreviewOnly,
+  resolvePackPlanPreview,
+  type McpPackArgs,
+} from "./pack-preview.js";
 
 export { DEFAULT_MAX_BYTES };
 
@@ -433,65 +438,78 @@ export async function okfEnrich(args: {
 
 /**
  * Pack sources on the local filesystem (or mounted cloud drive).
- * AI OKF runs during pack by default (accurate concepts). Pass
- * `noAiOkf: true` to skip and enrich later via `okf_enrich`, or
- * `useZipcodexOkf: true` to force hosted/BYO OKF.
+ *
+ * Default: return a markdown table plan (`displayForUser`) and stop for human chat approval.
+ * Pack only when `confirm:true` and `humanApproved:true` after the human said yes in a later message.
+ * No MCP elicitation / Approve dialog.
  */
-export async function pack(args: {
-  source: string;
-  output?: string;
-  /** Default false — run AI OKF during pack. Set true to skip. */
-  noAiOkf?: boolean;
-  /** When true, run AI OKF via account credential (ZipWiki or BYO). */
-  useZipcodexOkf?: boolean;
-  noOkf?: boolean;
-  noOcr?: boolean;
-  recurse?: boolean;
-  origins?: string;
-  originPattern?: string;
-  originUrlTemplate?: string;
-  originFile?: boolean;
-  originRecord?: "manifest" | "cd" | "both";
-  sha256Extra?: boolean;
-  originSha256?: boolean;
-  okfProfile?: "auto" | "book" | "legislation" | "invoice";
-}): Promise<ToolResult> {
+export async function pack(args: McpPackArgs): Promise<ToolResult> {
   try {
-    const source = isAbsolute(args.source)
-      ? args.source
-      : resolve(process.cwd(), args.source);
-    if (!existsSync(source)) {
+    loadZipwikiHomeEnv();
+    const preview = resolvePackPlanPreview(args);
+
+    if (isPackPreviewOnly(args)) {
+      return jsonResult({
+        status: "preview",
+        awaitingHumanApproval: true,
+        displayForUser: preview.displayForUser,
+        cliCommand: preview.cliCommand,
+        message: preview.message,
+        agentInstruction: preview.agentInstruction,
+        plan: preview.plan,
+        warnings: preview.warnings,
+        suggestedArgs: preview.suggestedArgs,
+      });
+    }
+
+    if (args.humanApproved !== true) {
       return jsonResult(
-        { error: `Source not found: ${source}`, code: "not_found" },
+        {
+          status: "preview",
+          awaitingHumanApproval: true,
+          code: "pack_needs_human_approval",
+          displayForUser: preview.displayForUser,
+          cliCommand: preview.cliCommand,
+          message: preview.message,
+          agentInstruction: preview.agentInstruction,
+          plan: preview.plan,
+          warnings: preview.warnings,
+          suggestedArgs: preview.suggestedArgs,
+        },
         true,
       );
     }
-    const out =
-      args.output?.trim() ||
-      join(
-        await mkdtemp(join(tmpdir(), "zipwiki-mcp-")),
-        `${basename(source)}.nzip`,
-      );
-    const outAbs = isAbsolute(out) ? out : resolve(process.cwd(), out);
+
+    const source = preview.plan.source;
+    const outAbs = preview.plan.output;
     await mkdir(resolve(outAbs, ".."), { recursive: true });
 
-    const useZipcodexOkf = args.useZipcodexOkf === true;
-    const noAiOkf = useZipcodexOkf ? false : (args.noAiOkf ?? false);
+    const useZipcodexOkf = preview.suggestedArgs.useZipcodexOkf === true;
+    const noAiOkf =
+      useZipcodexOkf ? false : (preview.suggestedArgs.noAiOkf ?? false);
 
     await runPack([source], {
       output: outAbs,
       noAiOkf,
       noOkf: args.noOkf,
       noOcr: args.noOcr,
-      recurse: args.recurse,
+      recurse: preview.plan.recurse,
+      omitOriginalDocuments: preview.plan.omitOriginalDocuments,
+      parser: preview.plan.parser,
+      parserMode: "fixed",
+      parseCredential: preview.plan.parseCredential,
+      remoteParse: preview.plan.parseCredential === "zipwiki",
+      llamaTier: preview.plan.llamaTier ?? undefined,
       origins: args.origins,
       originPattern: args.originPattern,
       originUrlTemplate: args.originUrlTemplate,
       originFile: args.originFile,
+      originDrive: args.originDrive,
       originRecord: args.originRecord,
       sha256Extra: args.sha256Extra,
       originSha256: args.originSha256,
       okfProfile: args.okfProfile,
+      yes: true,
       quiet: true,
     });
     if (!existsSync(outAbs)) {
@@ -511,8 +529,10 @@ export async function pack(args: {
       : "AI OKF ran during pack. Call open on the output.";
 
     return jsonResult({
+      status: "packed",
       output: outAbs,
       source,
+      plan: preview.plan,
       noAiOkf,
       useZipcodexOkf,
       enrichHint,
@@ -527,7 +547,9 @@ export async function pack(args: {
         ? "liteparse_dependency"
         : /quota/i.test(message)
           ? "quota_exceeded"
-          : "pack_failed";
+          : /not found/i.test(message)
+            ? "not_found"
+            : "pack_failed";
     return jsonResult(
       {
         error: message,

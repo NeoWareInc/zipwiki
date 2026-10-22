@@ -31,16 +31,17 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 | `read_manifest` | Always `META-INF/manifest.json` as raw JSON | zipaccess lib |
 | `extract` | Verified extract to disk (`fetchOrigin` also downloads 0x014F originals) | zipaccess lib |
 | `origin` | Extra Field `0x014F` URI/CRC; `fetch` downloads and verifies CRC-32 | zipaccess lib |
-| `pack` | Pack sources → `.zipwiki` (default **no AI OKF**) | zipwiki |
+| `pack` | Pack sources → `.zipwiki`. Default: markdown table plan (`displayForUser`). Pack only with `confirm:true` + `humanApproved:true` after human chat approval | zipwiki |
 | `update` | Add / update / delete documents (one rewrite; copies unchanged compressed members) | zipwiki |
 | `okf_enrich` | Apply host-LLM OKF enrichment into `.zipwiki` | zipaccess lib |
 
 ### Create workflow (default)
 
-1. `pack` — Free = local LiteParse (LibreOffice for Office docs); paid may use hosted LlamaParse until quota, then soft-falls back to LiteParse. **Skips** hosted AI OKF by default.
-2. `read_parsed` (capped) as needed.
-3. Host agent LLM fills title / description / type / tags / keyFacts.
-4. `okf_enrich` writes `wiki/okf/` (no hosted OKF quota).
+1. `pack` (default) — returns `displayForUser` (markdown table + CLI). Agent pastes that into chat and stops. After the human says yes, call again with `confirm:true` and `humanApproved:true`. Free = local LiteParse (LibreOffice for Office docs); paid may use hosted LlamaParse until quota, then soft-falls back to LiteParse.
+2. `open` on the new package.
+3. `read_parsed` (capped) as needed.
+4. Host agent LLM fills title / description / type / tags / keyFacts when AI OKF was skipped (`noAiOkf`).
+5. `okf_enrich` writes `wiki/okf/` (no hosted OKF quota).
 
 Optional: request hosted/BYO OKF on `pack` when the plan still has hosted OKF remaining; otherwise soft-skip and use `okf_enrich`.
 

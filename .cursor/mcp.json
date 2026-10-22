@@ -1,8 +1,11 @@
 {
   "mcpServers": {
-    "ZipWiki": {
-      "command": "node",
-      "args": ["${workspaceFolder}/apps/mcp/dist/stdio.js"]
+    "zipwiki": {
+      "command": "/Users/stevenburg/.local/share/fnm/node-versions/v22.22.3/installation/bin/node",
+      "args": [
+        "/Users/stevenburg/Projects/NeoWare/zipwiki/apps/mcp/dist/stdio.js"
+      ],
+      "cwd": "/Users/stevenburg/Projects/NeoWare/zipwiki"
     }
   }
 }

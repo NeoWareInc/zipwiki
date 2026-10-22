@@ -5,12 +5,18 @@ Portable knowledge lives in **`.zipwiki`** packages (ZIP + `META-INF/manifest.js
 
 | Surface | Role |
 | --- | --- |
-| **zipwiki** | Create (`pack`) and query (`open` / `search` / `read` / `origin`) |
+| **zipwiki** | Create (`pack`: markdown table → human yes → write) and query (`open` / `search` / `read` / `origin`) |
 | **stdio MCP** | Agents on this machine → zipaccess library |
+
+## Pack (MCP) — markdown table in chat
+
+1. Call `pack` once (omit `confirm`, or `confirm:false`) with the proposed args.
+2. Paste `displayForUser` (markdown table + CLI) into the chat and **STOP**. Wait for the human.
+3. Only after they approve in a **later** message, call `pack` again with `confirm:true` and `humanApproved:true` (plus any setting changes they asked for). Never invent `humanApproved` in the same turn. No MCP elicitation / Approve forms.
 
 ## Open sequence (always)
 
-1. Pack (or open an existing package)
+1. Pack (or open an existing package) — table plan, then human yes before create
 2. Catalog — `open`
 3. Prefer `search` / `query` when available; else `read_okf_index` + `read_okf`
 4. Follow `sources` to `read_parsed` (or originals via `read_entry` — stream, verified)

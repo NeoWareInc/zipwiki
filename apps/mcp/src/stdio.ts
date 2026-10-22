@@ -22,10 +22,16 @@ if (shouldShowMcpInstallHelp(args, process.stdin.isTTY === true)) {
 
 void maybeCheckForUpdate();
 
-const server = new McpServer({
-  name: "zipwiki",
-  version: "0.1.0",
-});
+const server = new McpServer(
+  {
+    name: "zipwiki",
+    version: "0.1.0",
+  },
+  {
+    instructions:
+      "For pack: call pack once (confirm omitted). Paste displayForUser (markdown table) into the chat and STOP. After the human approves in a later message, call pack again with confirm:true and humanApproved:true. Never invent humanApproved in the same turn. Never use MCP elicitation forms.",
+  },
+);
 
 registerTools(server);
 
