@@ -89,14 +89,19 @@ function QueryIcon() {
   );
 }
 
+const navLockedClass =
+  "flex cursor-not-allowed items-center gap-2.5 rounded-lg border-l-2 border-transparent px-3 py-2 text-sm text-(--muted) opacity-50";
+
 function SidebarNav({
   isAdmin,
   pathname,
   onNavigate,
+  setupRequired,
 }: {
   isAdmin: boolean;
   pathname: string;
   onNavigate?: () => void;
+  setupRequired?: boolean;
 }) {
   const adminActive =
     pathname === "/admin" || pathname.startsWith("/admin/");
@@ -105,6 +110,42 @@ function SidebarNav({
     (pathname.startsWith("/dashboard/knowledge/") &&
       !pathname.startsWith("/dashboard/knowledge/create"));
   const createActive = pathname.startsWith("/dashboard/knowledge/create");
+  const settingsActive = pathname.startsWith("/dashboard/settings");
+
+  if (setupRequired) {
+    return (
+      <nav className="flex flex-col gap-0.5 px-3" aria-label="Main">
+        <NavLink
+          to="/dashboard/settings?onboarding=1"
+          className={() => navClass({ isActive: settingsActive })}
+          onClick={onNavigate}
+        >
+          Settings
+        </NavLink>
+        <p className="mt-2 px-3 text-xs leading-relaxed text-(--muted)">
+          Save your Knowledge Archive settings to unlock the rest of the portal.
+        </p>
+        <span className={navLockedClass} aria-disabled="true">
+          <DashboardIcon />
+          Dashboard
+        </span>
+        <span className={navLockedClass} aria-disabled="true">
+          <CreateIcon />
+          Create ZipWiki
+        </span>
+        <span className={navLockedClass} aria-disabled="true">
+          <QueryIcon />
+          Query ZipWiki
+        </span>
+        {isAdmin && (
+          <span className={navLockedClass} aria-disabled="true">
+            <UsersIcon />
+            Admin Pages
+          </span>
+        )}
+      </nav>
+    );
+  }
 
   return (
     <nav className="flex flex-col gap-0.5 px-3" aria-label="Main">
@@ -147,11 +188,13 @@ function SidebarBody({
   me,
   pathname,
   onNavigate,
+  setupRequired,
 }: {
   isAdmin: boolean;
   me: MeResponse | undefined;
   pathname: string;
   onNavigate?: () => void;
+  setupRequired?: boolean;
 }) {
   return (
     <>
@@ -176,6 +219,7 @@ function SidebarBody({
           isAdmin={isAdmin}
           pathname={pathname}
           onNavigate={onNavigate}
+          setupRequired={setupRequired}
         />
       </div>
       <div className="border-t border-(--border) p-3">
@@ -210,12 +254,14 @@ export function DashboardLayout() {
       }
     : undefined;
   const isAdmin = me?.user.role === "admin";
+  const setupRequired =
+    settings !== undefined && settings.setupComplete !== true;
 
   useEffect(() => {
-    if (!settings || settings.setupComplete) return;
+    if (!setupRequired) return;
     if (location.pathname.startsWith("/dashboard/settings")) return;
     navigate("/dashboard/settings?onboarding=1", { replace: true });
-  }, [settings, location.pathname, navigate]);
+  }, [setupRequired, location.pathname, navigate]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -228,6 +274,7 @@ export function DashboardLayout() {
           isAdmin={Boolean(isAdmin)}
           me={me}
           pathname={location.pathname}
+          setupRequired={setupRequired}
         />
       </aside>
 
@@ -274,12 +321,20 @@ export function DashboardLayout() {
                 me={me}
                 pathname={location.pathname}
                 onNavigate={() => setMobileOpen(false)}
+                setupRequired={setupRequired}
               />
             </aside>
           </div>
         )}
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+          {setupRequired && (
+            <p className="mb-6 rounded-md border border-(--border) bg-(--paper) px-4 py-3 text-sm text-(--muted)">
+              Confirm your Knowledge Archive settings (defaults are fine), then
+              choose <span className="font-medium text-(--ink)">Save and continue</span>{" "}
+              to open the portal.
+            </p>
+          )}
           <LowCreditsBanner />
           <Outlet />
         </main>

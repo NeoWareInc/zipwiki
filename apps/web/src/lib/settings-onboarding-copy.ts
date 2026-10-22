@@ -8,7 +8,7 @@ export const SETTINGS_PAGE = {
 } as const;
 
 export const SETTINGS_ONBOARDING_BANNER = {
-  body: "Creating a Knowledge Archive is two pack-time jobs: extract document text into AI-readable markdown, then write a small OKF search index. Set those choices below—the CLI downloads them on each pack.",
+  body: "Before you enter the portal, confirm how ZipWiki builds Knowledge Archives (defaults are fine). Parse turns documents into markdown; OKF writes a small search index. Save and continue unlocks the rest of the dashboard—you can change these anytime under Settings.",
   howItWorksHref: "/how-it-works",
   howItWorksLabel: "How it works",
 } as const;

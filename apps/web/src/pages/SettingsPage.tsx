@@ -137,7 +137,7 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-10">
       {onboarding && (
-        <div className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted) space-y-2">
+        <div className="rounded-lg border border-(--border) bg-(--paper) p-4 text-sm text-(--muted) space-y-3">
           <p>{SETTINGS_ONBOARDING_BANNER.body}</p>
           {!embedded && (
             <p>
@@ -152,6 +152,13 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
               Advanced settings.
             </p>
           )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-(--accent-bright) disabled:opacity-50 disabled:hover:bg-(--accent)"
+          >
+            {saving ? "Saving…" : "Save and continue"}
+          </button>
         </div>
       )}
       {saveError && <FormError message={saveError} />}
@@ -556,23 +563,37 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
         </section>
       )}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-(--accent-bright) disabled:opacity-50 disabled:hover:bg-(--accent)"
+      <div
+        className={
+          onboarding && !embedded
+            ? "sticky bottom-0 z-20 -mx-6 border-t border-(--border) bg-(--surface)/95 px-6 py-4 backdrop-blur md:-mx-8 md:px-8"
+            : undefined
+        }
       >
-        {saving
-          ? "Saving…"
-          : onboarding
-            ? "Save and continue"
-            : "Save settings"}
-      </button>
-      {data?.setupComplete && !onboarding && (
-        <p className="text-xs text-(--muted)">
-          Last updated:{" "}
-          {data.updatedAt ? new Date(data.updatedAt).toLocaleString() : "—"}
-        </p>
-      )}
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-md bg-(--accent) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-(--accent-bright) disabled:opacity-50 disabled:hover:bg-(--accent)"
+        >
+          {saving
+            ? "Saving…"
+            : onboarding
+              ? "Save and continue"
+              : "Save settings"}
+        </button>
+        {onboarding && (
+          <p className="mt-2 text-xs text-(--muted)">
+            Defaults are already selected. Saving confirms them and opens the
+            portal.
+          </p>
+        )}
+        {data?.setupComplete && !onboarding && (
+          <p className="mt-2 text-xs text-(--muted)">
+            Last updated:{" "}
+            {data.updatedAt ? new Date(data.updatedAt).toLocaleString() : "—"}
+          </p>
+        )}
+      </div>
     </form>
   );
 }
@@ -658,26 +679,35 @@ function hostedOkfModelLabel(model: string | undefined): string {
 }
 
 export default function SettingsPage() {
+  const [params] = useSearchParams();
+  const onboarding = params.get("onboarding") === "1";
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="font-display text-3xl font-semibold">
-          {SETTINGS_PAGE.title}
+          {onboarding ? "Confirm your settings" : SETTINGS_PAGE.title}
         </h1>
-        <p className="mt-2 max-w-2xl text-(--muted)">{SETTINGS_PAGE.lead}</p>
+        <p className="mt-2 max-w-2xl text-(--muted)">
+          {onboarding
+            ? "Review the defaults below, then Save and continue. Nothing is locked in—you can edit these later from Settings."
+            : SETTINGS_PAGE.lead}
+        </p>
       </div>
       <div className="rounded-xl border border-(--border) bg-(--surface) shadow-soft p-6 md:p-8">
         <AccountSettingsForm />
       </div>
-      <p className="text-sm text-(--muted)">
-        Need a machine key for scripts or older clients?{" "}
-        <Link
-          to="/dashboard/keys"
-          className="text-(--accent) hover:underline"
-        >
-          Manage API keys
-        </Link>
-      </p>
+      {!onboarding && (
+        <p className="text-sm text-(--muted)">
+          Need a machine key for scripts or older clients?{" "}
+          <Link
+            to="/dashboard/keys"
+            className="text-(--accent) hover:underline"
+          >
+            Manage API keys
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
