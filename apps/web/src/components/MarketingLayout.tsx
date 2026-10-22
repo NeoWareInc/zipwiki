@@ -185,6 +185,9 @@ export function MarketingLayout() {
             <Link to="/mcp" className="hover:text-(--accent)">
               MCP & CLI
             </Link>
+            <Link to="/resources" className="hover:text-(--accent)">
+              Resources
+            </Link>
             {SHOW_INSTALL_IN_NAV && (
               <Link to="/install" className="hover:text-(--accent)">
                 Install

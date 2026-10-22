@@ -14,6 +14,7 @@ const NAV_CORE = [
   { to: "/", label: "Product" },
   { to: "/how-it-works", label: "How it works" },
   { to: "/mcp", label: "MCP & CLI" },
+  { to: "/resources", label: "Resources" },
 ] as const;
 
 const NAV_CONTACT = [{ to: "/contact", label: "Contact" }] as const;
@@ -27,6 +28,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/how-it-works": `How it works — ${SITE_NAME}`,
   "/mcp": `MCP & CLI — ${SITE_NAME}`,
   "/cli": `MCP & CLI — ${SITE_NAME}`,
+  "/resources": `Resources — ${SITE_NAME}`,
   "/install": `Install — ${SITE_NAME}`,
   "/contact": `Contact — ${SITE_NAME}`,
   "/download": `Install — ${SITE_NAME}`,

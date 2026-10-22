@@ -117,6 +117,13 @@ export default function ContactPage() {
                   </Link>{" "}
                   if you are connecting an agent
                 </li>
+                <li>
+                  • Visit{" "}
+                  <Link to="/resources" className="text-(--accent) hover:underline">
+                    Resources
+                  </Link>{" "}
+                  for articles, the Application Note, and developer use cases
+                </li>
               </ul>
             </div>
           </div>

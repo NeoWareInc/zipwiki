@@ -9,6 +9,9 @@ import HowItWorksPage from "./pages/marketing/HowItWorksPage";
 import McpPage from "./pages/marketing/McpPage";
 import InstallPage from "./pages/marketing/InstallPage";
 import ContactPage from "./pages/marketing/ContactPage";
+import ResourcesPage, {
+  ResourceArticlePage,
+} from "./pages/marketing/ResourcesPage";
 import DashboardPage from "./pages/DashboardPage";
 import KeysPage from "./pages/KeysPage";
 import BillingPage from "./pages/BillingPage";
@@ -41,6 +44,8 @@ export default function App() {
             <Route path="/mcp" element={<McpPage />} />
             <Route path="/cli" element={<Navigate to="/mcp#cli" replace />} />
             <Route path="/install" element={<InstallPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/resources/:slug" element={<ResourceArticlePage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/download" element={<Navigate to="/install" replace />} />
             <Route path="/plugin" element={<Navigate to="/mcp" replace />} />
