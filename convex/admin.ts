@@ -816,38 +816,110 @@ export const deleteAccount = mutation({
   args: { id: v.id("accounts") },
   handler: async (ctx, { id }) => {
     const admin = await requireAdmin(ctx);
+    const account = await ctx.db.get(id);
+    if (!account) throw new Error("Account not found");
+    if (account.userId === admin.userId) {
+      throw new Error("You cannot delete your own account.");
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", account.userId))
+      .unique();
+    const email = profile?.email ?? "(unknown)";
+
     await recordAdminAudit(ctx, {
-      accountId: id,
       adminUserId: admin.userId,
       adminEmail: admin.adminEmail,
       action: "account_deleted",
+      detail: email,
     });
+
     const keys = await ctx.db
       .query("apiKeys")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
       .collect();
     for (const k of keys) await ctx.db.delete(k._id);
+
     const periods = await ctx.db
       .query("usagePeriods")
       .withIndex("by_account_period", (q) => q.eq("accountId", id))
       .collect();
     for (const p of periods) await ctx.db.delete(p._id);
+
     const events = await ctx.db
       .query("usageEvents")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
       .collect();
     for (const e of events) await ctx.db.delete(e._id);
+
+    const steps = await ctx.db
+      .query("usageStepEvents")
+      .withIndex("by_accountId_and_createId", (q) => q.eq("accountId", id))
+      .collect();
+    for (const s of steps) await ctx.db.delete(s._id);
+
     const ledger = await ctx.db
       .query("creditLedger")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
       .collect();
     for (const row of ledger) await ctx.db.delete(row._id);
+
     const settings = await ctx.db
       .query("accountSettings")
       .withIndex("by_accountId", (q) => q.eq("accountId", id))
       .unique();
     if (settings) await ctx.db.delete(settings._id);
+
+    // Device codes for this account (no by_accountId index — small table).
+    const deviceCodes = await ctx.db.query("deviceAuthCodes").collect();
+    for (const row of deviceCodes) {
+      if (row.accountId === id || row.userId === account.userId) {
+        await ctx.db.delete(row._id);
+      }
+    }
+
+    if (profile) await ctx.db.delete(profile._id);
+
+    const passkeys = await ctx.db
+      .query("adminPasskeys")
+      .withIndex("by_userId", (q) => q.eq("userId", account.userId))
+      .collect();
+    for (const p of passkeys) await ctx.db.delete(p._id);
+    const challenges = await ctx.db
+      .query("adminPasskeyChallenges")
+      .withIndex("by_userId", (q) => q.eq("userId", account.userId))
+      .collect();
+    for (const c of challenges) await ctx.db.delete(c._id);
+
+    const sessions = await ctx.db
+      .query("authSessions")
+      .withIndex("userId", (q) => q.eq("userId", account.userId))
+      .collect();
+    for (const session of sessions) {
+      const tokens = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const t of tokens) await ctx.db.delete(t._id);
+      await ctx.db.delete(session._id);
+    }
+
+    const authAccounts = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", account.userId))
+      .collect();
+    for (const authAccount of authAccounts) {
+      const codes = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", authAccount._id))
+        .collect();
+      for (const code of codes) await ctx.db.delete(code._id);
+      await ctx.db.delete(authAccount._id);
+    }
+
     await ctx.db.delete(id);
-    return { ok: true };
+    await ctx.db.delete(account.userId);
+    return { ok: true, email };
   },
 });

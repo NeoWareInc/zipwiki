@@ -203,12 +203,16 @@ export default function AdminAccountPage() {
             <button
               type="button"
               className="rounded-md border border-red-200 px-2 py-1 text-xs text-red-700"
-              onClick={() =>
+              onClick={() => {
+                const ok = window.confirm(
+                  `Permanently delete ${a.email}? This removes their profile, login, API keys, and usage history. This cannot be undone.`,
+                );
+                if (!ok) return;
                 void run(async () => {
                   await remove({ id: a.id as Id<"accounts"> });
                   navigate("/admin");
-                })
-              }
+                });
+              }}
             >
               Delete account
             </button>

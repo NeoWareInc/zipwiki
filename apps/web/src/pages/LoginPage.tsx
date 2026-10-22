@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   Link,
   Navigate,
@@ -25,6 +25,7 @@ import {
   useBetaAccessStatus,
 } from "../components/BetaAccessGate";
 import { AuthBusy, takeAuthNext, useAuthSettling } from "../components/AuthSession";
+import { parseAuthEmailLinkParams } from "../lib/authEmailLink";
 
 const KNOWN_CODES = new Set([
   "use_google_sign_in",
@@ -43,16 +44,22 @@ export default function LoginPage() {
   const { signIn, signOut } = useAuthActions();
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
   const access = useBetaAccessStatus();
-  const [params] = useSearchParams();
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [params, setParams] = useSearchParams();
+  const linkParams = parseAuthEmailLinkParams(params);
+  const [step, setStep] = useState<Step>(() =>
+    linkParams ? "code" : "email",
+  );
+  const [email, setEmail] = useState(
+    () => linkParams?.email ?? params.get("email")?.trim() ?? "",
+  );
+  const [code, setCode] = useState(() => linkParams?.code ?? "");
   const [error, setError] = useState(params.get("error") ?? "");
   const [pending, setPending] = useState(false);
   const [gateNotice, setGateNotice] = useState<{
     title: string;
     message: string;
   } | null>(null);
+  const linkVerifyStarted = useRef(false);
 
   const { settling, isAuthenticated } = useAuthSettling();
   const from =
@@ -76,6 +83,39 @@ export default function LoginPage() {
     }
   }
 
+  async function verifyWithCode(nextEmail: string, nextCode: string) {
+    setError("");
+    setPending(true);
+    try {
+      await signIn("resend-otp", {
+        email: nextEmail.trim(),
+        code: nextCode.trim(),
+      });
+      await finishSignIn();
+    } catch (err) {
+      const gate = parseBetaAccessError(err);
+      if (gate) {
+        setGateNotice({ title: gate.title, message: gate.message });
+      } else {
+        setError(
+          err instanceof Error ? err.message : "Invalid or expired code — try again",
+        );
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!linkParams || linkVerifyStarted.current) return;
+    linkVerifyStarted.current = true;
+    const next = new URLSearchParams(params);
+    next.delete("code");
+    setParams(next, { replace: true });
+    void verifyWithCode(linkParams.email, linkParams.code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot from initial URL
+  }, []);
+
   async function onSendCode(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -93,26 +133,7 @@ export default function LoginPage() {
 
   async function onVerifyCode(e: FormEvent) {
     e.preventDefault();
-    setError("");
-    setPending(true);
-    try {
-      await signIn("resend-otp", {
-        email: email.trim(),
-        code: code.trim(),
-      });
-      await finishSignIn();
-    } catch (err) {
-      const gate = parseBetaAccessError(err);
-      if (gate) {
-        setGateNotice({ title: gate.title, message: gate.message });
-      } else {
-        setError(
-          err instanceof Error ? err.message : "Invalid or expired code — try again",
-        );
-      }
-    } finally {
-      setPending(false);
-    }
+    await verifyWithCode(email, code);
   }
 
   if (settling) return <AuthBusy label="Finishing sign-in…" />;
@@ -120,6 +141,9 @@ export default function LoginPage() {
     const next =
       (location.state as { from?: string } | null)?.from || takeAuthNext();
     return <Navigate to={next.startsWith("/") ? next : "/dashboard"} replace />;
+  }
+  if (linkParams && pending && !gateNotice && !error) {
+    return <AuthBusy label="Signing you in…" />;
   }
 
   const signupAction =
@@ -139,8 +163,8 @@ export default function LoginPage() {
               ? "Sign in as the account this CLI should use. We'll send a one-time code."
               : access?.mode === "invite"
                 ? "Invite-only development site. Sign in with an invited email."
-                : "Enter your email — we'll send a one-time code."
-            : `Enter the code we sent to ${email.trim()}.`
+                : "Enter your email — we'll send a one-time code (and a sign-in link)."
+            : `Enter the code we sent to ${email.trim()}, or use the link in that email.`
         }
         footer={
           access ? (

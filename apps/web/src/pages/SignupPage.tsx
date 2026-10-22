@@ -1,5 +1,5 @@
-import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
@@ -19,6 +19,7 @@ import {
   authPrimaryButtonClassName,
 } from "../components/AuthChrome";
 import { AuthBusy } from "../components/AuthSession";
+import { parseAuthEmailLinkParams } from "../lib/authEmailLink";
 
 type Step = "email" | "code";
 
@@ -28,15 +29,22 @@ export default function SignupPage() {
   const ensure = useMutation(api.profiles.ensureProfileAndAccount);
   const createKey = useMutation(api.apiKeys.createMine);
   const access = useBetaAccessStatus();
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
+  const [params, setParams] = useSearchParams();
+  const linkParams = parseAuthEmailLinkParams(params);
+  const [step, setStep] = useState<Step>(() =>
+    linkParams ? "code" : "email",
+  );
+  const [email, setEmail] = useState(
+    () => linkParams?.email ?? params.get("email")?.trim() ?? "",
+  );
+  const [code, setCode] = useState(() => linkParams?.code ?? "");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [denied, setDenied] = useState<{
     title: string;
     message: string;
   } | null>(null);
+  const linkVerifyStarted = useRef(false);
 
   async function afterAuth() {
     let lastErr: unknown;
@@ -61,29 +69,13 @@ export default function SignupPage() {
     navigate("/dashboard/settings?onboarding=1", { replace: true });
   }
 
-  async function onSendCode(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setPending(true);
-    try {
-      await signIn("resend-otp", { email: email.trim() });
-      setStep("code");
-      setCode("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send sign-in code");
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function onVerifyCode(e: FormEvent) {
-    e.preventDefault();
+  async function verifyWithCode(nextEmail: string, nextCode: string) {
     setError("");
     setPending(true);
     try {
       const result = await signIn("resend-otp", {
-        email: email.trim(),
-        code: code.trim(),
+        email: nextEmail.trim(),
+        code: nextCode.trim(),
       });
       if (!result.signingIn) {
         setError("Could not verify that code. Request a new one and try again.");
@@ -104,6 +96,38 @@ export default function SignupPage() {
     }
   }
 
+  useEffect(() => {
+    if (!linkParams || linkVerifyStarted.current) return;
+    if (access === undefined) return;
+    if (!access.canJoin) return;
+    linkVerifyStarted.current = true;
+    const next = new URLSearchParams(params);
+    next.delete("code");
+    setParams(next, { replace: true });
+    void verifyWithCode(linkParams.email, linkParams.code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot from URL once access allows join
+  }, [access]);
+
+  async function onSendCode(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setPending(true);
+    try {
+      await signIn("resend-otp", { email: email.trim() });
+      setStep("code");
+      setCode("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send sign-in code");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function onVerifyCode(e: FormEvent) {
+    e.preventDefault();
+    await verifyWithCode(email, code);
+  }
+
   if (access === undefined) {
     return <AuthBusy label="Checking beta access…" />;
   }
@@ -122,13 +146,17 @@ export default function SignupPage() {
     );
   }
 
+  if (linkParams && pending && !error) {
+    return <AuthBusy label="Creating your account…" />;
+  }
+
   return (
     <AuthCard
       title="Create your ZipWiki account"
       subtitle={
         step === "email"
-          ? "During beta development, a limited number of account seats are available. Enter your email — we'll send a one-time code."
-          : `Enter the code we sent to ${email.trim()}.`
+          ? "During beta development, a limited number of account seats are available. Enter your email — we'll send a one-time code (and a sign-in link)."
+          : `Enter the code we sent to ${email.trim()}, or use the link in that email.`
       }
       footer={
         <AuthSwitchLink to="/login" prompt="Already have an account?" action="Sign in" />

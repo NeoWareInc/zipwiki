@@ -112,10 +112,11 @@ export async function denialForNewAccount(
 ): Promise<BetaGateDenial | null> {
   const normalized = email.trim().toLowerCase();
   if (isAlwaysAllowedEmail(normalized)) return null;
+  // Invited emails bypass invite-only and open-mode capacity.
+  if (await emailHasInvite(ctx, normalized)) return null;
 
   const mode: BetaAccessMode = resolveBetaAccessMode();
   if (mode === "invite") {
-    if (await emailHasInvite(ctx, normalized)) return null;
     return inviteOnlyDenial();
   }
 

@@ -261,11 +261,15 @@ export default defineSchema({
     message: v.string(),
   }).index("by_email", ["email"]),
 
-  /** Invite-only beta (dev): emails allowed to create an account. */
+  /** Invite allowlist: invited emails may create an account (invite-only or at capacity). */
   betaInvites: defineTable({
     email: v.string(),
     note: v.optional(v.string()),
     invitedByEmail: v.optional(v.string()),
+    /** When the invite email was last sent. */
+    sentAt: v.optional(v.number()),
+    /** When the invitee created their account. */
+    acceptedAt: v.optional(v.number()),
   }).index("by_email", ["email"]),
 
   /** Access requests when invite-only or the open-beta seat limit is reached. */
@@ -274,5 +278,15 @@ export default defineSchema({
     email: v.string(),
     message: v.string(),
     reason: v.union(v.literal("invite_only"), v.literal("capacity")),
+    /** Absent / undefined means pending (legacy rows). */
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("approved"),
+        v.literal("declined"),
+      ),
+    ),
+    reviewedAt: v.optional(v.number()),
+    reviewedByEmail: v.optional(v.string()),
   }).index("by_email", ["email"]),
 });

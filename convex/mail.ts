@@ -198,22 +198,32 @@ export const submitAccessRequest = action({
       reason === "invite_only"
         ? "Dev invite request"
         : "Beta capacity waitlist";
+    const origin = (process.env.SITE_URL?.trim() || "https://zipwiki.ai").replace(
+      /\/+$/,
+      "",
+    );
+    const adminUrl = `${origin}/admin`;
+    const bodyText = [
+      `Reason: ${reason}`,
+      `Name: ${stored.name}`,
+      `Email: ${stored.email}`,
+      "",
+      stored.message,
+      "",
+      `Approve in Admin: ${adminUrl}`,
+    ].join("\n");
+    const bodyHtml = `${contactHtml({
+      name: stored.name,
+      email: stored.email,
+      subject: label,
+      message: stored.message,
+    })}
+<p style="font-family:sans-serif;font-size:16px;line-height:1.5"><a href="${adminUrl}">Open Admin to approve</a></p>`;
     const sent = await send(
       CONTACT_INBOX,
       `${label}: ${stored.email}`,
-      [
-        `Reason: ${reason}`,
-        `Name: ${stored.name}`,
-        `Email: ${stored.email}`,
-        "",
-        stored.message,
-      ].join("\n"),
-      contactHtml({
-        name: stored.name,
-        email: stored.email,
-        subject: label,
-        message: stored.message,
-      }),
+      bodyText,
+      bodyHtml,
       stored.email,
     );
     if (!sent.ok) {
@@ -222,5 +232,46 @@ export const submitAccessRequest = action({
       );
     }
     return { ok: true as const };
+  },
+});
+
+/** Email an invited user that they can sign in. */
+export const sendBetaInvite = internalAction({
+  args: { email: v.string() },
+  returns: v.object({
+    ok: v.boolean(),
+    reason: v.optional(v.string()),
+  }),
+  handler: async (ctx, { email }): Promise<{ ok: boolean; reason?: string }> => {
+    const normalized = email.trim().toLowerCase();
+    const origin = (process.env.SITE_URL?.trim() || "https://zipwiki.ai").replace(
+      /\/+$/,
+      "",
+    );
+    const loginUrl = `${origin}/login?email=${encodeURIComponent(normalized)}`;
+    const installUrl = `${origin}/install`;
+    const sent = await send(
+      normalized,
+      "Your ZipWiki beta invite is ready",
+      [
+        "You're invited to the ZipWiki beta.",
+        "",
+        `Sign in with this email (${normalized}) using a one-time code or Google:`,
+        loginUrl,
+        "",
+        `Install the CLI anytime: ${installUrl}`,
+      ].join("\n"),
+      `<p style="font-family:sans-serif;font-size:16px;line-height:1.5">You're invited to the ZipWiki beta.</p>
+<p style="font-family:sans-serif;font-size:16px;line-height:1.5">Sign in with <strong>${normalized}</strong> using a one-time code or Google.</p>
+<p><a href="${loginUrl}">Sign in to ZipWiki</a></p>
+<p style="font-family:sans-serif;font-size:14px;color:#5a6b78"><a href="${installUrl}">Install the CLI</a></p>`,
+    );
+    if (!sent.ok) {
+      return { ok: false, reason: sent.reason };
+    }
+    await ctx.runMutation(internal.betaAccess.markInviteSent, {
+      email: normalized,
+    });
+    return { ok: true };
   },
 });

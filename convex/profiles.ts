@@ -92,6 +92,13 @@ export const ensureProfileAndAccount = mutation({
         email.split("@")[0] || "My account",
       );
       account = (await ctx.db.get(accountId))!;
+      const invite = await ctx.db
+        .query("betaInvites")
+        .withIndex("by_email", (q) => q.eq("email", normalized))
+        .unique();
+      if (invite && !invite.acceptedAt) {
+        await ctx.db.patch(invite._id, { acceptedAt: Date.now() });
+      }
     }
 
     return {
@@ -152,6 +159,13 @@ export const repairOrphanedAuthUser = internalMutation({
         normalized.split("@")[0] || "My account",
       );
       account = (await ctx.db.get(accountId))!;
+      const invite = await ctx.db
+        .query("betaInvites")
+        .withIndex("by_email", (q) => q.eq("email", normalized))
+        .unique();
+      if (invite && !invite.acceptedAt) {
+        await ctx.db.patch(invite._id, { acceptedAt: Date.now() });
+      }
     }
 
     return {

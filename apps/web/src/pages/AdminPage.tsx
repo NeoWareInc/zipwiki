@@ -18,6 +18,7 @@ export default function AdminPage() {
   const setCreditsUnlimited = useMutation(api.admin.setCreditsUnlimited);
   const setCreditsLocked = useMutation(api.admin.setCreditsLocked);
   const adjustCredits = useMutation(api.admin.adjustCredits);
+  const deleteAccount = useMutation(api.admin.deleteAccount);
 
   const list = (accounts ?? []) as Array<{
     id: string;
@@ -58,6 +59,21 @@ export default function AdminPage() {
     } catch (err) {
       setActionError(
         err instanceof Error ? err.message : "Failed to update login access",
+      );
+    }
+  }
+
+  async function removeAccount(accountId: string, email: string) {
+    const ok = window.confirm(
+      `Permanently delete ${email}? This removes their profile, login, API keys, and usage history. This cannot be undone.`,
+    );
+    if (!ok) return;
+    setActionError("");
+    try {
+      await deleteAccount({ id: accountId as Id<"accounts"> });
+    } catch (err) {
+      setActionError(
+        err instanceof Error ? err.message : "Failed to delete account",
       );
     }
   }
@@ -138,6 +154,7 @@ export default function AdminPage() {
         }
         onAdjustCredits={(id, sign) => void adjustAccountCredits(id, sign)}
         onDisable={(id, disabled) => void toggleDisabled(id, disabled)}
+        onDelete={(id, email) => void removeAccount(id, email)}
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
         }
@@ -154,6 +171,7 @@ export default function AdminPage() {
         }
         onAdjustCredits={(id, sign) => void adjustAccountCredits(id, sign)}
         onDisable={(id, disabled) => void toggleDisabled(id, disabled)}
+        onDelete={(id, email) => void removeAccount(id, email)}
         onSetRole={(id, role) =>
           void setRole({ id: id as Id<"accounts">, role })
         }
@@ -164,34 +182,52 @@ export default function AdminPage() {
   );
 }
 
+function formatWhen(ms: number | null | undefined) {
+  if (!ms) return null;
+  try {
+    return new Date(ms).toLocaleString();
+  } catch {
+    return null;
+  }
+}
+
 function AdminBetaInvites() {
   const status = useQuery(api.betaAccess.status);
   const invites = useQuery(api.betaAccess.listInvites);
+  const requests = useQuery(api.betaAccess.listRequests);
   const addInvite = useMutation(api.betaAccess.addInvite);
   const removeInvite = useMutation(api.betaAccess.removeInvite);
+  const resendInvite = useMutation(api.betaAccess.resendInvite);
+  const declineRequest = useMutation(api.betaAccess.declineRequest);
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [busyEmail, setBusyEmail] = useState<string | null>(null);
 
   if (status === undefined) return null;
-  if (status.mode !== "invite") {
-    return (
-      <div className="rounded-xl border border-(--border) bg-(--surface) p-4 shadow-soft">
-        <h2 className="font-display text-lg font-semibold">Beta access</h2>
-        <p className="mt-1 text-sm text-(--muted)">
-          This deployment is open beta with a limited number of account seats.
-        </p>
-      </div>
-    );
-  }
+
+  const modeLabel =
+    status.mode === "invite"
+      ? "Invite-only (dev). Bootstrap admin emails are always allowed."
+      : status.canJoin
+        ? "Open beta with a limited number of account seats."
+        : "Open beta is at capacity — approve waitlist requests below to grant seats.";
+
+  const pendingRequests = (requests ?? []).filter(
+    (row) => row.status === "pending",
+  );
 
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setPending(true);
     setError("");
     try {
-      await addInvite({ email: email.trim(), note: note.trim() || undefined });
+      await addInvite({
+        email: email.trim(),
+        note: note.trim() || undefined,
+        sendEmail: true,
+      });
       setEmail("");
       setNote("");
     } catch (err) {
@@ -201,69 +237,188 @@ function AdminBetaInvites() {
     }
   }
 
+  async function onApprove(requestEmail: string) {
+    setBusyEmail(requestEmail);
+    setError("");
+    try {
+      await addInvite({ email: requestEmail, sendEmail: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not approve request");
+    } finally {
+      setBusyEmail(null);
+    }
+  }
+
+  async function onDecline(requestEmail: string) {
+    setBusyEmail(requestEmail);
+    setError("");
+    try {
+      await declineRequest({ email: requestEmail });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not decline request");
+    } finally {
+      setBusyEmail(null);
+    }
+  }
+
+  async function onResend(inviteEmail: string) {
+    setBusyEmail(inviteEmail);
+    setError("");
+    try {
+      await resendInvite({ email: inviteEmail });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not resend invite");
+    } finally {
+      setBusyEmail(null);
+    }
+  }
+
   return (
-    <div className="space-y-3 rounded-xl border border-(--border) bg-(--surface) p-4 shadow-soft">
+    <div className="space-y-4 rounded-xl border border-(--border) bg-(--surface) p-4 shadow-soft">
       <div>
-        <h2 className="font-display text-lg font-semibold">Beta invites</h2>
-        <p className="mt-1 text-sm text-(--muted)">
-          Development access is invite-only. Bootstrap admin emails are always
-          allowed. Add other testers here before they sign in.
-        </p>
+        <h2 className="font-display text-lg font-semibold">Beta access</h2>
+        <p className="mt-1 text-sm text-(--muted)">{modeLabel}</p>
       </div>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <form onSubmit={onAdd} className="flex flex-wrap items-end gap-2">
-        <label className="text-sm">
-          <span className="mb-1 block text-(--muted)">Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded-md border border-(--border) px-3 py-2 text-sm"
-            required
-          />
-        </label>
-        <label className="text-sm">
-          <span className="mb-1 block text-(--muted)">Note (optional)</span>
-          <input
-            type="text"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="rounded-md border border-(--border) px-3 py-2 text-sm"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={pending || !email.trim()}
-          className="rounded-md bg-(--accent) px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          {pending ? "Adding…" : "Add invite"}
-        </button>
-      </form>
-      <ul className="divide-y divide-(--border) text-sm">
-        {(invites ?? []).map((row) => (
-          <li
-            key={row.id}
-            className="flex flex-wrap items-center justify-between gap-2 py-2"
+
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-(--ink)">
+          Pending access requests
+        </h3>
+        {requests === undefined ? (
+          <p className="text-sm text-(--muted)">Loading…</p>
+        ) : pendingRequests.length === 0 ? (
+          <p className="text-sm text-(--muted)">No pending requests.</p>
+        ) : (
+          <ul className="divide-y divide-(--border) text-sm">
+            {pendingRequests.map((row) => (
+              <li key={row.id} className="space-y-2 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-(--ink)">
+                      {row.name}{" "}
+                      <span className="font-normal text-(--muted)">
+                        &lt;{row.email}&gt;
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-xs text-(--muted)">
+                      {row.reason === "invite_only" ? "Invite request" : "Waitlist"}
+                      {formatWhen(row.createdAt)
+                        ? ` · ${formatWhen(row.createdAt)}`
+                        : ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={busyEmail === row.email}
+                      className="rounded-md bg-(--accent) px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                      onClick={() => void onApprove(row.email)}
+                    >
+                      Approve &amp; email
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyEmail === row.email}
+                      className="rounded-md border border-(--border) px-2.5 py-1.5 text-xs text-(--muted) hover:text-(--ink) disabled:opacity-50"
+                      onClick={() => void onDecline(row.email)}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+                {row.message ? (
+                  <p className="rounded-md bg-(--paper) px-3 py-2 text-xs text-(--muted)">
+                    {row.message}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="space-y-2 border-t border-(--border) pt-4">
+        <h3 className="text-sm font-semibold text-(--ink)">Invites</h3>
+        <p className="text-xs text-(--muted)">
+          Add an email to allow signup when invite-only or at capacity. An invite
+          email is sent automatically.
+        </p>
+        <form onSubmit={onAdd} className="flex flex-wrap items-end gap-2">
+          <label className="text-sm">
+            <span className="mb-1 block text-(--muted)">Email</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-md border border-(--border) px-3 py-2 text-sm"
+              required
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block text-(--muted)">Note (optional)</span>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="rounded-md border border-(--border) px-3 py-2 text-sm"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={pending || !email.trim()}
+            className="rounded-md bg-(--accent) px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            <div>
-              <p className="font-medium text-(--ink)">{row.email}</p>
-              {row.note ? (
-                <p className="text-xs text-(--muted)">{row.note}</p>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              className="text-xs text-red-600 hover:underline"
-              onClick={() => void removeInvite({ email: row.email })}
-            >
-              Remove
-            </button>
-          </li>
-        ))}
-        {(invites ?? []).length === 0 ? (
-          <li className="py-3 text-(--muted)">No invites yet.</li>
-        ) : null}
-      </ul>
+            {pending ? "Sending…" : "Add & email invite"}
+          </button>
+        </form>
+        <ul className="divide-y divide-(--border) text-sm">
+          {(invites ?? []).map((row) => {
+            const joined = Boolean(row.acceptedAt || row.hasAccount);
+            const statusText = joined
+              ? `Joined${formatWhen(row.acceptedAt) ? ` · ${formatWhen(row.acceptedAt)}` : ""}`
+              : row.sentAt
+                ? `Invited · emailed ${formatWhen(row.sentAt)}`
+                : "Invited · email pending";
+            return (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <div>
+                  <p className="font-medium text-(--ink)">{row.email}</p>
+                  <p className="text-xs text-(--muted)">{statusText}</p>
+                  {row.note ? (
+                    <p className="text-xs text-(--muted)">{row.note}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {!joined ? (
+                    <button
+                      type="button"
+                      disabled={busyEmail === row.email}
+                      className="text-xs font-medium text-(--accent) hover:underline disabled:opacity-50"
+                      onClick={() => void onResend(row.email)}
+                    >
+                      Resend email
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="text-xs text-red-600 hover:underline"
+                    onClick={() => void removeInvite({ email: row.email })}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+          {(invites ?? []).length === 0 ? (
+            <li className="py-3 text-(--muted)">No invites yet.</li>
+          ) : null}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -285,6 +440,7 @@ function AccountTable({
   onCreditDraftChange,
   onAdjustCredits,
   onDisable,
+  onDelete,
   onSetRole,
   onSetUnlimited,
   onSetLocked,
@@ -307,6 +463,7 @@ function AccountTable({
   onCreditDraftChange: (id: string, value: string) => void;
   onAdjustCredits: (id: string, sign: 1 | -1) => void;
   onDisable: (id: string, disabled: boolean) => void;
+  onDelete: (id: string, email: string) => void;
   onSetRole: (id: string, role: "admin" | "customer") => void;
   onSetUnlimited: (id: string, unlimited: boolean) => void;
   onSetLocked: (id: string, locked: boolean) => void;
@@ -413,6 +570,13 @@ function AccountTable({
                     onClick={() => onDisable(a.id, !a.disabled)}
                   >
                     {a.disabled ? "Enable login" : "Disable login"}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-xs text-red-700 hover:underline"
+                    onClick={() => onDelete(a.id, a.email)}
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>

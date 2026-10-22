@@ -4,8 +4,10 @@ import {
   internalQuery,
   mutation,
   query,
+  type MutationCtx,
 } from "./_generated/server";
-import { requireAdmin } from "./lib/admin";
+import { internal } from "./_generated/api";
+import { recordAdminAudit, requireAdmin } from "./lib/admin";
 import {
   accountCountForLimit,
   capacityMessage,
@@ -91,45 +93,194 @@ export const listInvites = query({
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const rows = await ctx.db.query("betaInvites").collect();
-    return rows
-      .map((row) => ({
-        id: row._id,
-        email: row.email,
-        note: row.note ?? null,
-        invitedByEmail: row.invitedByEmail ?? null,
-        createdAt: row._creationTime,
-      }))
-      .sort((a, b) => a.email.localeCompare(b.email));
+    const enriched = await Promise.all(
+      rows.map(async (row) => {
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_email", (q) => q.eq("email", row.email))
+          .unique();
+        return {
+          id: row._id,
+          email: row.email,
+          note: row.note ?? null,
+          invitedByEmail: row.invitedByEmail ?? null,
+          createdAt: row._creationTime,
+          sentAt: row.sentAt ?? null,
+          acceptedAt: row.acceptedAt ?? null,
+          hasAccount: Boolean(profile),
+        };
+      }),
+    );
+    return enriched.sort((a, b) => a.email.localeCompare(b.email));
   },
 });
 
+export const listRequests = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const rows = await ctx.db.query("betaAccessRequests").order("desc").take(200);
+    return await Promise.all(
+      rows.map(async (row) => {
+        const status = row.status ?? "pending";
+        const invite = await ctx.db
+          .query("betaInvites")
+          .withIndex("by_email", (q) => q.eq("email", row.email))
+          .unique();
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_email", (q) => q.eq("email", row.email))
+          .unique();
+        return {
+          id: row._id,
+          name: row.name,
+          email: row.email,
+          message: row.message,
+          reason: row.reason,
+          status,
+          createdAt: row._creationTime,
+          reviewedAt: row.reviewedAt ?? null,
+          reviewedByEmail: row.reviewedByEmail ?? null,
+          hasInvite: Boolean(invite),
+          hasAccount: Boolean(profile),
+        };
+      }),
+    );
+  },
+});
+
+async function markRequestsApproved(
+  ctx: MutationCtx,
+  email: string,
+  reviewedByEmail: string,
+) {
+  const rows = await ctx.db
+    .query("betaAccessRequests")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .collect();
+  const now = Date.now();
+  for (const row of rows) {
+    const status = row.status ?? "pending";
+    if (status !== "pending") continue;
+    await ctx.db.patch(row._id, {
+      status: "approved",
+      reviewedAt: now,
+      reviewedByEmail,
+    });
+  }
+}
+
+/**
+ * Add (or keep) an invite, approve matching access requests, optionally email.
+ */
 export const addInvite = mutation({
   args: {
     email: v.string(),
     note: v.optional(v.string()),
+    sendEmail: v.optional(v.boolean()),
   },
-  handler: async (ctx, { email, note }) => {
+  handler: async (ctx, { email, note, sendEmail }) => {
     const admin = await requireAdmin(ctx);
     const normalized = email.trim().toLowerCase();
     if (!normalized.includes("@")) throw new Error("Enter a valid email.");
+    const shouldEmail = sendEmail !== false;
+
+    let existing = await ctx.db
+      .query("betaInvites")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .unique();
+    let created = false;
+    if (!existing) {
+      const id = await ctx.db.insert("betaInvites", {
+        email: normalized,
+        note: note?.trim() || undefined,
+        invitedByEmail: admin.adminEmail,
+      });
+      existing = (await ctx.db.get(id))!;
+      created = true;
+    } else if (note?.trim()) {
+      await ctx.db.patch(existing._id, { note: note.trim() });
+      existing = (await ctx.db.get(existing._id))!;
+    }
+
+    await markRequestsApproved(ctx, normalized, admin.adminEmail);
+    await recordAdminAudit(ctx, {
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: created ? "beta_invite_add" : "beta_invite_refresh",
+      detail: normalized,
+    });
+
+    if (shouldEmail) {
+      await ctx.scheduler.runAfter(0, internal.mail.sendBetaInvite, {
+        email: normalized,
+      });
+    }
+
+    return { id: existing._id, created, emailed: shouldEmail };
+  },
+});
+
+export const resendInvite = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const admin = await requireAdmin(ctx);
+    const normalized = email.trim().toLowerCase();
     const existing = await ctx.db
       .query("betaInvites")
       .withIndex("by_email", (q) => q.eq("email", normalized))
       .unique();
-    if (existing) return { id: existing._id, created: false };
-    const id = await ctx.db.insert("betaInvites", {
+    if (!existing) throw new Error("Invite not found.");
+    await ctx.scheduler.runAfter(0, internal.mail.sendBetaInvite, {
       email: normalized,
-      note: note?.trim() || undefined,
-      invitedByEmail: admin.adminEmail,
     });
-    return { id, created: true };
+    await recordAdminAudit(ctx, {
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: "beta_invite_resend",
+      detail: normalized,
+    });
+    return { ok: true as const };
+  },
+});
+
+export const declineRequest = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const admin = await requireAdmin(ctx);
+    const normalized = email.trim().toLowerCase();
+    const rows = await ctx.db
+      .query("betaAccessRequests")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .collect();
+    const now = Date.now();
+    let declined = 0;
+    for (const row of rows) {
+      const status = row.status ?? "pending";
+      if (status !== "pending") continue;
+      await ctx.db.patch(row._id, {
+        status: "declined",
+        reviewedAt: now,
+        reviewedByEmail: admin.adminEmail,
+      });
+      declined += 1;
+    }
+    if (declined > 0) {
+      await recordAdminAudit(ctx, {
+        adminUserId: admin.userId,
+        adminEmail: admin.adminEmail,
+        action: "beta_request_decline",
+        detail: normalized,
+      });
+    }
+    return { declined };
   },
 });
 
 export const removeInvite = mutation({
   args: { email: v.string() },
   handler: async (ctx, { email }) => {
-    await requireAdmin(ctx);
+    const admin = await requireAdmin(ctx);
     const normalized = email.trim().toLowerCase();
     const existing = await ctx.db
       .query("betaInvites")
@@ -137,7 +288,29 @@ export const removeInvite = mutation({
       .unique();
     if (!existing) return { removed: false };
     await ctx.db.delete(existing._id);
+    await recordAdminAudit(ctx, {
+      adminUserId: admin.userId,
+      adminEmail: admin.adminEmail,
+      action: "beta_invite_remove",
+      detail: normalized,
+    });
     return { removed: true };
+  },
+});
+
+export const markInviteSent = internalMutation({
+  args: { email: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { email }) => {
+    const normalized = email.trim().toLowerCase();
+    const invite = await ctx.db
+      .query("betaInvites")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .unique();
+    if (invite) {
+      await ctx.db.patch(invite._id, { sentAt: Date.now() });
+    }
+    return null;
   },
 });
 
@@ -182,6 +355,7 @@ export const recordAccessRequest = internalMutation({
       email: parsed.value.email,
       message: parsed.value.message,
       reason: args.reason,
+      status: "pending",
     });
     return parsed.value;
   },
