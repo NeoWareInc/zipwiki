@@ -9,8 +9,6 @@ import {
   HOW_SECTIONS,
   OKF_FIELDS,
   OKF_INDEXING,
-  OKF_SPEC_LINK_LABEL,
-  OKF_SPEC_URL,
   ORIGIN_LINKS,
   PACKAGE_ACTIONS,
   PARSE_ENGINES,
@@ -117,16 +115,6 @@ export default function HowItWorksPage() {
           {OKF_INDEXING.title}
         </h2>
         <p className="mt-3 max-w-3xl text-(--muted)">{OKF_INDEXING.lead}</p>
-        <p className="mt-4 text-sm">
-          <a
-            className="font-medium text-(--accent) hover:underline"
-            href={OKF_SPEC_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {OKF_SPEC_LINK_LABEL}
-          </a>
-        </p>
         <div className="mt-10">
           <FeatureGrid items={OKF_FIELDS} columns={2} />
         </div>

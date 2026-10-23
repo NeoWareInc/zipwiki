@@ -10,8 +10,6 @@ import {
 import { api } from "@convex/_generated/api";
 import { FormError } from "../components/AuthChrome";
 import {
-  OKF_SPEC_LINK_LABEL,
-  OKF_SPEC_URL,
   SETTINGS_LLM_SECTION,
   SETTINGS_ONBOARDING_BANNER,
   SETTINGS_PACK_SECTION,
@@ -297,16 +295,6 @@ export function AccountSettingsForm({ embedded, onSaved }: Props) {
         </h2>
         <p className="text-sm leading-relaxed text-(--muted)">
           {SETTINGS_WHY_LLM.body}
-        </p>
-        <p className="text-sm">
-          <a
-            className="text-(--accent) hover:underline"
-            href={OKF_SPEC_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {OKF_SPEC_LINK_LABEL}
-          </a>
         </p>
       </section>
 

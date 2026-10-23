@@ -29,6 +29,7 @@ export const PAGE_TITLES: Record<string, string> = {
   "/mcp": `MCP & CLI — ${SITE_NAME}`,
   "/cli": `MCP & CLI — ${SITE_NAME}`,
   "/resources": `Resources — ${SITE_NAME}`,
+  "/docs": `Format specifications — ${SITE_NAME}`,
   "/install": `Install — ${SITE_NAME}`,
   "/contact": `Contact — ${SITE_NAME}`,
   "/download": `Install — ${SITE_NAME}`,

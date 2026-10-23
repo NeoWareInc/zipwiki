@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Introducing ZipWiki: Portable, AI-Searchable Knowledge Packages</title>
+  <style>
+    @page { margin: 0.85in; size: letter; }
+    body {
+      font-family: "Georgia", "Times New Roman", serif;
+      font-size: 11.5pt;
+      line-height: 1.55;
+      color: #1a1a1a;
+      max-width: 6.5in;
+      margin: 0 auto;
+    }
+    .brand {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #0d6e6e;
+      margin: 0 0 1.25em;
+    }
+    h1 {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 22pt;
+      font-weight: 700;
+      line-height: 1.25;
+      margin: 0 0 0.6em;
+      color: #111;
+    }
+    .excerpt {
+      font-size: 12.5pt;
+      color: #444;
+      margin: 0 0 0.75em;
+    }
+    .meta {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 9.5pt;
+      color: #666;
+      margin: 0 0 1.75em;
+      padding-bottom: 1em;
+      border-bottom: 1px solid #ddd;
+    }
+    h2 {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 13.5pt;
+      font-weight: 700;
+      margin: 1.6em 0 0.55em;
+      color: #111;
+      page-break-after: avoid;
+    }
+    p { margin: 0 0 0.85em; }
+    ul {
+      margin: 0 0 1em;
+      padding-left: 1.25em;
+    }
+    li { margin: 0 0 0.45em; }
+    .footer {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 9pt;
+      color: #777;
+      margin-top: 2.5em;
+      padding-top: 1em;
+      border-top: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <p class="brand">ZipWiki · zipwiki.ai</p>
+  <h1>Introducing ZipWiki: Portable, AI-Searchable Knowledge Packages</h1>
+  <p class="excerpt">How pairing compressed document storage with AI-friendly text lets AI agents query your archives instantly—while shrinking files to a fraction of their original size.</p>
+  <p class="meta">October 26, 2026 · Product &amp; Vision · 4 min read</p>
+
+  <h2>Why long-term archives need an AI upgrade</h2>
+  <p>Every team accumulates folders of PDFs, Word documents, spreadsheets, and slide decks—session laws, quarterly earnings filings, clinical records, contracts, or reference books.</p>
+  <p>We traditionally pack these into ZIP files to save space. But to an AI agent, a standard ZIP file is just a blind box. The AI can only see filenames. To actually read the contents or answer a question, the entire archive must be unpacked, and the AI has to chew through massive, heavy files from scratch every single time.</p>
+  <p>ZipWiki solves this problem. It is portable document memory with an embedded AI index—not another cloud drive, and not a complex database you have to maintain. When you pack a folder into a .zipwiki file, ZipWiki reads your documents once, pulls out the clean text, and writes a smart index right inside the ZIP container.</p>
+
+  <h2>What lives inside a ZipWiki package?</h2>
+  <p>A .zipwiki is still a standard ZIP file that opens with normal unzipping tools on any computer, but organized specifically for AI:</p>
+  <ul>
+    <li><strong>An AI Digest (The Summary):</strong> A quick overview of what is inside the archive, so an AI agent knows what is in the box before doing a deep dive.</li>
+    <li><strong>The Smart Index:</strong> Lightweight “concept cards” for each document. This acts like the index at the back of a textbook, helping an AI instantly locate key facts without reading every page.</li>
+    <li><strong>Clean Text (Extracted Markdown):</strong> AI models struggle with complex PDFs and binary files. ZipWiki converts documents into clean, structured text that AI can read rapidly.</li>
+    <li><strong>The Originals (Optional):</strong> Bulky original PDFs can stay bundled right next to the text, or they can be omitted to save space while keeping a verified web link to the original source.</li>
+  </ul>
+
+  <h2>How AI reads a ZipWiki (Without getting overwhelmed)</h2>
+  <p>Asking an AI a question about a massive archive shouldn’t require loading the entire collection into memory at once.</p>
+  <p>ZipWiki is built for selective reading. When an AI interacts with a ZipWiki package, it follows a simple path:</p>
+  <ul>
+    <li>It reads the overall summary.</li>
+    <li>It searches the smart index to identify which documents hold the answer.</li>
+    <li>It streams only the specific text needed to answer your question.</li>
+    <li>If it absolutely requires the original file, it knows exactly where to retrieve it.</li>
+  </ul>
+
+  <h2>Shrinking knowledge to 1/100th the size</h2>
+  <p>Because ZipWiki captures the text, tables, and headings an AI actually uses, bulky original files don’t always need to travel with the archive.</p>
+  <p>Linking out to original files (such as state law portals or SEC databases) instead of packing them directly inside routinely shrinks an archive’s size by upwards of 99%. That translates to roughly 1/100th of the original file size, while preserving full citation integrity and source verifiability. When full offline access is required, the original binaries can simply remain bundled inside.</p>
+
+  <h2>Trust the archive, not a hosted database</h2>
+  <p>ZipWiki puts data back in your hands. There is no external database to manage or keep in sync. You can share, sync, email, and back up .zipwiki archives like any standard ZIP file, confident that your knowledge remains instantly accessible to both humans and AI models.</p>
+  <p>ZipWiki is now available in Beta. To explore the format, download the tools, and start packaging your archives, visit <strong>zipwiki.ai</strong>.</p>
+
+  <p class="footer">© NeoWare, Inc. · Introducing ZipWiki</p>
+</body>
+</html>

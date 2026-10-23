@@ -39,6 +39,8 @@
     "pack:cli:dev": "pnpm build:dist:dev",
     "install:cli": "pnpm install:dist",
     "build:mcp": "pnpm build:zipwiki && pnpm --filter @zipwiki/mcp build",
+    "sync:public-specs": "./scripts/sync-public-specs.sh",
+    "publish:public-specs": "./scripts/publish-format-specs.sh",
     "test:zipwiki": "pnpm --filter @zipwiki/zipwiki test",
     "okf:tokens": "bash scripts/okf-zipwiki-tokens.sh",
     "smoke:zipwiki": "pnpm zipwiki -- open knowledge/sample-docs.zipwiki && pnpm zipwiki -- search knowledge/sample-docs.zipwiki deed",

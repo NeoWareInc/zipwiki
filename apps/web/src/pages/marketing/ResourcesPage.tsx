@@ -5,9 +5,10 @@ import {
   DEVELOPER_OKF_TABS,
   DEVELOPER_PROMPTS,
   DEVELOPER_USE_CASE_CARDS,
+  DOCS_INDEX_URL,
+  FORMAT_SPECS_REPO_URL,
   getResourceArticle,
   NEOZIP_APPNOTE_URL,
-  OKF_SPEC_URL,
   RESOURCE_ARTICLES,
   RESOURCE_CARDS,
   RESOURCES_SECTIONS,
@@ -174,30 +175,31 @@ export default function ResourcesPage() {
           <p className="mt-3 text-(--muted)">
             Every <code className="text-xs">.zipwiki</code> file is a standard
             ZIP archive that follows the NeoZip container profile and adds the{" "}
-            <code className="text-xs">wiki/</code> AI knowledge tree. The
-            specifications below define the exact on-disk layout, manifest
-            fields, and OKF conventions.
+            <code className="text-xs">wiki/</code> AI knowledge tree. Specs are
+            public markdown (for NeoZip.io and other sites) and are also rendered
+            here—while the ZipWiki product repository stays private.
           </p>
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <PrimaryCta to={ZIPWIKI_APPNOTE_URL}>
-            Open ZipWiki Application Note
+            Read ZipWiki Application Note
           </PrimaryCta>
           <SecondaryCta to={NEOZIP_APPNOTE_URL}>
             NeoZip Application Note →
           </SecondaryCta>
-          <SecondaryCta to={OKF_SPEC_URL}>OKF v0.2 Spec →</SecondaryCta>
+          <SecondaryCta to={DOCS_INDEX_URL}>All specs →</SecondaryCta>
         </div>
 
         <div className="mt-10 overflow-x-auto rounded-xl border border-(--border) bg-(--surface) shadow-soft">
-          <table className="w-full min-w-[44rem] text-left text-sm">
+          <table className="w-full min-w-[48rem] text-left text-sm">
             <thead className="border-b border-(--line) text-(--muted)">
               <tr>
                 <th className="px-4 py-3 font-medium">Specification</th>
                 <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">What it defines</th>
-                <th className="px-4 py-3 font-medium">Link</th>
+                <th className="px-4 py-3 font-medium">Read</th>
+                <th className="px-4 py-3 font-medium">Source</th>
               </tr>
             </thead>
             <tbody>
@@ -212,13 +214,21 @@ export default function ResourcesPage() {
                   <td className="px-4 py-3.5 text-(--muted)">{row.scope}</td>
                   <td className="px-4 py-3.5 text-(--muted)">{row.covers}</td>
                   <td className="px-4 py-3.5 whitespace-nowrap">
-                    <a
-                      href={row.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Link
+                      to={row.href}
                       className="font-semibold text-(--accent) hover:underline"
                     >
-                      View spec →
+                      On site →
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3.5 whitespace-nowrap">
+                    <a
+                      href={row.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-(--muted) hover:text-(--accent) hover:underline"
+                    >
+                      Markdown ↗
                     </a>
                   </td>
                 </tr>
@@ -226,6 +236,18 @@ export default function ResourcesPage() {
             </tbody>
           </table>
         </div>
+        <p className="mt-4 text-sm text-(--muted)">
+          Canonical raw files for NeoZip.io and partners:{" "}
+          <a
+            href={FORMAT_SPECS_REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-(--accent) hover:underline"
+          >
+            github.com/NeoWareInc/format-specs
+          </a>
+          .
+        </p>
       </Band>
 
       <Band tone="tint" id="developers">
@@ -271,8 +293,8 @@ export default function ResourcesPage() {
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
             <PrimaryCta to="/contact">Contact us</PrimaryCta>
-            <SecondaryCta to="/resources/custom-okf-domain-rules">
-              Read the custom OKF article →
+            <SecondaryCta to="/resources/introducing-zipwiki">
+              Read the ZipWiki intro →
             </SecondaryCta>
           </div>
         </div>
@@ -307,10 +329,31 @@ export function ResourceArticlePage() {
             ← All resources
           </Link>
 
-          <p className="mt-6 text-xs font-semibold tracking-wide text-(--accent) uppercase">
-            {article.date} · {article.category} · {article.readTimeMinutes} min
-            read
-          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+              {article.date} · {article.category} · {article.readTimeMinutes}{" "}
+              min read
+            </p>
+            {article.pdfPath ? (
+              <a
+                href={article.pdfPath}
+                download={`${article.slug}.pdf`}
+                className="inline-flex items-center justify-center gap-2 rounded-md border border-(--border) bg-(--paper) px-4 py-2 text-sm font-semibold text-(--ink) transition-colors hover:border-(--accent) hover:text-(--accent)"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                  aria-hidden
+                >
+                  <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+                  <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                </svg>
+                Download PDF
+              </a>
+            ) : null}
+          </div>
 
           <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-(--ink) md:text-4xl">
             {article.title}

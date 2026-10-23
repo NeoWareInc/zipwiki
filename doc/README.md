@@ -1,10 +1,19 @@
 # ZipWiki docs
 
-GitHub markdown is the docs host for Phase 1. A `docs.zipwiki.ai` site is later.
+**Public format specs (hybrid):** Application Notes and OKF live in
+`public-specs/` (synced from this tree) for the public
+[`NeoWareInc/format-specs`](https://github.com/NeoWareInc/format-specs) repo,
+and are rendered on the site at `/docs`. Product docs below stay private with
+this repository.
+
+```bash
+pnpm sync:public-specs
+# Optional: PUBLIC_SPECS_DEST=../format-specs pnpm sync:public-specs
+```
 
 **Start here**
 
-1. [ZIPWIKI_APPNOTE.md](ZIPWIKI_APPNOTE.md) — what a `.zipwiki` is
+1. [ZIPWIKI_APPNOTE.md](ZIPWIKI_APPNOTE.md) — what a `.zipwiki` is (also `/docs/zipwiki-appnote`)
 2. [ZIPACCESS.md](ZIPACCESS.md) — query (`open` / `search` / `read`)
 3. [MCP.md](MCP.md) — agent tools
 4. [CLI.md](CLI.md) — command reference

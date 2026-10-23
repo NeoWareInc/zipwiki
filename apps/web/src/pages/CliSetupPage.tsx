@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { AccountSettingsForm } from "./SettingsPage";
 import { AuthCard } from "../components/AuthChrome";
-import {
-  OKF_SPEC_LINK_LABEL,
-  OKF_SPEC_URL,
-  SETTINGS_CLI_INTRO,
-} from "../lib/settings-onboarding-copy";
+import { SETTINGS_CLI_INTRO } from "../lib/settings-onboarding-copy";
 
 export default function CliSetupPage() {
   const [done, setDone] = useState(false);
@@ -26,16 +22,6 @@ export default function CliSetupPage() {
         <p>{SETTINGS_CLI_INTRO.lead}</p>
         <p>{SETTINGS_CLI_INTRO.whyParse}</p>
         <p>{SETTINGS_CLI_INTRO.whyLlm}</p>
-        <p>
-          <a
-            className="text-(--accent) hover:underline"
-            href={OKF_SPEC_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {OKF_SPEC_LINK_LABEL}
-          </a>
-        </p>
       </div>
       <AccountSettingsForm embedded onSaved={() => setDone(true)} />
     </AuthCard>

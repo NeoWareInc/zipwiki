@@ -12,6 +12,10 @@ import ContactPage from "./pages/marketing/ContactPage";
 import ResourcesPage, {
   ResourceArticlePage,
 } from "./pages/marketing/ResourcesPage";
+import {
+  SpecDocPage,
+  SpecDocsIndexPage,
+} from "./pages/marketing/SpecDocsPage";
 import DashboardPage from "./pages/DashboardPage";
 import KeysPage from "./pages/KeysPage";
 import BillingPage from "./pages/BillingPage";
@@ -46,6 +50,8 @@ export default function App() {
             <Route path="/install" element={<InstallPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/resources/:slug" element={<ResourceArticlePage />} />
+            <Route path="/docs" element={<SpecDocsIndexPage />} />
+            <Route path="/docs/:slug" element={<SpecDocPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/download" element={<Navigate to="/install" replace />} />
             <Route path="/plugin" element={<Navigate to="/mcp" replace />} />

@@ -44,10 +44,15 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@convex": path.resolve(__dirname, "../../convex"),
+        "@public-specs": path.resolve(__dirname, "../../public-specs"),
       },
     },
     server: {
       port: 5173,
+      fs: {
+        // public-specs/ lives at the monorepo root (synced format AppNotes).
+        allow: [repoRoot],
+      },
       proxy: {
         // SPA routes must not be proxied. Fly only needs API prefixes —
         // a blanket `/auth` steals `/signed-in` cousins like `/auth/callback`.
