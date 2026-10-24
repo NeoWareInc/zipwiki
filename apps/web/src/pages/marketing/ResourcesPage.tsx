@@ -27,6 +27,8 @@ import {
   Section,
 } from "./MarketingUi";
 
+const TEAM_EMAIL = "team@zipwiki.ai";
+
 const BARE_DOMAIN_RE = /(?<![\w.@/-])([a-z0-9-]+\.(?:ai|io|com))(?![\w/-])/gi;
 
 function linkifyDomains(text: string): ReactNode {
@@ -303,16 +305,22 @@ export default function ResourcesPage() {
 
         <div className="mt-12 rounded-2xl border border-(--border) bg-(--paper) p-8 text-center shadow-soft">
           <h3 className="font-display text-2xl font-semibold text-(--ink)">
-            Have a special use case or suggestion?
+            Have a great use case? Let&rsquo;s talk.
           </h3>
           <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-(--muted)">
-            Working with a new document format, designing a custom{" "}
-            <code className="text-xs">--okf-profile</code>, or have a topic you
-            would like covered in our developer guides? Send us a note and tell
-            us what you are building.
+            If you have a strong use case for ZipWiki, are interested in
+            partnering with us, or have other suggestions, we would love to hear
+            from you. Email the ZipWiki team at{" "}
+            <a
+              href={`mailto:${TEAM_EMAIL}`}
+              className="font-semibold text-(--accent) hover:underline"
+            >
+              {TEAM_EMAIL}
+            </a>
+            .
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-            <PrimaryCta to="/contact">Contact us</PrimaryCta>
+            <PrimaryCta to={`mailto:${TEAM_EMAIL}`}>Email the team</PrimaryCta>
             <SecondaryCta to="/resources/introducing-zipwiki">
               Read the ZipWiki intro →
             </SecondaryCta>
@@ -442,11 +450,18 @@ export function ResourceArticlePage() {
                 Questions or suggestions on this topic?
               </h3>
               <p className="mt-1 text-sm text-(--muted)">
-                Reach out with your archive use case or browse more resources.
+                Have a use case, partnership idea, or suggestion? Email{" "}
+                <a
+                  href={`mailto:${TEAM_EMAIL}`}
+                  className="font-semibold text-(--accent) hover:underline"
+                >
+                  {TEAM_EMAIL}
+                </a>
+                .
               </p>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3 sm:mt-0">
-              <PrimaryCta to="/contact">Contact us</PrimaryCta>
+              <PrimaryCta to={`mailto:${TEAM_EMAIL}`}>Email the team</PrimaryCta>
               <SecondaryCta to="/resources">All resources</SecondaryCta>
             </div>
           </div>

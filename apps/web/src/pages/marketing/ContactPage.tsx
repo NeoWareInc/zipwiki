@@ -6,7 +6,7 @@ import { api } from "@convex/_generated/api";
 import { authInputClassName } from "../../components/AuthChrome";
 import { Section } from "./MarketingUi";
 
-const CONTACT_EMAIL = "hello@zipwiki.ai";
+const CONTACT_EMAIL = "support@zipwiki.ai";
 
 export default function ContactPage() {
   const submit = useAction(api.mail.submitContact);
