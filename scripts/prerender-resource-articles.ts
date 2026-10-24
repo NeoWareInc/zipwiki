@@ -12,6 +12,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RESOURCE_ARTICLES } from "../apps/web/src/lib/articles/index";
 import type { ResourceArticle } from "../apps/web/src/lib/articles/types";
+import {
+  NOINDEX_CONTENT,
+  shouldNoIndexBuild,
+} from "../apps/web/src/lib/robots-policy";
 import { absoluteUrl, resolveSiteOrigin } from "../apps/web/src/lib/site-origin";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -36,6 +40,17 @@ function upsertMeta(
   const tag = `<meta ${attr}="${key}" content="${escapeAttr(content)}" />`;
   if (re.test(html)) return html.replace(re, tag);
   return html.replace(/<\/head>/i, `    ${tag}\n  </head>`);
+}
+
+function removeMeta(
+  html: string,
+  attr: "name" | "property",
+  key: string,
+): string {
+  return html.replace(
+    new RegExp(`\\s*<meta\\s+[^>]*${attr}=["']${key}["'][^>]*>`, "gi"),
+    "",
+  );
 }
 
 function upsertLink(html: string, rel: string, href: string): string {
@@ -97,6 +112,7 @@ function main(): void {
   }
 
   const template = readFileSync(distIndex, "utf8");
+  const noIndex = shouldNoIndexBuild(process.env);
 
   // Absolute OG/Twitter images on the homepage shell (crawlers prefer full URLs).
   const homeImage = absoluteUrl(origin, "/zipwiki-og.png");
@@ -105,10 +121,45 @@ function main(): void {
   home = upsertMeta(home, "name", "twitter:image", homeImage);
   home = upsertMeta(home, "property", "og:url", absoluteUrl(origin, "/"));
   home = upsertLink(home, "canonical", absoluteUrl(origin, "/"));
+  if (noIndex) {
+    home = upsertMeta(home, "name", "robots", NOINDEX_CONTENT);
+    home = upsertMeta(home, "name", "googlebot", NOINDEX_CONTENT);
+  } else {
+    home = removeMeta(home, "name", "robots");
+    home = removeMeta(home, "name", "googlebot");
+  }
   writeFileSync(distIndex, home);
 
+  const robotsPath = join(webRoot, "dist/robots.txt");
+  if (noIndex) {
+    writeFileSync(
+      robotsPath,
+      [
+        "# Staging / rehearsal — do not index (duplicate of zipwiki.ai).",
+        "User-agent: *",
+        "Disallow: /",
+        "",
+      ].join("\n"),
+    );
+    console.log(
+      `prerender-resource-articles: robots.txt Disallow:/ (noindex build)`,
+    );
+  } else {
+    writeFileSync(
+      robotsPath,
+      ["User-agent: *", "Allow: /", ""].join("\n"),
+    );
+  }
+
   for (const article of RESOURCE_ARTICLES) {
-    const html = applyArticleHead(home, article, origin);
+    let html = applyArticleHead(home, article, origin);
+    if (noIndex) {
+      html = upsertMeta(html, "name", "robots", NOINDEX_CONTENT);
+      html = upsertMeta(html, "name", "googlebot", NOINDEX_CONTENT);
+    } else {
+      html = removeMeta(html, "name", "robots");
+      html = removeMeta(html, "name", "googlebot");
+    }
     const outDir = join(webRoot, "dist/resources", article.slug);
     mkdirSync(outDir, { recursive: true });
     const outFile = join(outDir, "index.html");

@@ -1,4 +1,5 @@
 import { SITE_NAME } from "./marketing-copy";
+import { isNoIndexHost, NOINDEX_CONTENT } from "./robots-policy";
 import { absoluteUrl, resolveSiteOrigin } from "./site-origin";
 
 export type DocumentMeta = {
@@ -76,5 +77,10 @@ export function applyDocumentMeta(meta: DocumentMeta): void {
     const url = absoluteUrl(origin, meta.path);
     upsertMeta("property", "og:url", url);
     upsertLink("canonical", url);
+  }
+
+  if (typeof window !== "undefined" && isNoIndexHost(window.location.hostname)) {
+    upsertMeta("name", "robots", NOINDEX_CONTENT);
+    upsertMeta("name", "googlebot", NOINDEX_CONTENT);
   }
 }

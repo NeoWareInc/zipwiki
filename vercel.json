@@ -4,6 +4,27 @@
   "buildCommand": "bash scripts/vercel-build-web.sh",
   "outputDirectory": "apps/web/dist",
   "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "dev.zipwiki.ai" }],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "zipwiki-web-git-dev-neoware.vercel.app"
+        }
+      ],
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!assets/|releases/|dev-releases/|examples/).*)",
