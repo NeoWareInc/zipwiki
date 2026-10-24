@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <title>Introducing ZipWiki: Portable, AI-Searchable Knowledge Packages</title>
   <style>
-    @page { margin: 0.75in; size: letter; }
+    @page { margin: 0.65in; size: letter; }
     body {
       font-family: "Georgia", "Times New Roman", serif;
-      font-size: 11.5pt;
-      line-height: 1.55;
+      font-size: 11pt;
+      line-height: 1.48;
       color: #1a1a1a;
-      max-width: 7in;
+      max-width: 7.1in;
       margin: 0 auto;
     }
     .header {
@@ -18,39 +18,47 @@
       width: 100%;
       height: auto;
       border-radius: 8px;
-      margin: 0 0 0.5em;
+      margin: 0 0 0.2em;
+    }
+    .byline {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #0d6e6e;
+      margin: 0 0 0.75em;
     }
     h2 {
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-      font-size: 13.5pt;
+      font-size: 13pt;
       font-weight: 700;
-      margin: 1.6em 0 0.55em;
+      margin: 1.15em 0 0.4em;
       color: #111;
       page-break-after: avoid;
     }
-    p { margin: 0 0 0.85em; }
+    p { margin: 0 0 0.7em; }
     ul {
-      margin: 0 0 1em;
+      margin: 0 0 0.8em;
       padding-left: 1.25em;
     }
-    li { margin: 0 0 0.45em; }
+    li { margin: 0 0 0.35em; }
     a { color: #0d6e6e; text-decoration: underline; }
     .footer {
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       font-size: 9pt;
       color: #777;
-      margin-top: 1.75em;
-      padding-top: 1em;
+      margin-top: 1.25em;
+      padding-top: 0.75em;
       border-top: 1px solid #ddd;
     }
   </style>
 </head>
 <body>
   <img class="header" src="../../apps/web/public/articles/introducing-zipwiki-header.svg" alt="Introducing ZipWiki: Portable, AI-Searchable Knowledge Packages" />
+  <p class="byline">ZipWiki by NeoWare</p>
 
   <h2>Why long-term archives need an AI upgrade</h2>
-  <p>Every team accumulates folders of PDFs, Word documents, spreadsheets, and slide decks—session laws, quarterly earnings filings, clinical records, contracts, or reference books.</p>
-  <p>We traditionally pack these into ZIP files to save space. But to an AI agent, a standard ZIP file is just a blind box. The AI can only see filenames. To actually read the contents or answer a question, the entire archive must be unpacked, and the AI has to chew through massive, heavy files from scratch every single time.</p>
+  <p>To an AI agent, a ZIP file is a blind box. It can see the filenames—and almost nothing else. To answer a question, the archive has to be unpacked and the agent has to chew through massive, heavy files from scratch every single time.</p>
+  <p>Every team accumulates folders of PDFs, Word documents, spreadsheets, and slide decks—session laws, quarterly earnings filings, clinical records, contracts, or reference books—and we traditionally pack them into ZIP files to save space. That works for humans. It fails for AI.</p>
   <p>ZipWiki solves this problem. It is portable document memory with an embedded AI index—not another cloud drive, and not a complex database you have to maintain. When you pack a folder into a .zipwiki file, ZipWiki reads your documents once, pulls out the clean text, and writes a smart index right inside the ZIP container.</p>
 
   <h2>What lives inside a ZipWiki package?</h2>
@@ -74,11 +82,11 @@
 
   <h2>Shrinking knowledge to 1/100th the size</h2>
   <p>Because ZipWiki captures the text, tables, and headings an AI actually uses, bulky original files don’t always need to travel with the archive.</p>
-  <p>Linking out to original files (such as state law portals or SEC databases) instead of packing them directly inside routinely shrinks an archive’s size by upwards of 99%. That translates to roughly 1/100th of the original file size, while preserving full citation integrity and source verifiability. When full offline access is required, the original binaries can simply remain bundled inside.</p>
+  <p>Linking out to original files (such as state law portals or SEC databases) instead of packing them directly inside routinely shrinks an archive’s size by upwards of 99%. That translates to roughly 1/100th of the original file size, while each answer still cites the concept card, the section it used, and the source link—checked against CRC-32. When full offline access is required, the original binaries can simply remain bundled inside.</p>
 
   <h2>Trust the archive, not a hosted database</h2>
-  <p>ZipWiki puts data back in your hands. There is no external database to manage or keep in sync. You can share, sync, email, and back up .zipwiki archives like any standard ZIP file, confident that your knowledge remains instantly accessible to both humans and AI models.</p>
-  <p>ZipWiki is now available in Beta. To explore the format, download the tools, and start packaging your archives, visit <a href="https://zipwiki.ai"><strong>zipwiki.ai</strong></a>.</p>
+  <p>ZipWiki puts data back in your hands. There is no hosted index or vector store needed. You can share, sync, email, and back up .zipwiki archives like any standard ZIP file, confident that your knowledge remains instantly accessible to both humans and AI models.</p>
+  <p>Built by NeoWare, the team behind NeoZip. ZipWiki is now available in Beta. To explore the format, download the tools, and start packaging your archives, visit <a href="https://zipwiki.ai"><strong>zipwiki.ai</strong></a>.</p>
 
   <p class="footer">© NeoWare, Inc. · Introducing ZipWiki</p>
 </body>

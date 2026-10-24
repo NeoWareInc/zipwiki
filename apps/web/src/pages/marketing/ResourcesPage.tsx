@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
+import { applyDocumentMeta } from "../../lib/document-meta";
 import { SITE_NAME } from "../../lib/marketing-copy";
 import {
   DEVELOPER_OKF_TABS,
@@ -337,7 +338,13 @@ export function ResourceArticlePage() {
 
   useEffect(() => {
     if (article) {
-      document.title = `${article.title} — ${SITE_NAME}`;
+      applyDocumentMeta({
+        title: `${article.title} — ${SITE_NAME}`,
+        description: article.excerpt,
+        image: article.ogImage ?? article.headerImage ?? "/zipwiki-og.png",
+        path: `/resources/${article.slug}`,
+        type: "article",
+      });
     }
     window.scrollTo(0, 0);
   }, [article]);
@@ -358,10 +365,17 @@ export function ResourceArticlePage() {
           </Link>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
-              {article.date} · {article.category} · {article.readTimeMinutes}{" "}
-              min read
-            </p>
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-(--accent) uppercase">
+                {article.date} · {article.category} · {article.readTimeMinutes}{" "}
+                min read
+              </p>
+              {article.byline ? (
+                <p className="mt-1 text-sm font-semibold text-(--ink)">
+                  {article.byline}
+                </p>
+              ) : null}
+            </div>
             {article.pdfPath ? (
               <a
                 href={article.pdfPath}

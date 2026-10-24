@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { applyDocumentMeta } from "../lib/document-meta";
 import {
   NAV,
   PAGE_TITLES,
@@ -11,6 +12,11 @@ import {
 import { useBetaAccessStatus } from "./BetaAccessGate";
 import { Logo } from "./Logo";
 import { ThemeToggler } from "./ThemeToggler";
+
+/** Article routes own their own title / OG / canonical tags. */
+function isResourceArticlePath(pathname: string): boolean {
+  return /^\/resources\/[^/]+\/?$/.test(pathname);
+}
 
 export function MarketingLayout() {
   const location = useLocation();
@@ -26,15 +32,14 @@ export function MarketingLayout() {
   const joinTo = "/signup";
 
   useEffect(() => {
-    const title = PAGE_TITLES[location.pathname] ?? SITE_NAME;
-    document.title = title;
-    let meta = document.querySelector('meta[name="description"]');
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.setAttribute("name", "description");
-      document.head.appendChild(meta);
-    }
-    meta.setAttribute("content", SITE_DESCRIPTION);
+    if (isResourceArticlePath(location.pathname)) return;
+    applyDocumentMeta({
+      title: PAGE_TITLES[location.pathname] ?? SITE_NAME,
+      description: SITE_DESCRIPTION,
+      image: "/zipwiki-og.png",
+      path: location.pathname === "/" ? "/" : location.pathname,
+      type: "website",
+    });
   }, [location.pathname]);
 
   useEffect(() => {
