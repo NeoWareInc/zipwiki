@@ -21,4 +21,9 @@ export type ResourceArticle = {
    * Same pattern as NeoZip blog PDFs under public/blog/.
    */
   pdfPath?: string;
+  /**
+   * Public path to a header image that already contains the article title.
+   * When set, the article page shows it instead of the visible title heading.
+   */
+  headerImage?: string;
 };

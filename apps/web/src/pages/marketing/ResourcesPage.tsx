@@ -27,6 +27,26 @@ import {
   Section,
 } from "./MarketingUi";
 
+const BARE_DOMAIN_RE = /(?<![\w.@/-])([a-z0-9-]+\.(?:ai|io|com))(?![\w/-])/gi;
+
+function linkifyDomains(text: string): ReactNode {
+  const parts = text.split(BARE_DOMAIN_RE);
+  if (parts.length === 1) return text;
+  return parts.map((part, idx) =>
+    idx % 2 === 1 ? (
+      <a
+        key={idx}
+        href={`https://${part.toLowerCase()}`}
+        className="font-semibold text-(--accent) hover:underline"
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 const SECTION_SCROLL = "scroll-mt-[calc(var(--site-header-h,4.5rem)+3.5rem)]";
 
 function Band({
@@ -355,15 +375,33 @@ export function ResourceArticlePage() {
             ) : null}
           </div>
 
-          <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-(--ink) md:text-4xl">
+          {article.headerImage ? (
+            <img
+              src={article.headerImage}
+              alt={article.title}
+              width={1200}
+              height={630}
+              className="mt-4 block h-auto w-full rounded-xl border border-(--line)"
+            />
+          ) : null}
+
+          <h1
+            className={
+              article.headerImage
+                ? "sr-only"
+                : "mt-2 font-display text-3xl font-semibold tracking-tight text-(--ink) md:text-4xl"
+            }
+          >
             {article.title}
           </h1>
 
-          <p className="mt-4 text-lg leading-relaxed text-(--muted)">
-            {article.excerpt}
-          </p>
+          {article.headerImage ? null : (
+            <p className="mt-4 text-lg leading-relaxed text-(--muted)">
+              {article.excerpt}
+            </p>
+          )}
 
-          <div className="mt-10 space-y-10 border-t border-(--line) pt-10">
+          <div className="mt-8 space-y-10 border-t border-(--line) pt-10">
             {article.sections.map((section) => (
               <section key={section.heading} className="space-y-4">
                 <h2 className="font-display text-2xl font-semibold text-(--ink)">
@@ -374,13 +412,13 @@ export function ResourceArticlePage() {
                     key={idx}
                     className="text-base leading-relaxed text-(--ink)/90"
                   >
-                    {paragraph}
+                    {linkifyDomains(paragraph)}
                   </p>
                 ))}
                 {section.bullets && (
                   <ul className="space-y-2 pl-5 text-sm leading-relaxed text-(--ink)/90 list-disc">
                     {section.bullets.map((bullet) => (
-                      <li key={bullet}>{bullet}</li>
+                      <li key={bullet}>{linkifyDomains(bullet)}</li>
                     ))}
                   </ul>
                 )}

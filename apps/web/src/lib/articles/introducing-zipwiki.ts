@@ -9,6 +9,7 @@ export const introducingZipwiki: ResourceArticle = {
   category: "Product & Vision",
   readTimeMinutes: 4,
   pdfPath: "/articles/introducing-zipwiki.pdf",
+  headerImage: "/articles/introducing-zipwiki-header.svg",
   sections: [
     {
       heading: "Why long-term archives need an AI upgrade",

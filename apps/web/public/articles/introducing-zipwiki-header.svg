@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-labelledby="iz-title iz-desc" font-family="Sora, 'Segoe UI', system-ui, -apple-system, sans-serif">
+  <title id="iz-title">Introducing ZipWiki: Portable, AI-Searchable Knowledge Packages</title>
+  <desc id="iz-desc">On a sunlit desk, PDFs, Word files, spreadsheets and slides fly into one teal .zipwiki package. An AI agent reads a single concept card from the package and answers with a citation.</desc>
+  <defs>
+    <linearGradient id="iz-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfeeea"/><stop offset=".6" stop-color="#eef8f5"/><stop offset="1" stop-color="#fdf0d8"/>
+    </linearGradient>
+    <radialGradient id="iz-sun" cx=".78" cy=".3" r=".45">
+      <stop offset="0" stop-color="#fff3c4"/><stop offset=".35" stop-color="#ffe7a8" stop-opacity=".65"/><stop offset="1" stop-color="#ffe7a8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="iz-hill1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fd8c3"/><stop offset="1" stop-color="#c9e8d8"/>
+    </linearGradient>
+    <linearGradient id="iz-hill2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6fc1a2"/><stop offset="1" stop-color="#a8dcc4"/>
+    </linearGradient>
+    <linearGradient id="iz-desk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1e2c4"/><stop offset="1" stop-color="#e2cb9e"/>
+    </linearGradient>
+    <linearGradient id="iz-crate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1aa59e"/><stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <linearGradient id="iz-crate-side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0c5a57"/><stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <radialGradient id="iz-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#fff7d6" stop-opacity=".95"/><stop offset="1" stop-color="#fff7d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="iz-panel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f7f8" stop-opacity=".96"/><stop offset=".85" stop-color="#f4f7f8" stop-opacity=".9"/><stop offset="1" stop-color="#f4f7f8" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="iz-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#1f3a44" flood-opacity=".18"/>
+    </filter>
+    <filter id="iz-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#1f3a44" flood-opacity=".14"/>
+    </filter>
+    <symbol id="iz-doc" viewBox="0 0 66 84">
+      <path d="M6 0 h44 l16 16 v62 a6 6 0 0 1 -6 6 H6 a6 6 0 0 1 -6 -6 V6 a6 6 0 0 1 6 -6 z" fill="#fff"/>
+      <path d="M50 0 v12 a4 4 0 0 0 4 4 h12" fill="#e7e0d1"/>
+      <rect x="7" y="32" width="50" height="4" rx="2" fill="#c5d2d8"/><rect x="7" y="41" width="42" height="4" rx="2" fill="#c5d2d8"/><rect x="7" y="50" width="48" height="4" rx="2" fill="#c5d2d8"/>
+    </symbol>
+  </defs>
+
+  <!-- sky + sun -->
+  <rect width="1200" height="630" fill="url(#iz-sky)"/>
+  <rect width="1200" height="630" fill="url(#iz-sun)"/>
+  <circle cx="1010" cy="150" r="52" fill="#fff4cc" opacity=".9"/>
+  <g fill="#fff" opacity=".75">
+    <ellipse cx="700" cy="80" rx="80" ry="16"/><ellipse cx="748" cy="66" rx="48" ry="20"/>
+    <ellipse cx="1090" cy="250" rx="66" ry="13"/><ellipse cx="1124" cy="238" rx="38" ry="15"/>
+  </g>
+  <g fill="none" stroke="#5a6b78" stroke-width="2" stroke-linecap="round" opacity=".5">
+    <path d="M860 110 q6 -6 12 0 q6 -6 12 0"/><path d="M896 94 q5 -5 10 0 q5 -5 10 0"/>
+  </g>
+
+  <!-- hills -->
+  <path d="M0 420 C 180 360, 340 380, 500 400 S 840 350, 1000 376 S 1160 392, 1200 380 V500 H0 z" fill="url(#iz-hill1)"/>
+  <path d="M0 448 C 220 404, 420 426, 620 430 S 960 396, 1200 420 V500 H0 z" fill="url(#iz-hill2)"/>
+  <g fill="#3fa871">
+    <path d="M1080 392 l11 -28 l11 28 z"/><path d="M1100 396 l9 -22 l9 22 z"/>
+  </g>
+
+  <!-- desk -->
+  <path d="M0 470 H1200 V630 H0 z" fill="url(#iz-desk)"/>
+  <rect x="0" y="466" width="1200" height="8" fill="#e8d4ad"/>
+  <g stroke="#d9c194" stroke-width="1.4" opacity=".7" fill="none">
+    <path d="M520 520 Q800 510 1180 522"/><path d="M560 580 Q880 568 1190 582"/>
+  </g>
+
+  <!-- text panel (left) -->
+  <rect x="0" y="0" width="640" height="630" fill="url(#iz-panel)"/>
+  <g transform="translate(64 0)">
+    <!-- brand mark: magnifier with lines, like the logo -->
+    <g transform="translate(0 92)">
+      <circle cx="18" cy="18" r="15" fill="none" stroke="#15202b" stroke-width="4"/>
+      <path d="M29 29 L39 39" stroke="#15202b" stroke-width="4.5" stroke-linecap="round"/>
+      <rect x="9" y="12" width="18" height="3" rx="1.5" fill="#2ea36b"/>
+      <rect x="7" y="17" width="22" height="3" rx="1.5" fill="#2ea36b"/>
+      <rect x="10" y="22" width="15" height="3" rx="1.5" fill="#2ea36b"/>
+      <text x="54" y="27" font-size="24" font-weight="800" fill="#15202b" font-family="Georgia, 'Times New Roman', serif">ZipWiki</text>
+    </g>
+    <text x="0" y="186" font-size="24" font-weight="700" letter-spacing="3.5" fill="#0f6e6a">INTRODUCING ZIPWIKI</text>
+    <text font-size="44" font-weight="800" fill="#15202b" letter-spacing="-0.5">
+      <tspan x="0" y="248">Portable,</tspan>
+      <tspan x="0" y="302">AI-Searchable</tspan>
+      <tspan x="0" y="356">Knowledge Packages</tspan>
+    </text>
+    <rect x="0" y="390" width="72" height="5" rx="2.5" fill="#14948e"/>
+    <text font-size="19" fill="#5a6b78">
+      <tspan x="0" y="444">Your archives, indexed for AI &#8212; and shrunk</tspan>
+      <tspan x="0" y="472">to a fraction of their original size.</tspan>
+    </text>
+    <g transform="translate(0 520)">
+      <rect width="98" height="30" rx="15" fill="#dff0ef"/>
+      <text x="49" y="20" font-size="13" font-weight="700" fill="#0f6e6a" text-anchor="middle">Now in Beta</text>
+      <text x="116" y="21" font-size="19" font-weight="700" fill="#0f6e6a" text-decoration="underline">https://zipwiki.ai</text>
+    </g>
+  </g>
+
+  <!-- flying docs into package -->
+  <path d="M628 232 C 680 110, 770 96, 806 282" fill="none" stroke="#14948e" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round" opacity=".8"/>
+  <g filter="url(#iz-soft)">
+    <g transform="translate(612 196) rotate(-18)"><use href="#iz-doc" width="56" height="71"/><rect x="6" y="8" width="26" height="11" rx="3" fill="#d64545"/><text x="19" y="16.5" font-size="6.5" font-weight="800" fill="#fff" text-anchor="middle">PDF</text></g>
+    <g transform="translate(676 120) rotate(-8)" opacity=".95"><use href="#iz-doc" width="52" height="66"/><rect x="6" y="7" width="24" height="10" rx="2.5" fill="#2b5fd9"/><text x="18" y="14.8" font-size="6" font-weight="800" fill="#fff" text-anchor="middle">DOCX</text></g>
+    <g transform="translate(748 96) rotate(6)" opacity=".92"><use href="#iz-doc" width="50" height="64"/><rect x="6" y="7" width="23" height="10" rx="2.5" fill="#1e8e4f"/><text x="17.5" y="14.8" font-size="6" font-weight="800" fill="#fff" text-anchor="middle">XLSX</text></g>
+    <!-- turning into markdown mid-flight -->
+    <g transform="translate(786 150) rotate(16)">
+      <rect width="50" height="62" rx="6" fill="#fff"/>
+      <path d="M6 0 h38 a6 6 0 0 1 6 6 v6 H0 v-6 a6 6 0 0 1 6 -6 z" fill="#0f6e6a"/>
+      <text x="6" y="9.5" font-size="6.5" font-weight="700" fill="#fff" font-family="'JetBrains Mono', ui-monospace, monospace">.md</text>
+      <rect x="6" y="20" width="30" height="4" rx="2" fill="#15202b"/><rect x="6" y="30" width="38" height="3" rx="1.5" fill="#c5d2d8"/><rect x="6" y="38" width="32" height="3" rx="1.5" fill="#c5d2d8"/><rect x="6" y="46" width="36" height="3" rx="1.5" fill="#c5d2d8"/>
+    </g>
+  </g>
+  <g fill="#ffc94d">
+    <path d="M736 74 Q738 82 746 84 Q738 86 736 94 Q734 86 726 84 Q734 82 736 74 z"/>
+    <path d="M868 214 Q869.5 220 876 221.5 Q869.5 223 868 229 Q866.5 223 860 221.5 Q866.5 220 868 214 z"/>
+  </g>
+
+  <!-- package with glow -->
+  <ellipse cx="810" cy="370" rx="190" ry="140" fill="url(#iz-glow)"/>
+  <g transform="translate(740 290)" filter="url(#iz-shadow)">
+    <path d="M0 44 L120 16 L240 44 L120 72 z" fill="#3fbdb5"/>
+    <path d="M0 44 L120 72 V176 L0 148 z" fill="url(#iz-crate-side)"/>
+    <path d="M240 44 L120 72 V176 L240 148 z" fill="url(#iz-crate)"/>
+    <path d="M181 58 V160" stroke="#e8f7f5" stroke-width="6" stroke-dasharray="3.5 3.5"/>
+    <rect x="173" y="88" width="16" height="28" rx="4" fill="#ffd27a" stroke="#b45309" stroke-width="1.5"/>
+    <text transform="translate(22 112) skewY(13.1)" font-size="18" font-weight="700" fill="#dff0ef">.zipwiki</text>
+    <text transform="translate(24 134) skewY(13.1)" font-size="10" fill="#9fe3dc">digest &#183; index &#183; markdown</text>
+  </g>
+
+  <!-- agent card -->
+  <path d="M936 352 C 944 336, 952 334, 960 342" fill="none" stroke="#b45309" stroke-width="3" stroke-dasharray="2 10" stroke-linecap="round"/>
+  <g transform="translate(964 300)" filter="url(#iz-shadow)">
+    <rect x="-6" y="-6" width="236" height="160" rx="20" fill="#cfd8dc"/><rect width="224" height="148" rx="15" fill="#ffffff"/>
+  </g>
+  <g transform="translate(964 300)">
+    <circle cx="26" cy="26" r="14" fill="#dff0ef"/>
+    <path d="M26 16 Q27.7 24.3 36 26 Q27.7 27.7 26 36 Q24.3 27.7 16 26 Q24.3 24.3 26 16 z" fill="#14948e"/>
+    <text x="48" y="23" font-size="12" font-weight="700" fill="#15202b">Your agent</text>
+    <text x="48" y="38" font-size="9" fill="#5a6b78">reads 1 card, not 86 files</text>
+    <g transform="translate(14 50)">
+      <rect width="196" height="52" rx="10" fill="#fffaf1" stroke="#e0a54b" stroke-width="2"/>
+      <text x="11" y="17" font-size="8" font-weight="700" letter-spacing="1" fill="#b45309">CONCEPT CARD</text>
+      <text x="11" y="33" font-size="10.5" font-weight="700" fill="#15202b">Q3 earnings filing</text>
+      <rect x="11" y="39" width="56" height="9" rx="4.5" fill="#fde9c8"/><text x="39" y="45.8" font-size="6" text-anchor="middle" fill="#b45309">Financial</text>
+      <rect x="72" y="39" width="54" height="9" rx="4.5" fill="#dff0ef"/><text x="99" y="45.8" font-size="6" text-anchor="middle" fill="#0f6e6a">10-q &#183; 2026</text>
+    </g>
+    <g transform="translate(14 112)">
+      <rect width="140" height="24" rx="12" fill="#14948e"/>
+      <path d="M13 12 l5 5 l8 -9" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="33" y="16" font-size="9" font-weight="700" fill="#fff">Answer + citation</text>
+    </g>
+  </g>
+
+  <!-- mug -->
+  <g transform="translate(1132 512)">
+    <path d="M2 4 h36 v36 a8 8 0 0 1 -8 8 h-20 a8 8 0 0 1 -8 -8 z" fill="#fff"/>
+    <path d="M38 12 a10 10 0 0 1 0 20" fill="none" stroke="#e4ecee" stroke-width="5"/>
+    <ellipse cx="20" cy="5" rx="18" ry="4" fill="#7a4a2a"/>
+    <path d="M13 -6 q4 -6 0 -12 M24 -4 q4 -6 0 -12" stroke="#c5d2d8" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
