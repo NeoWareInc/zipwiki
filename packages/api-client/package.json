@@ -1,7 +1,7 @@
 {
   "name": "@zipwiki/api-client",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared ZipWiki hosted API client (device login, client-config, settings)",
   "type": "module",
   "exports": {

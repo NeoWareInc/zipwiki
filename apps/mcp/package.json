@@ -1,7 +1,7 @@
 {
   "name": "@zipwiki/mcp",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ZipWiki MCP server — open portable .zipwiki knowledge packages (stdio + shared handlers)",
   "type": "module",
   "bin": {

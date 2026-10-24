@@ -5,7 +5,7 @@ The `zipwiki` command packs documents into a `.zipwiki` and queries that package
 Requires Node.js 22.13 or newer. Word, Excel, and PowerPoint also need LibreOffice installed on the machine.
 
 ```bash
-npm i -g https://zipwiki.ai/releases/zipwiki-0.1.0-darwin-arm64.tgz
+npm i -g https://zipwiki.ai/releases/zipwiki-0.2.0-darwin-arm64.tgz
 zipwiki --help
 zipwiki login
 ```

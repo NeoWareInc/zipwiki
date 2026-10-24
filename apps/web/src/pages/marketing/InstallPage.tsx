@@ -137,7 +137,7 @@ function isDevHost(hostname: string): boolean {
 }
 
 export default function InstallPage() {
-  const [version, setVersion] = useState("0.1.0");
+  const [version, setVersion] = useState("0.2.0");
   const [published, setPublished] = useState<Set<string>>(new Set());
   const [siteOrigin, setSiteOrigin] = useState("https://zipwiki.ai");
   const [devHost, setDevHost] = useState(false);

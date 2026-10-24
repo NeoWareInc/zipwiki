@@ -1,6 +1,8 @@
 {
   "name": "@zipwiki/typescript-config",
   "private": true,
-  "version": "0.1.0",
-  "files": ["*.json"]
+  "version": "0.2.0",
+  "files": [
+    "*.json"
+  ]
 }
