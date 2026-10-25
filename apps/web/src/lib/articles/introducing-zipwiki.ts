@@ -50,7 +50,7 @@ export const introducingZipwiki: ResourceArticle = {
       heading: "Shrinking knowledge to 1/100th the size",
       paragraphs: [
         "Because ZipWiki captures the text, tables, and headings an AI actually uses, bulky original files don’t always need to travel with the archive.",
-        "Linking out to original files (such as state law portals or SEC databases) instead of packing them directly inside routinely shrinks an archive’s size by upwards of 99%. That translates to roughly 1/100th of the original file size, while each answer still cites the concept card, the section it used, and the source link—checked against CRC-32. When full offline access is required, the original binaries can simply remain bundled inside.",
+        "Linking out to original files (such as state law portals or SEC databases) instead of packing them directly inside routinely shrinks an archive’s size by upwards of 99%. That translates to roughly 1/100th of the original file size, while each answer still cites the concept card, the section it used, and the source link. When that original is fetched from the source link, ZipWiki can verify it against the recorded CRC-32. When full offline access is required, the original binaries can simply remain bundled inside.",
       ],
     },
     {
