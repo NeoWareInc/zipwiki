@@ -46,6 +46,10 @@ sample-output/**
 !sample-output/.gitkeep
 knowledge/.stage/
 knowledge/.output/
+
+# Local agent / ops scratch (screenshots, MCP payloads, one-off uploads)
+tmp/
+.tmp-*
 tmp/
 
 # OS / editor
