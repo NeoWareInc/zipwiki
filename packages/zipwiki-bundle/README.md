@@ -5,12 +5,12 @@ The `zipwiki` command packs documents into a `.zipwiki` and queries that package
 Requires Node.js 22.23.4 or newer (or 24.22.1+ / 26.12.1+ — Oct 2026 Brotli security fix). Word, Excel, and PowerPoint also need LibreOffice installed on the machine.
 
 ```bash
-npm i -g https://zipwiki.ai/releases/zipwiki-0.2.0-darwin-arm64.tgz
+npm i -g --allow-remote=root https://zipwiki.ai/releases/zipwiki-0.2.0-darwin-arm64.tgz
 zipwiki --help
 zipwiki login
 ```
 
-Pick the tarball that matches your OS and CPU. The install page lists them: https://zipwiki.ai/install
+Starting in npm 12, `--allow-remote=root` is required when installing a tarball directly from an HTTPS URL (or download the `.tgz` file first and run `npm i -g ./zipwiki-0.2.0-darwin-arm64.tgz`). Pick the tarball that matches your OS and CPU. The install page lists them: https://zipwiki.ai/install
 
 Hosted questions (`zipwiki ask` and the MCP `ask` tool) use the account from `zipwiki login`. Local pack with LiteParse does not.
 

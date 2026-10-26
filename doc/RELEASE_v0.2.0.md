@@ -14,7 +14,7 @@ Initial public beta cut of the TypeScript CLI + stdio MCP.
 2. `pnpm build:dist:dev` → `apps/web/public/dev-releases/` + `latest.json` → `https://dev.zipwiki.ai/install`.
 3. Push `dev` → Vercel updates `https://dev.zipwiki.ai` only.
 4. Smoke on a second machine:
-   - `npm i -g https://dev.zipwiki.ai/dev-releases/zipwiki-0.2.0-<platform>-<arch>.tgz`
+   - `npm i -g --allow-remote=root https://dev.zipwiki.ai/dev-releases/zipwiki-0.2.0-<platform>-<arch>.tgz`
    - `zipwiki --version` shows `0.2.0 beta (2026-10-24)`
    - `zipwiki --help`, `zipwiki login` against **dev** API if testing auth.
 

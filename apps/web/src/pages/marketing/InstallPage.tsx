@@ -266,15 +266,32 @@ export default function InstallPage() {
         <p className="mt-3 max-w-3xl text-(--muted)">
           Choose the zipwiki-bundle build for this computer. Each file is version{" "}
           {version} and includes the matching LiteParse native library. After
-          download, install with{" "}
+          download, install the local file with{" "}
           <code className="text-sm">npm i -g ./zipwiki-….tgz</code>, or use the
-          one-liner below (npm fetches the same file from this site).
+          one-liner below so npm fetches the tarball directly from this site.
         </p>
+        <div className="mt-4 max-w-3xl rounded-xl border border-(--border) bg-(--paper) p-4 text-sm leading-relaxed text-(--muted)">
+          <p className="font-semibold text-(--ink)">
+            Why <code className="text-xs">--allow-remote=root</code> is included
+          </p>
+          <p className="mt-1">
+            Starting in npm 12, <code className="text-xs">allow-remote</code>{" "}
+            defaults to <code className="text-xs">none</code> and refuses direct
+            tarball URLs with <code className="text-xs">EALLOWREMOTE</code>{" "}
+            unless opted in. Passing{" "}
+            <code className="text-xs">--allow-remote=root</code> permits the
+            top-level release tarball URL you asked to install (and older npm
+            versions ignore the flag). You can also click{" "}
+            <strong className="font-medium text-(--ink)">Download</strong> and
+            run <code className="text-xs">npm i -g ./zipwiki-….tgz</code> on the
+            local file without the flag.
+          </p>
+        </div>
         <div className="mt-8 grid gap-4">
           {BUILDS.map((build) => {
             const file = tarballName(version, build.platform, build.arch);
             const href = `${releasesBase}/${file}`;
-            const command = `npm i -g ${siteOrigin}${href}`;
+            const command = `npm i -g --allow-remote=root ${siteOrigin}${href}`;
             const ready = published.has(file);
             return (
               <article
