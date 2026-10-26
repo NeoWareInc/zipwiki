@@ -483,8 +483,9 @@ export type DownloadPrereq = {
 
 export const DOWNLOAD_PREREQS: readonly DownloadPrereq[] = [
   {
-    title: "Node.js 22.13 or newer",
-    blurb: "TypeScript CLI and MCP runtime.",
+    title: "Node.js 22.23.4 or newer",
+    blurb:
+      "TypeScript CLI and MCP runtime. Requires a Node build that includes the Oct 2026 Brotli security fix (22.23.4+, 24.22.1+, or 26.12.1+).",
     docsHref: "https://nodejs.org/",
     docsLabel: "nodejs.org",
     installs: [

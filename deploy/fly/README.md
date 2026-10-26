@@ -26,7 +26,8 @@ Image: [`apps/server/Dockerfile`](../../apps/server/Dockerfile) (port **3001**,
 ## Machine notes
 
 - **Process:** `app` → `node dist/index.js` (`WORKDIR /app/apps/server`).
-- **VM:** `shared-cpu-1x` / **256MB**. Raise to 1GB when parse/OKF land.
+- **VM:** `shared-cpu-1x` / **2GB** (was 256MB). Needed for hosted PDF parse / OKF.
+  Apply with `pnpm deploy:fly:dev` / `pnpm deploy:fly:prod` (config alone does not resize running Machines).
 - **Health:** Fly Proxy `GET /health` (HTTP 2xx). Expect `"status":"ok"`,
   `"service":"zipwiki"`, `"phase":"1b"`, `"convex":false`.
 - **Dev:** `auto_stop_machines = "stop"`, `min_machines_running = 0`.

@@ -52,7 +52,9 @@ resolve to the default (`claude-haiku-5-5`) instead of returning 400.
 | Production | `https://api.zipwiki.ai` (ops: `https://zipwiki-api-prod.fly.dev`) |
 
 Product clients should use the custom hosts. Fly `.fly.dev` hostnames remain
-for ops and debugging.
+for ops and debugging. Dev and prod Fly VMs are configured for **2GB** RAM
+(`deploy/fly/fly.*.toml`) so hosted PDF parse has headroom; redeploy after
+changing that value. The API image pins **Node 22.23.4** (CVE-2026-111497).
 
 ## Local
 

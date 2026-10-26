@@ -4,7 +4,7 @@ Initial public beta cut of the TypeScript CLI + stdio MCP.
 
 ## Scope
 
-- Install: `zipwiki` and `zipwiki-mcp` via platform tarball (`npm i -g`), Node.js 22.13+.
+- Install: `zipwiki` and `zipwiki-mcp` via platform tarball (`npm i -g`), Node.js 22.23.4+ (or 24.22.1+ / 26.12.1+; CVE-2026-111497).
 - Platforms: `darwin-arm64`, `darwin-x64`, `linux-x64` (glibc), `linux-arm64` (glibc), `win32-x64`.
 - Not in this cut: Alpine/musl, Windows ARM, Rust CLI, public npm registry package.
 

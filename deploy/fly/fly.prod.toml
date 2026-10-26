@@ -51,5 +51,6 @@ kill_timeout = 30
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "256mb"
+  # Hosted PDF parse / OKF need headroom beyond a health-check VM.
+  memory = "2gb"
   processes = ["app"]

@@ -2,7 +2,7 @@
 
 The `zipwiki` command packs documents into a `.zipwiki` and queries that package on this machine. `zipwiki-mcp` is the stdio server for Claude and Cursor. LiteParse is included. This package is not published on the public npm registry.
 
-Requires Node.js 22.13 or newer. Word, Excel, and PowerPoint also need LibreOffice installed on the machine.
+Requires Node.js 22.23.4 or newer (or 24.22.1+ / 26.12.1+ — Oct 2026 Brotli security fix). Word, Excel, and PowerPoint also need LibreOffice installed on the machine.
 
 ```bash
 npm i -g https://zipwiki.ai/releases/zipwiki-0.2.0-darwin-arm64.tgz

@@ -102,7 +102,7 @@ Production Vercel builds **delete** `public/dev-releases/` before the web build.
 - [x] `/releases/` and `/dev-releases/` are not rewritten to `index.html` on the **dev** deploy.
 - [x] Copy icons on the install scripts copy the command that is on screen.
 - [x] Platforms that are not published say so and do not offer a fake `npm i -g` URL.
-- [x] Node `>= 22.13` is stated on `/install` and enforced by the package `engines` field.
+- [x] Node `^22.23.4 || ^24.22.1 || >=26.12.1` is stated on `/install` and enforced by the package `engines` field (CVE-2026-111497 Brotli; was `>=22.13`).
 - [x] LibreOffice is documented as a system requirement for Office files and is not bundled. EasyOCR and PaddleOCR are not implied.
 - [x] A second machine can install from the **dev** tarball URL (`…/dev-releases/….tgz` or a copied `.tgz`) and run `zipwiki --help` before production publish.
 
@@ -110,8 +110,8 @@ Production Vercel builds **delete** `public/dev-releases/` before the web build.
 
 - [ ] `GET /health` on `https://api-dev.zipwiki.ai` returns success, and the docs describe the routes that actually exist: `/api/parse`, `/api/okf/enrich`, `/api/okf/digest`, `/api/query/answer`, `/api/settings`, `/api/client-config`, usage and telemetry.
 - [ ] [HOSTED-API.md](HOSTED-API.md) matches that list (update the doc if it still omits digest and ask).
-- [ ] Dev Fly is running the image that contains those routes, with enough memory for a real PDF parse.
-- [ ] `api-dev.zipwiki.ai` has a valid certificate and DNS. Clients may still know `*.fly.dev` for ops, but product paths use the custom host.
+- [ ] Dev Fly is running the image that contains those routes, with enough memory for a real PDF parse (`deploy/fly/fly.dev.toml` is set to `2gb`; confirm after `pnpm deploy:fly:dev`).
+- [x] `api-dev.zipwiki.ai` has a valid certificate and DNS. Clients may still know `*.fly.dev` for ops, but product paths use the custom host. (`fly certs check` Issued/verified; `GET /health` 200 on custom host, 2026-10-26.)
 - [ ] Parse, OKF enrich, package digest, and ask each debit one credit on success and do not debit on vendor failure (**dev** ledger).
 - [ ] Haiku 5.5 (and any other allowed model) is on both allowlists (`convex/lib/credits.ts` and `apps/server/src/gateway/anthropic.ts`). A saved older model id does not 400.
 - [ ] Package digest reads the full OKF index the client sends and returns a summary; an empty Claude reply is visible in logs and the CLI keeps a digest that still names every group.
@@ -195,7 +195,7 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 ## B1. Release cut
 
 - [x] Write the beta scope in one paragraph: what a user can install, which OS/CPU builds exist, and what still waits (Rust, extra platforms).
-  A beta user installs the TypeScript CLI and stdio MCP (`zipwiki` and `zipwiki-mcp`) with `npm i -g` of one platform tarball from [zipwiki.ai/install](https://zipwiki.ai/install). That needs Node.js 22.13 or newer. The five builds are macOS Apple silicon (`darwin-arm64`), macOS Intel (`darwin-x64`), Linux x64 glibc, Linux ARM64 glibc, and Windows x64. Alpine/musl, Windows ARM, the Rust CLI, and a public npm registry package wait until after this beta.
+  A beta user installs the TypeScript CLI and stdio MCP (`zipwiki` and `zipwiki-mcp`) with `npm i -g` of one platform tarball from [zipwiki.ai/install](https://zipwiki.ai/install). That needs Node.js 22.23.4 or newer (or 24.22.1+ / 26.12.1+ for the Oct 2026 Brotli fix). The five builds are macOS Apple silicon (`darwin-arm64`), macOS Intel (`darwin-x64`), Linux x64 glibc, Linux ARM64 glibc, and Windows x64. Alpine/musl, Windows ARM, the Rust CLI, and a public npm registry package wait until after this beta.
 - [x] Pick the version customers see (`zipwiki --version`, `latest.json`, and the tarball name are the same version).
 - [x] Tag that version and keep the git tree that built the tarball. Tag `v0.1.0` is commit `40618b1`, the tree `pnpm build:dist:dev` packed into `zipwiki-0.1.0-*.tgz` (`0.1.0 beta (2026-10-19)`). Initial public beta cut: `v0.2.0` (`0.2.0 beta (2026-10-24)`) — rehearse on `dev.zipwiki.ai` with `pnpm build:dist:dev`, then promote to `main` / `pnpm build:dist` after approval.
 - [x] Decide the support address (`hello@zipwiki.ai` or another) and put it on the site, in the package README, and in error text that tells people where to write. Contact page: `support@zipwiki.ai`. Partnership / use-case outreach: `team@zipwiki.ai`.
@@ -226,8 +226,8 @@ Cut and wire the public Beta. Do not mark Part C done until these are in place.
 ## B4. Promote website, API, and Convex
 
 - [x] Merge / promote the verified `dev` work to `main` (or the production deploy path) so `https://zipwiki.ai` matches the Part A product.
-- [ ] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse.
-- [ ] `api.zipwiki.ai` has a valid certificate and DNS. Clients do not depend on `*.fly.dev` hostnames for product use.
+- [ ] Production Fly is running the image that contains the beta routes, with enough memory for a real PDF parse (`deploy/fly/fly.prod.toml` is set to `2gb`; live Machines were still **256MB** until the next `pnpm deploy:fly:prod`).
+- [x] `api.zipwiki.ai` has a valid certificate and DNS. Clients do not depend on `*.fly.dev` hostnames for product use. (`pnpm certs:fly:prod` Issued/verified; `GET /health` 200 on custom host, 2026-10-26.)
 - [x] Production Convex functions match what the CLI and website call (including admin credit adjust, welcome credits, passkey origins for www/apex as needed).
 
 **Part B gate:** release artifacts and production wiring are ready. Proceed to Part C verification.
