@@ -762,6 +762,8 @@ export async function runCompressPhase(input: {
   title: string;
   /** Absolute pack input roots (rules do not leak across). */
   inputRoots?: string[];
+  /** Out param: set to the v1 Merkle root when `opts.stamp` computed one. */
+  result?: { merkleRoot?: string };
 }): Promise<string> {
   // Pack every member whose primary file exists on the source path (m.abs).
   // Primaries are not staged under stageDir — compress reads them in-place.
@@ -902,7 +904,11 @@ export async function runCompressPhase(input: {
     parsedMtimeFromOriginal: input.opts.parsedMtimeFromOriginal === true,
     sha256Extra: input.opts.sha256Extra === true,
     originSha256: input.opts.originSha256 === true,
+    computeMerkle: input.opts.stamp === true,
   });
 
+  if (input.result && written.merkleRoot) {
+    input.result.merkleRoot = written.merkleRoot;
+  }
   return written.bundlePath;
 }

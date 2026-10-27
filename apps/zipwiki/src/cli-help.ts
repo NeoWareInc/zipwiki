@@ -12,7 +12,7 @@ declare module "commander" {
 
 type GroupedCommand = Command & { _helpGroup?: string };
 
-const GROUP_ORDER = ["Create", "Query", "Account"] as const;
+const GROUP_ORDER = ["Create", "Query", "Chain", "Account"] as const;
 
 Command.prototype.helpGroup = function helpGroup(this: Command, heading: string) {
   (this as GroupedCommand)._helpGroup = heading;

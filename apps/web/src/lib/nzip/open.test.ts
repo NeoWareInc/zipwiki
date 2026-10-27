@@ -1,18 +1,30 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { strToU8, zipSync } from "fflate";
+import { buildZipBufferSync } from "neozipkit/node";
 import { applyManifestOrigin, openNzip } from "./open";
 
-function manifestArchive(ai: Record<string, unknown>): ArrayBuffer {
-  const bytes = zipSync({
-    "META-INF/manifest.json": strToU8(
-      JSON.stringify({ format: "neozip", specVersion: "0.2", ai }),
-    ),
-  });
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
   ) as ArrayBuffer;
+}
+
+function manifestArchive(
+  ai: Record<string, unknown>,
+  extra: Array<{ name: string; data: string }> = [],
+): ArrayBuffer {
+  const manifest = JSON.stringify({ format: "neozip", specVersion: "0.2", ai });
+  return toArrayBuffer(
+    buildZipBufferSync([
+      { name: "META-INF/manifest.json", data: Buffer.from(manifest), method: 8 },
+      ...extra.map((e) => ({
+        name: e.name,
+        data: Buffer.from(e.data),
+        method: 8 as const,
+      })),
+    ]),
+  );
 }
 
 describe("applyManifestOrigin", () => {
@@ -62,5 +74,57 @@ describe("openNzip ai.digest", () => {
       "sample.zipwiki",
     );
     assert.equal(opened.digest, undefined);
+  });
+
+  it("keeps the shared reader on the summary", async () => {
+    const opened = await openNzip(
+      manifestArchive({ root: "wiki", primaries: [] }),
+      "sample.zipwiki",
+    );
+    assert.equal(opened.entryCount, 1);
+    const bytes = await opened.reader.readEntry("META-INF/manifest.json");
+    assert.ok(bytes.byteLength > 0);
+  });
+});
+
+describe("openNzip blockchain badge", () => {
+  const ai = { root: "wiki", primaries: [] };
+
+  it("shows nothing without sidecars", async () => {
+    const opened = await openNzip(manifestArchive(ai), "a.zipwiki");
+    assert.equal(opened.blockchain, undefined);
+  });
+
+  it("marks TS-SUBMIT alone as pending", async () => {
+    const opened = await openNzip(
+      manifestArchive(ai, [{ name: "META-INF/TS-SUBMIT.NZIP", data: "{}" }]),
+      "a.zipwiki",
+    );
+    assert.equal(opened.blockchain?.label, "Stamp pending");
+  });
+
+  it("marks TIMESTAMP as timestamped", async () => {
+    const opened = await openNzip(
+      manifestArchive(ai, [
+        { name: "META-INF/TS-SUBMIT.NZIP", data: "{}" },
+        { name: "META-INF/TIMESTAMP.NZIP", data: "{}" },
+      ]),
+      "a.zipwiki",
+    );
+    assert.equal(opened.blockchain?.label, "Timestamped");
+  });
+
+  it("marks TOKEN as tokenized and reads network/tokenId", async () => {
+    const opened = await openNzip(
+      manifestArchive(ai, [
+        {
+          name: "META-INF/TOKEN.NZIP",
+          data: JSON.stringify({ network: "base-sepolia", tokenId: 42 }),
+        },
+      ]),
+      "a.zipwiki",
+    );
+    assert.equal(opened.blockchain?.label, "Tokenized");
+    assert.equal(opened.blockchain?.title, "Network: base-sepolia · Token ID: 42");
   });
 });

@@ -5,8 +5,11 @@ Portable knowledge lives in **`.zipwiki`** packages (ZIP + `META-INF/manifest.js
 
 | Surface | Role |
 | --- | --- |
-| **zipwiki** | Create (`pack`: markdown table → human yes → write) and query (`open` / `search` / `read` / `origin`) |
-| **stdio MCP** | Agents on this machine → zipaccess library |
+| **zipwiki** | Create (`pack`: markdown table → human yes → write), query (`open` / `search` / `read` / `origin`), chain (`stamp` / `upgrade` / `mint` / `verify`) |
+| **stdio MCP** | Agents on this machine → zipaccess library + chain tools |
+
+ZIP wire I/O is **NeoZipKit**; blockchain sidecars are **neozip-blockchain**. See
+[doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
 
 ## Pack (MCP) — markdown table in chat
 
@@ -14,26 +17,31 @@ Portable knowledge lives in **`.zipwiki`** packages (ZIP + `META-INF/manifest.js
 2. Paste `displayForUser` (markdown table + CLI) into the chat and **STOP**. Wait for the human.
 3. Only after they approve in a **later** message, call `pack` again with `confirm:true` and `humanApproved:true` (plus any setting changes they asked for). Never invent `humanApproved` in the same turn. No MCP elicitation / Approve forms.
 
+`stamp` / `upgrade` / `mint` use the same table → STOP → later
+`confirm:true` + `humanApproved:true` pattern. Never pass a wallet key as a
+tool argument.
+
 ## Open sequence (always)
 
 1. Pack (or open an existing package) — table plan, then human yes before create
-2. Catalog — `open`
-3. Prefer `search` / `query` when available; else `read_okf_index` + `read_okf`
-4. Follow `sources` to `read_parsed` (or originals via `read_entry` — stream, verified)
-5. Prefer OKF descriptions before dumping full parses
-6. `origin` (`fetch: true`) to download Extra Field `0x014F` originals and verify CRC-32
-7. `read` to stream entry bodies; `extract` only when a filesystem path is required
+2. Catalog — `open` (includes `blockchain` when proof sidecars exist)
+3. Optional `verify` (offline by default) when timestamp / token proofs matter
+4. Prefer `search` / `query` when available; else `read_okf_index` + `read_okf`
+5. Follow `sources` to `read_parsed` (or originals via `read_entry` — stream, verified)
+6. Prefer OKF descriptions before dumping full parses
+7. `origin` (`fetch: true`) to download Extra Field `0x014F` originals and verify CRC-32
+8. `read` to stream entry bodies; `extract` only when a filesystem path is required
 
 Default package: `package` tool arg, or `wiki.zipwiki` in the MCP cwd.
 
 Do not write `wiki/search.json`, `wiki/okf/log.md`, or `wiki/okf/topics/pdf.md` into a `.zipwiki`. `search` reads OKF markdown. Other topic pages stay. `log.md` is optional in the OKF language spec and ZipWiki does not emit it. If an older archive still has `search.json`, `log.md`, or `topics/pdf.md`, the next update deletes it.
 
-Specs: [doc/ZIPWIKI_APPNOTE.md](doc/ZIPWIKI_APPNOTE.md), [doc/ZIPACCESS.md](doc/ZIPACCESS.md),
-[doc/MCP.md](doc/MCP.md), [doc/CLI.md](doc/CLI.md). Future NeoZipKit ZIP-writer swap
-(prefer general ZipkitNode hooks, not a ZipWiki layer in the kit):
+Specs: [doc/ZIPWIKI_APPNOTE.md](doc/ZIPWIKI_APPNOTE.md) (ZipWiki profile),
+[doc/format/NEOZIP_APPNOTE.md](doc/format/NEOZIP_APPNOTE.md) (NeoZip wire),
+[doc/ZIPACCESS.md](doc/ZIPACCESS.md), [doc/MCP.md](doc/MCP.md), [doc/CLI.md](doc/CLI.md),
 [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
 
-This checkout includes Phase 2: `@zipwiki/zipwiki` (pack and query) and
+This checkout includes Phase 2: `@zipwiki/zipwiki` (pack, query, chain) and
 `@zipwiki/mcp` (stdio). Local pack does not need login (`--no-ai-okf` +
 LiteParse). Home is `~/.zipwiki`. Hosted auth is Phase 3. A Rust CLI is
 Phase 4 — see [PHASES.md](PHASES.md).

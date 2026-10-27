@@ -3,19 +3,28 @@
 | | |
 | :---- | :---- |
 | **Format** | `.zipwiki` (ZIP / NeoZip profile with ZipWiki AI extensions) |
-| **Specification version** | **0.2.0-draft** |
-| **Status** | Draft — ZipWiki extensions to PKWARE APPNOTE 6.3.10 via NeoZip 0.2 |
-| **Document date** | 2026-09-16 |
-| **Parent specification** | [NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md) (NeoZip 0.2.0-draft) |
+| **Specification version** | **0.3.0-draft** |
+| **Status** | Draft — ZipWiki **profile** on NeoZip 0.3 (producer / AI conventions) |
+| **Document date** | 2026-10-27 |
+| **Parent specification** | [NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md) (NeoZip **0.3.0-draft**, canonical in NeoZipKit) |
 | **Base specification** | [APPNOTE.TXT](./APPNOTE.TXT) (PKWARE `.ZIP` File Format Specification, Version 6.3.10) |
-| **Related** | [OKF_SPEC.md](./OKF_SPEC.md) · [OKF producer profile](./OKF_ZIPWIKI_VS_SPEC.md) · [ZIPACCESS.md](./ZIPACCESS.md) |
+| **Related** | [OKF_SPEC.md](./OKF_SPEC.md) · [OKF producer profile](./OKF_ZIPWIKI_VS_SPEC.md) · [ZIPACCESS.md](./ZIPACCESS.md) · [NEOZIPKIT_INTEGRATION.md](./NEOZIPKIT_INTEGRATION.md) |
 
-This file in the repository is the **ZipWiki packaging note**: how **zipwiki**
-writes (and the **zipaccess** library reads) AI materials inside a NeoZip archive. The
-parent [NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md) remains the on-wire NeoZip
-contract (integrity Extra Fields, Merkle, blockchain sidecars, encryption).
-This note **copies** those AI-root rules and **adds** producer conventions
-that do not belong in the NeoZip app note.
+This file is the **ZipWiki packaging profile**: how **zipwiki** writes (and
+zipaccess / the web portal read) AI materials inside a NeoZip archive.
+
+**Wire rules live in NeoZip.** Local headers, central directory, EOCD / Zip64,
+compression methods 0 / 8 / 93, Extra Fields `0x014E` / `0x014F`, Merkle v1/v0,
+`META-INF` reserved paths, manifest envelope fields, and blockchain sidecars
+(`TS-SUBMIT` → `TIMESTAMP` → `TOKEN`) are normative in
+[NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md). ZipWiki implements them via
+**NeoZipKit** and **neozip-blockchain**; this note does not redefine those
+layouts. Sections below that describe wire shapes are **informative summaries**
+plus ZipWiki placement policy (e.g. where to put `0x014F` on parse members).
+
+This note **owns** ZipWiki-only producer conventions: `.zipwiki` filename,
+stage tree, pack / update pipeline, omit-original extension set, collision
+rewrite, OKF enrichment, and the full `ai` registry ZipWiki emits.
 
 ---
 
@@ -1117,13 +1126,16 @@ written.
 ### 12.1 Query (zipwiki)
 
 1. `open` / `zipwiki open` — manifest, OKF flags, primaries, optional
-   `origins[]` from Extra Field `0x014F`.
-2. Prefer `search` / `zipwiki search`; else `read_okf_index` +
+   `origins[]` from Extra Field `0x014F`, and `blockchain` status when
+   proof sidecars are present.
+2. Optional `verify` / `zipwiki verify` (offline by default) when
+   timestamp or token proofs matter.
+3. Prefer `search` / `zipwiki search`; else `read_okf_index` +
    `read_okf`.
-3. Follow `sources` to `read` / `read_parsed` (or originals via
+4. Follow `sources` to `read` / `read_parsed` (or originals via
    `read_entry` — stream, verified).
-4. Prefer OKF descriptions before dumping full parses (context budget).
-5. `extract` only when a filesystem path is required.
+5. Prefer OKF descriptions before dumping full parses (context budget).
+6. `extract` only when a filesystem path is required.
 
 ### 12.2 Create (MCP default)
 
@@ -1162,7 +1174,7 @@ L4 never substitutes for L1–L3. A default ZipWiki package is L0 + L4.
 **ZipWiki L4 writer checklist:**
 
 - [ ] Exactly one AI root, declared as `ai.root`
-- [ ] `specVersion` ≥ `0.2.0`, `format` = `neozip`
+- [ ] `specVersion` ≥ `0.2.0` (ZipWiki AI-root packages; NeoZip envelope tracks **0.3.0**), `format` = `neozip`
 - [ ] Parse paths `{R}/parsed/{P}.md`; no AI under `META-INF/`
 - [ ] Orphan parses rejected unless `sourceIncluded: false` for that `P`
 - [ ] `ai.okf` matches CD (present iff OKF members exist)
@@ -1209,5 +1221,6 @@ Archives declare `specVersion` in `META-INF/manifest.json`. Readers
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
+| 2026-10-27 | **0.3.0-draft** | Profile rewrite: NeoZip **0.3.0-draft** is the canonical wire note (synced from NeoZipKit). ZipWiki uses NeoZipKit for ZIP I/O and neozip-blockchain for stamp / upgrade / mint / verify. Open sequence adds optional `verify` after `open`. Sidecars are dropped when package content changes (re-stamp required). |
 | 2026-10-09 | **0.2.0-draft** | `ai.digest` is at most 1000 characters and starts with the document count. A model reads `wiki/okf/index.md` and summarizes the whole `# Files` list. Otherwise those descriptions are joined. A failed call that would cut that join still names every group. Refresh on `update`. Omit when there are no OKF concepts. |
 | 2026-09-16 | **0.2.0-draft** | Initial ZipWiki Application Note: AI-root rules (`wiki/` default, `parsed/`, per-primary OKF, `ai` registry, omit-original, L4) plus producer detail (`.zipwiki` filename, `"zipwiki"` profile, collision rewrite `content/N/`, omittable extension set, stage tree, parser extra fields, pack / enrich pipeline, parsed origins Extra Field `0x014F` v1 TLV with optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes (tag `0x05`); field version stays 1 until first release). Default integrity is ZIP CRC-32; Extra Field `0x014E` and origin SHA-256 are opt-in; Merkle v1 root is computed only for blockchain sidecars. |

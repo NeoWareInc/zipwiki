@@ -18,7 +18,7 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 
 | Tool | Purpose | Owned by |
 | --- | --- | --- |
-| `open` | Catalog (same fields as `zipwiki open --json`) + manifest summary + open sequence | zipaccess lib |
+| `open` | Catalog (same fields as `zipwiki open --json`) + manifest summary + open sequence; includes `blockchain` when proof sidecars exist | zipaccess lib |
 | `list` | Entry inventory (`prefix` / `limit`) | zipaccess lib |
 | `search` | Ranked OKF search (snippets + `readHints`). Parsed text only when OKF misses | zipaccess lib |
 | `query` | Search plus capped bodies, cited passages, and gaps for files never extracted | zipaccess lib |
@@ -31,8 +31,12 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 | `read_manifest` | Always `META-INF/manifest.json` as raw JSON | zipaccess lib |
 | `extract` | Verified extract to disk (`fetchOrigin` also downloads 0x014F originals) | zipaccess lib |
 | `origin` | Extra Field `0x014F` URI/CRC; `fetch` downloads and verifies CRC-32 | zipaccess lib |
+| `verify` | Read-only: check `TS-SUBMIT` / `TIMESTAMP` / `TOKEN` sidecars (offline by default; `online:true` optional) | zipwiki chain |
+| `stamp` | Submit Merkle root → `TS-SUBMIT.NZIP`. Same approval pattern as `pack` | zipwiki chain |
+| `upgrade` | Pending stamp → `TIMESTAMP.NZIP`. Same approval pattern as `pack` | zipwiki chain |
+| `mint` | Mint NFT → `TOKEN.NZIP` (spends gas). Wallet key from MCP env only — never a tool arg. Same approval pattern as `pack` | zipwiki chain |
 | `pack` | Pack sources → `.zipwiki`. Default: markdown table plan (`displayForUser`). Pack only with `confirm:true` + `humanApproved:true` after human chat approval | zipwiki |
-| `update` | Add / update / delete documents (one rewrite; copies unchanged compressed members) | zipwiki |
+| `update` | Add / update / delete documents (one rewrite; copies unchanged compressed members). Drops proof sidecars when content changes | zipwiki |
 | `okf_enrich` | Apply host-LLM OKF enrichment into `.zipwiki` | zipaccess lib |
 
 ### Create workflow (default)
@@ -47,11 +51,23 @@ Optional: request hosted/BYO OKF on `pack` when the plan still has hosted OKF re
 
 ### Query workflow
 
-1. `open` — catalog rows (title/type, parsed?, original?, `readHints`)
-2. `search` (preferred) or `query` or `read_okf_index`. `query` already includes passages from cited text. A gap means no extract was stored at pack time; do not expect `read_entry` to recover that text. `ask` runs the website question loop (hosted credits) when the agent wants an answer instead of reading the package itself.
-3. `read_okf` → `read_parsed` / `read` / `read_entry` when a parsed or text file exists (stream through MCP; verified inflate)
-4. `origin` with `fetch: true` to download an omitted original and check CRC-32
-5. `extract` only when a filesystem path is required (`fetchOrigin` to pull originals next to the parse)
+1. `open` — catalog rows (title/type, parsed?, original?, `readHints`) and optional `blockchain` status
+2. Optional `verify` when proofs matter (offline default)
+3. `search` (preferred) or `query` or `read_okf_index`. `query` already includes passages from cited text. A gap means no extract was stored at pack time; do not expect `read_entry` to recover that text. `ask` runs the website question loop (hosted credits) when the agent wants an answer instead of reading the package itself.
+4. `read_okf` → `read_parsed` / `read` / `read_entry` when a parsed or text file exists (stream through MCP; verified inflate)
+5. `origin` with `fetch: true` to download an omitted original and check CRC-32
+6. `extract` only when a filesystem path is required (`fetchOrigin` to pull originals next to the parse)
+
+### Chain workflow (stamp / mint)
+
+Same human-approval contract as `pack`:
+
+1. Call `stamp` / `upgrade` / `mint` once (omit `confirm`, or `confirm:false`).
+2. Paste `displayForUser` into the chat and **STOP**.
+3. After the human approves in a later message, call again with `confirm:true` and `humanApproved:true`.
+
+Wallet private keys are never tool arguments — set `ZIPWIKI_WALLET_KEY` or
+`NEOZIP_WALLET_PASSKEY` in the MCP process environment.
 
 `maxBytes` (default 160_000) caps **bytes returned** from a single read — not archive size or tokens. Binary entries return `encoding: "base64"`.
 

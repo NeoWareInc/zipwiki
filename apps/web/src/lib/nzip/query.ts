@@ -1,6 +1,7 @@
-import { payloadCrcMatches } from "./integrity.js";
+import type { ZipReaderBrowser } from "neozipkit/browser";
 import {
   BUNDLE_PATHS,
+  listZipEntries,
   readZipEntryPayload,
   type ZipListEntry,
 } from "./zip.js";
@@ -220,20 +221,21 @@ function isConceptPath(name: string): boolean {
   );
 }
 
+/** Read text through the kit reader (size, CRC-32, and SHA-256 verified). */
 async function readVerifiedText(
-  buf: ArrayBuffer,
+  reader: ZipReaderBrowser,
   entry: ZipListEntry,
   skipped: QuerySkipped[],
 ): Promise<string | null> {
   try {
-    const data = await readZipEntryPayload(buf, entry);
-    if (!payloadCrcMatches(data, entry.crc32)) {
-      skipped.push({ path: entry.name, reason: "CRC-32 mismatch" });
-      return null;
-    }
+    const data = await readZipEntryPayload(reader, entry);
     return new TextDecoder("utf-8").decode(data);
-  } catch {
-    skipped.push({ path: entry.name, reason: "Could not read entry" });
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code;
+    skipped.push({
+      path: entry.name,
+      reason: code === "crc" ? "CRC-32 mismatch" : "Could not read entry",
+    });
     return null;
   }
 }
@@ -357,10 +359,12 @@ function scoreSearchDoc(doc: SearchDoc, tokens: string[]): number {
  * Parsed markdown is used only when no concept matches.
  */
 export async function queryPackage(
-  buf: ArrayBuffer,
-  entries: ZipListEntry[],
+  reader: ZipReaderBrowser,
   query: string,
 ): Promise<PackageQuery> {
+  const entries = listZipEntries(reader).filter(
+    (entry) => !entry.name.endsWith("/"),
+  );
   const trimmed = query.trim();
   const skipped: QuerySkipped[] = [];
   if (!trimmed) {
@@ -374,7 +378,7 @@ export async function queryPackage(
   const indexEntry = byName.get(SEARCH_INDEX);
   let usedCatalog = false;
   if (indexEntry) {
-    const raw = await readVerifiedText(buf, indexEntry, skipped);
+    const raw = await readVerifiedText(reader, indexEntry, skipped);
     const docs = raw ? parseSearchIndex(raw) : null;
     if (docs && docs.length > 0) {
       usedCatalog = true;
@@ -386,7 +390,7 @@ export async function queryPackage(
       for (const { doc } of ranked) {
         const entry = byName.get(doc.path);
         if (!entry) continue;
-        const markdown = await readVerifiedText(buf, entry, skipped);
+        const markdown = await readVerifiedText(reader, entry, skipped);
         if (!markdown) continue;
         const hit = hitFromConcept(doc.path, markdown, tokens, entryNames);
         if (hit) scored.push(hit);
@@ -397,7 +401,7 @@ export async function queryPackage(
   if (!usedCatalog) {
     for (const entry of entries) {
       if (!isConceptPath(entry.name)) continue;
-      const markdown = await readVerifiedText(buf, entry, skipped);
+      const markdown = await readVerifiedText(reader, entry, skipped);
       if (!markdown) continue;
       const hit = hitFromConcept(entry.name, markdown, tokens, entryNames);
       if (hit) scored.push(hit);
@@ -414,7 +418,7 @@ export async function queryPackage(
       )
       .slice(0, PARSED_FILE_CAP);
     for (const entry of parsed) {
-      const markdown = await readVerifiedText(buf, entry, skipped);
+      const markdown = await readVerifiedText(reader, entry, skipped);
       if (!markdown) continue;
       const sample = markdown.slice(0, PARSED_SCAN_CHARS);
       // Score the head for density and the full body so deep sections still rank.
@@ -491,7 +495,7 @@ export async function queryPackage(
         if (passageBudget <= 0) continue;
         const entry = byName.get(parsePath);
         const markdown = entry
-          ? await readVerifiedText(buf, entry, skipped)
+          ? await readVerifiedText(reader, entry, skipped)
           : null;
         const window = markdown ? passageAround(markdown, tokens) : null;
         if (!window) continue;
@@ -503,7 +507,7 @@ export async function queryPackage(
         if (passageBudget <= 0) continue;
         const entry = byName.get(resolved);
         const markdown = entry
-          ? await readVerifiedText(buf, entry, skipped)
+          ? await readVerifiedText(reader, entry, skipped)
           : null;
         const window = markdown ? passageAround(markdown, tokens) : null;
         if (!window) continue;
@@ -543,7 +547,7 @@ export async function queryPackage(
       }
       const entry = byName.get(path);
       if (!entry) continue;
-      const markdown = await readVerifiedText(buf, entry, skipped);
+      const markdown = await readVerifiedText(reader, entry, skipped);
       if (!markdown) continue;
       const idx = bestPassageOffset(markdown, focusTokens);
       if (idx < 0) continue;
@@ -565,7 +569,7 @@ export async function queryPackage(
   }
 
   const seeded = await seedDeepPassages(
-    buf,
+    reader,
     entries,
     tokens,
     skipped,
@@ -711,7 +715,7 @@ function sliceAroundOffset(
  * return windows the Ask model must see on the first turn.
  */
 async function seedDeepPassages(
-  buf: ArrayBuffer,
+  reader: ZipReaderBrowser,
   entries: ZipListEntry[],
   tokens: string[],
   skipped: QuerySkipped[],
@@ -744,7 +748,7 @@ async function seedDeepPassages(
       if (seeded.length >= 3) break;
       const name = entry.name.replace(/\\/g, "/");
       if (queryReadKind(name) !== "text") continue;
-      const markdown = await readVerifiedText(buf, entry, skipped);
+      const markdown = await readVerifiedText(reader, entry, skipped);
       if (!markdown) continue;
       const at = SECTION_HINT.test(token)
         ? tokenMatchLastIndex(markdown, token)
@@ -882,20 +886,18 @@ export function formatPhraseHits(phrase: string, hits: PhraseHit[]): string {
 
 /** Exact phrase scan of stored text. PDF, Office, and image bytes stay closed. */
 export async function searchPackagePhrase(
-  buf: ArrayBuffer,
-  entries: ZipListEntry[],
+  reader: ZipReaderBrowser,
   phrase: string,
 ): Promise<PhraseHit[]> {
   const needle = phrase.trim().replace(/\s+/g, " ");
   if (needle.length < 2) return [];
   const hits: PhraseHit[] = [];
-  for (const entry of entries) {
+  for (const entry of listZipEntries(reader)) {
     if (hits.length >= PHRASE_HITS) break;
     const name = entry.name.replace(/\\/g, "/");
     if (queryReadKind(name) !== "text") continue;
     try {
-      const data = await readZipEntryPayload(buf, entry);
-      if (!payloadCrcMatches(data, entry.crc32)) continue;
+      const data = await readZipEntryPayload(reader, entry);
       const text = new TextDecoder("utf-8").decode(data);
       const at = findPhraseOffset(text, needle);
       if (at < 0) continue;
@@ -943,8 +945,7 @@ export function originLink(entries: ZipListEntry[], selector: string): string | 
 
 /** Load one model-requested path, or refuse when pack stored no extract. */
 export async function readPackageFollow(
-  buf: ArrayBuffer,
-  entries: ZipListEntry[],
+  reader: ZipReaderBrowser,
   requestPath: string,
   offset = 0,
 ): Promise<FollowWindow | { error: string }> {
@@ -952,16 +953,16 @@ export async function readPackageFollow(
   const kind = queryReadKind(name);
   if (kind === "binary") return { error: NO_EXTRACT_REASON };
   if (kind !== "text") return { error: "That path cannot be read from this package." };
-  const entry = entries.find((item) => item.name === name);
+  const entry = listZipEntries(reader).find((item) => item.name === name);
   if (!entry) return { error: `Not in this package: ${name}` };
   try {
-    const data = await readZipEntryPayload(buf, entry);
-    if (!payloadCrcMatches(data, entry.crc32)) {
-      return { error: `CRC-32 mismatch: ${name}` };
-    }
+    const data = await readZipEntryPayload(reader, entry);
     const full = new TextDecoder("utf-8").decode(data);
     return followWindow(full, offset);
-  } catch {
-    return { error: `Could not read ${name}` };
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code;
+    return {
+      error: code === "crc" ? `CRC-32 mismatch: ${name}` : `Could not read ${name}`,
+    };
   }
 }

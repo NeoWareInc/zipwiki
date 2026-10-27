@@ -1,103 +1,77 @@
-# NeoZipKit integration (prep)
+# NeoZipKit integration (current)
 
-ZipWiki pack currently frames ZIP archives in
-[`apps/zipwiki/src/lib/archive/nzip.ts`](../apps/zipwiki/src/lib/archive/nzip.ts)
-(`writeZipBuffer` / `buildZip`). A future release should use NeoZipKit /
-ZipkitNode for ZIP I/O instead of the hand-rolled writer.
+ZipWiki **0.3.0** uses **NeoZipKit 1.6.0** for all NeoZip / APPNOTE wire I/O and
+**neozip-blockchain 2.0.0** for Token Service timestamps and NFT binding.
+ZipWiki still owns AI content and pack policy.
 
-**Direction (important):** ZipWiki does **not** need a ZipWiki-specific module
-inside NeoZipKit. Prefer **general ZipkitNode hooks and primitives** so ZipWiki
-(and other apps) compose pack behavior on top of the kit. NeoZipKit’s optional
-`writeZipWiki*` helpers on `dev` are scaffolding / parity checks only — do not
-treat them as the integration target.
-
-**Not done yet:** ZipWiki does not depend on `neozipkit` in package.json.
-Parse, OKF, CD order policy, store-by-suffix policy, and full AI
-`META-INF/manifest.json` stay in ZipWiki.
+Canonical wire spec: NeoZip Application Note **0.3.0-draft** in NeoZipKit
+([`packages/neozipkit/NEOZIP_APPNOTE.md`](../../neozipkit/packages/neozipkit/NEOZIP_APPNOTE.md);
+synced copies under [format/NEOZIP_APPNOTE.md](./format/NEOZIP_APPNOTE.md) and
+[`public-specs/`](../public-specs/NEOZIP_APPNOTE.md)). ZipWiki’s own note is a
+**profile** on top of that: [ZIPWIKI_APPNOTE.md](./ZIPWIKI_APPNOTE.md).
 
 ## Ownership
 
-| Layer | Owner today | Future |
+| Layer | Owner |
+| --- | --- |
+| ZIP local / CD / EOCD, methods 0 / 8 / 93, Zip64 | NeoZipKit (`buildZipBufferSync`, `ZipReaderNode`, `ZipReaderBrowser`, `rewriteZip`) |
+| Extra Field `0x014E` (SHA-256) | NeoZipKit (`useSHA256` / verify on read) |
+| Extra Field `0x014F` (origin TLV) | NeoZipKit builders/parsers; ZipWiki decides *when* to attach |
+| Manifest envelope (`format` / `specVersion` / `createdAt` / `profiles`) | NeoZipKit (`createManifest`, `serializeManifest`, `readManifest`, `updateManifest`) |
+| Manifest `ai` block, parse, OKF, omit-original policy | **ZipWiki only** |
+| CD order META-INF → `{aiRoot}/` → primaries | **ZipWiki** (ordered members into the kit writer) |
+| Store-by-suffix (PDF, images, …) | **ZipWiki** (`method: 0` / level per member) |
+| Merkle v1/v0 | NeoZipKit; ZipWiki records results in pack / stamp |
+| `TS-SUBMIT` / `TIMESTAMP` / `TOKEN` sidecars | neozip-blockchain (`stampArchive`, `upgradeTimestamp`, `mint*`, `verifyArchive`) |
+
+There is **no** ZipWiki product module inside NeoZipKit. Kit `writeZipWiki*`
+helpers were removed in 1.6.0; ZipWiki composes general primitives.
+
+## Code map
+
+| Concern | ZipWiki | Kit / blockchain |
 | --- | --- | --- |
-| ZIP local / CD / EOCD, methods 0 / 8 / 93, Zip64 | ZipWiki `nzip.ts` | NeoZipKit ZipkitNode |
-| Extra Field `0x014F` (origin) | ZipWiki `origin-extra.ts` (+ kit `OriginExtra`) | Prefer kit builders; ZipWiki still decides *when* to attach |
-| Extra Field `0x014E` (SHA-256) | Both (opt-in) | Kit (`useSHA256`) |
-| CD order META-INF → `{aiRoot}/` → primaries | ZipWiki pack | **ZipWiki** (pass ordered members into kit) |
-| Store-by-suffix (PDF, images, …) | ZipWiki compress | **ZipWiki** (set `method: 0` / level per member) |
-| Full AI manifest + parse + OKF | ZipWiki only | ZipWiki only |
-| Kit extension hooks (transforms, extra composition) | — | NeoZipKit backlog **E7** |
+| Pack write | [`neozipkit-writer.ts`](../apps/zipwiki/src/lib/archive/neozipkit-writer.ts) → `buildZipBufferSync` | `neozipkit/node` |
+| List / inflate / verify | [`zip-list.ts`](../apps/zipwiki/src/lib/archive/zip-list.ts), [`integrity.ts`](../apps/zipwiki/src/lib/archive/integrity.ts) | `ZipReaderNode` |
+| Update / enrich rewrite | [`rewrite.ts`](../apps/zipwiki/src/lib/archive/rewrite.ts) | `readRaw` + precompressed / atomic write; drops proof sidecars when content changes |
+| Chain CLI / MCP | [`lib/chain/`](../apps/zipwiki/src/lib/chain/) | `neozip-blockchain/archive` |
+| Web Knowledge / Query | [`apps/web/src/lib/nzip/`](../apps/web/src/lib/nzip/) | `ZipReaderBrowser` via `neozipkit/browser` |
 
-## Preferred integration shape
+## Dependencies (dev)
 
-Use low-level kit APIs ZipWiki already almost matches:
+During integration, workspace packages use `file:` links to the sibling
+NeoZipKit repo:
 
-```ts
-import {
-  ZipkitNode,
-  buildZipBufferSync,
-  makeOriginExtra,
-} from "neozipkit/node";
+- `@zipwiki/zipwiki` → `neozipkit`, `neozip-blockchain`
+- `@zipwiki/web` → `neozipkit`
 
-// ZipWiki builds members (order, methods, origins) then:
-const buf = buildZipBufferSync([
-  {
-    name: "META-INF/manifest.json",
-    data: manifestBytes,
-    method: 0,
-  },
-  {
-    name: "wiki/parsed/doc.pdf.md",
-    data: parseMd,
-    method: 93,
-    level: 7,
-  },
-  {
-    name: "doc.pdf",
-    data: pdfBytes,
-    method: 0,
-    additionalExtra: makeOriginExtra({
-      uri: "https://example.org/doc.pdf",
-      size: pdfBytes.length,
-    }),
-  },
-]);
+Release packages should pin published `neozipkit@^1.6.0` and
+`neozip-blockchain@^2.0.0` after those versions are on npm.
 
-// or ZipkitNode.writeMembersSync(path, members)
-```
+Local pack does **not** require blockchain credentials. Stamp / mint need a
+verified Token Service email and (for mint) a wallet key from the environment
+only — never the OS keychain, never secrets inside the `.zipwiki`.
 
-Parity targets vs ZipWiki `writeZipBuffer`:
+## Agent open sequence
 
-- Default method **93**, level **7** (ZipWiki chooses per member)
-- No Unicode-path extra on the buffer path (`emitUnicodePath` off)
-- Caller complete Extra Field **`0x014F`** via `additionalExtra` / `makeOriginExtra`
-- Optional **`0x014E`** via `useSHA256`
+1. Pack (or open an existing package)
+2. `open` / catalog (includes `blockchain` status when sidecars exist)
+3. Optional `verify` (offline by default) when proofs matter
+4. `search` / `query` / OKF reads
+5. `read_parsed` / `origin` (`fetch`) / `extract` as needed
 
-Ask NeoZipKit for **E7 hooks** only where ZipWiki would otherwise fork the
-writer (e.g. create/copy entry transforms, cleaner multi-extra composition).
+MCP `stamp` / `upgrade` / `mint` use the same table → human yes →
+`confirm:true` + `humanApproved:true` pattern as `pack`.
 
-## Suggested ZipWiki migration steps
+## Non-goals (unchanged)
 
-1. Add a published `neozipkit` dependency to `@zipwiki/zipwiki`; keep `nzip.ts`
-   until golden tests pass.
-2. Adapter in ZipWiki (e.g. `neozipkit-writer.ts`) that maps pack members onto
-   `ZipBufferMember` and calls `buildZipBufferSync` / `writeMembersSync` —
-   **not** a hard dependency on kit `writeZipWiki*`.
-3. Dual-write or golden ZIP compare (methods, CRC, extras, CD order ZipWiki
-   already applied).
-4. Point `buildZip` / `writeZipBuffer` at the adapter; delete duplicated
-   framing once CI proves compatible.
-5. If gaps appear, file NeoZipKit **E7** hooks rather than adding more
-   ZipWiki-named APIs to the kit.
-
-## Non-goals
-
-- Moving LlamaParse / LiteParse / OKF into NeoZipKit
-- Growing a permanent `neozipkit` ZipWiki product layer
+- Moving LlamaParse / LiteParse / OKF generation into NeoZipKit
+- Growing a permanent ZipWiki layer inside the kit
 - Requiring `neozip-blockchain` for local pack
-- Changing AppNote wire (kit AppNote on `dev` tracks ZipWiki **0.2.0-draft**)
+- OpenTimestamps (removed from neozip-blockchain 2.0.0)
 
 ## References
 
-- NeoZipKit backlog: `docs/FUTURE_ENHANCEMENTS.md` (**E7** preferred; **E4a** optional)
-- Optional kit scaffolding: `src/node/zipwiki/` (may stay example-only)
-- Specs: [ZIPWIKI_APPNOTE.md](./ZIPWIKI_APPNOTE.md), kit `NEOZIP_APPNOTE.md`
+- NeoZipKit AppNote 0.3.0-draft, `WHATS_NEW` 1.6.0, `docs/FUTURE_ENHANCEMENTS.md`
+- [ZIPWIKI_APPNOTE.md](./ZIPWIKI_APPNOTE.md), [CLI.md](./CLI.md), [MCP.md](./MCP.md)
+- Golden fixtures: `apps/zipwiki/src/lib/archive/__fixtures__/`

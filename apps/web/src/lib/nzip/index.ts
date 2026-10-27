@@ -7,10 +7,17 @@ export {
   type ZipListEntry,
 } from "./open";
 export {
-  listZipEntriesFromBuffer,
+  createPackageReader,
+  listZipEntries,
   readZipEntryPayload,
   readZipEntryText,
+  toZipListEntry,
 } from "./zip";
+export {
+  detectBlockchainBadge,
+  type BlockchainBadge,
+  type BlockchainState,
+} from "./blockchain";
 export {
   integritySummary,
   payloadCrcMatches,

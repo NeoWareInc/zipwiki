@@ -571,6 +571,7 @@ export async function runStage(
     let members: StageResult["members"] = [];
     let errors = 0;
     let outputPath: string | undefined;
+    const packResult: { merkleRoot?: string } = {};
 
     const runParseOkf = async (mode: "both" | "parse" | "okf") => {
       const result = await runParseAndOkfPhase({
@@ -632,6 +633,7 @@ export async function runStage(
           omitOriginalDocuments,
           title: stripPackageExtension(basename(outputPath)) || "bundle",
           inputRoots,
+          result: packResult,
         });
       } else {
         // all
@@ -680,6 +682,7 @@ export async function runStage(
             omitOriginalDocuments,
             title: stripPackageExtension(basename(outputPath)) || "bundle",
             inputRoots,
+            result: packResult,
           });
         } else {
           phasesRun.push("manifest");
@@ -772,6 +775,36 @@ export async function runStage(
       if (createSummary) {
         console.error("");
         console.error(formatOriginalsSummary(createSummary));
+      }
+
+      if (
+        opts.stamp === true &&
+        outputPath &&
+        !opts.dryRun &&
+        packResult.merkleRoot
+      ) {
+        // The pack already succeeded; a failed stamp only warns.
+        try {
+          const { stampPackage } = await import("../lib/chain/index.js");
+          const stamped = await stampPackage(outputPath, {
+            email: opts.stampEmail,
+            network: opts.stampNetwork,
+            merkleRoot: packResult.merkleRoot,
+          });
+          if (!opts.quiet) {
+            console.error(
+              `[zipwiki] stamped ${basename(outputPath)} (${stamped.settings.network}) merkle=${stamped.stamp.merkleRoot}`,
+            );
+            console.error(
+              `[zipwiki] next: zipwiki upgrade ${basename(outputPath)} --wait`,
+            );
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(
+            `[zipwiki] warning: pack succeeded but stamp failed: ${msg}`,
+          );
+        }
       }
 
       if (phase === "all" && outputPath && !opts.dryRun) {
