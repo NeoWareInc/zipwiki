@@ -1,9 +1,21 @@
-# Article PDFs
+# Article tooling
 
-Downloadable PDFs for `/resources/:slug` live in `apps/web/public/articles/{slug}.pdf`.
+**Editorial files:** repo-root [`articles/`](../../articles/) — `{slug}.md` + `{slug}.pdf`.
 
-Regenerate the intro article PDF (requires Google Chrome):
+**Website (published only):** `apps/web/src/lib/articles/` modules +
+`apps/web/public/articles/` static assets.
+
+## Regenerate a PDF from markdown
 
 ```bash
-./scripts/articles/render-introducing-zipwiki-pdf.sh
+./scripts/articles/render-pdf.sh articles/still-just-a-zip.md
+./scripts/articles/render-pdf.sh articles/introducing-zipwiki.md
 ```
+
+Requires Google Chrome (or set `CHROME_PATH`).
+
+## Legacy intro HTML print
+
+`introducing-zipwiki.html` + `render-introducing-zipwiki-pdf.sh` still write
+directly to `apps/web/public/articles/` (site header SVG). Prefer
+`render-pdf.sh` + `/articles` for ongoing edits.

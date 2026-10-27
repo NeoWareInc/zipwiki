@@ -1,24 +1,21 @@
-import { customOkfDomainRules } from "./custom-okf-domain-rules";
-import { insideTheZipwikiAppnote } from "./inside-the-zipwiki-appnote";
 import { introducingZipwiki } from "./introducing-zipwiki";
 import type { ResourceArticle } from "./types";
 
 export type { ArticleSection, ResourceArticle } from "./types";
 
-/** Every article kept in source (including drafts not yet public). */
-export const ALL_RESOURCE_ARTICLES: readonly ResourceArticle[] = [
-  introducingZipwiki,
-  insideTheZipwikiAppnote,
-  customOkfDomainRules,
-];
-
 /**
- * Articles shown on /resources and reachable at /resources/:slug.
- * Drafts remain in ALL_RESOURCE_ARTICLES for later publish.
+ * Articles on /resources and /resources/:slug.
+ *
+ * Editorial drafts live in repo-root `/articles` (`.md` + `.pdf`) and stay
+ * off the website until publish. Only released pieces belong here.
  */
 export const RESOURCE_ARTICLES: readonly ResourceArticle[] = [
   introducingZipwiki,
 ];
+
+/** Alias kept for older imports; drafts are no longer in the web tree. */
+export const ALL_RESOURCE_ARTICLES: readonly ResourceArticle[] =
+  RESOURCE_ARTICLES;
 
 export function getResourceArticle(
   slug: string,
