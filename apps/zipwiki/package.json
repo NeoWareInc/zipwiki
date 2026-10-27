@@ -28,6 +28,10 @@
     "./access": {
       "types": "./dist/lib/access/index.d.ts",
       "import": "./dist/lib/access/index.js"
+    },
+    "./chain": {
+      "types": "./dist/lib/chain/index.d.ts",
+      "import": "./dist/lib/chain/index.js"
     }
   },
   "main": "./dist/index.js",
@@ -58,6 +62,7 @@
     "picocolors": "^1.1.1",
     "zod": "^3.25.0",
     "@zipwiki/api-client": "workspace:*",
+    "neozip-blockchain": "file:../../../neozipkit/packages/neozip-blockchain",
     "neozipkit": "file:../../../neozipkit/packages/neozipkit"
   },
   "devDependencies": {
