@@ -139,6 +139,10 @@ export type UpdatePackageResult = {
   /** Present only when `computeMerkle` was set. */
   merkleRoot?: string;
   stageDir?: string;
+  /** Set when TOKEN / TIMESTAMP / TS-SUBMIT sidecars were dropped (re-stamp required). */
+  notice?: string;
+  /** Proof sidecar entry names removed by this rewrite. */
+  droppedSidecars?: string[];
 };
 
 function logUpdate(quiet: boolean, message: string): void {
@@ -480,6 +484,7 @@ async function patchManifest(
   map: Map<string, ZipArchiveEntry>,
   primaries: NeoZipAiPrimary[],
   noAiOkf: boolean,
+  dropTokenizedProfile = false,
 ): Promise<void> {
   const existing = map.get(BUNDLE_PATHS.manifest);
   let man: NeoZipManifest;
@@ -492,6 +497,11 @@ async function patchManifest(
       "Archive has no META-INF/manifest.json",
       "invalid_package",
     );
+  }
+  if (dropTokenizedProfile && Array.isArray(man.profiles)) {
+    const profiles = man.profiles.filter((p) => p !== "tokenized");
+    if (profiles.length > 0) man.profiles = profiles;
+    else delete man.profiles;
   }
   const assetEntryCount = [...map.keys()].filter((n) =>
     n.includes(".assets/"),
@@ -699,6 +709,7 @@ export async function updatePackage(
   const pathsNow = () => [...inventory.primaries.keys()];
 
   logUpdate(quiet, `open ${zipPath}`);
+  if (loaded.notice) warnings.push(loaded.notice);
 
   for (const key of delKeys) {
     const p = resolveExistingPrimaryPath(key, pathsNow());
@@ -789,7 +800,13 @@ export async function updatePackage(
       },
   );
   primaries.sort((a, b) => a.path.localeCompare(b.path));
-  await patchManifest(inventory, map, primaries, input.noAiOkf === true);
+  await patchManifest(
+    inventory,
+    map,
+    primaries,
+    input.noAiOkf === true,
+    loaded.droppedSidecars.length > 0,
+  );
 
   const entries = sortPackOrder([...map.values()], inventory.aiRoot);
   const allowedMissing = new Set(
@@ -851,5 +868,8 @@ export async function updatePackage(
     warnings,
     ...(merkleRoot ? { merkleRoot } : {}),
     ...(stageDir ? { stageDir } : {}),
+    ...(loaded.notice
+      ? { notice: loaded.notice, droppedSidecars: loaded.droppedSidecars }
+      : {}),
   };
 }

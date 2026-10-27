@@ -23,14 +23,19 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import {
-  compressZipPayload,
-  type CompressOptions,
-  type ZipCompressionAlg,
-} from "./compress.js";
-import { contentMerkleRoot, isMetaInfPath } from "./merkle.js";
+  createManifest,
+  registerManifestBlock,
+  serializeManifest,
+  type NeoZipManifest as KitNeoZipManifest,
+} from "neozipkit/node";
+import { type ZipCompressionAlg } from "./compress.js";
+import { isMetaInfPath } from "./merkle.js";
 import {
-  concatExtraFields,
-  makeOriginExtra,
+  buildZipWithKit,
+  buildZipWithKitMerkle,
+  type WriteZipOptions,
+} from "./neozipkit-writer.js";
+import {
   originLocatorFromOriginal,
   originLocatorPresent,
   splitOriginRecord,
@@ -45,8 +50,6 @@ export const DEFAULT_OKF_DIR = "okf" as const;
 export const DEFAULT_OKF_VERSION = "0.2" as const;
 
 const MANIFEST_ENTRY = "META-INF/manifest.json";
-/** NeoZip Extra Field ID: SHA-256 of uncompressed payload (APPNOTE §7.1). */
-const EF_NZIP_SHA256 = 0x014e;
 
 export type AiRootName = "wiki" | "codex" | "ai" | "context";
 
@@ -352,23 +355,8 @@ export type BundleWriteResult = {
   size: number;
 };
 
-function crc32(buf: Buffer): number {
-  let crc = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) {
-    crc ^= buf[i]!;
-    for (let j = 0; j < 8; j++) {
-      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}
-
-function sha256Digest(buf: Buffer): Buffer {
-  return createHash("sha256").update(buf).digest();
-}
-
 function sha256Hex(buf: Buffer): string {
-  return sha256Digest(buf).toString("hex");
+  return createHash("sha256").update(buf).digest("hex");
 }
 
 export type ZipArchiveEntry = {
@@ -634,28 +622,6 @@ export function relativeContentPath(abs: string, roots: string[]): string {
   return best && best.length > 0 ? best : basename(file);
 }
 
-function makeSha256Extra(digest: Buffer): Buffer {
-  if (digest.length !== 32) {
-    throw new Error("0x014E requires a 32-byte SHA-256 digest");
-  }
-  const extra = Buffer.alloc(4 + 32);
-  extra.writeUInt16LE(EF_NZIP_SHA256, 0);
-  extra.writeUInt16LE(32, 2);
-  digest.copy(extra, 4);
-  return extra;
-}
-
-/** Build local/central Extra Field blob: optional 0x014E, optional 0x014F. */
-function makeEntryExtra(
-  digest: Buffer | undefined,
-  origin?: OriginLocator,
-): Buffer {
-  const parts: Buffer[] = [];
-  if (digest) parts.push(makeSha256Extra(digest));
-  if (originLocatorPresent(origin)) parts.push(makeOriginExtra(origin));
-  return concatExtraFields(...parts);
-}
-
 function buildAiParser(
   parserEngine: string | undefined,
   parser?: NeoZipAiParser,
@@ -730,11 +696,16 @@ export function buildNeoZipManifest(
     delete parserRecord.credential;
   }
 
-  return {
-    format: "neozip",
+  const envelope = createManifest({
     specVersion: PACKAGE_SPEC_VERSION,
     createdAt: input.createdAt ?? new Date().toISOString(),
     profiles: input.profiles ?? ["zipwiki"],
+  });
+  return {
+    format: "neozip",
+    specVersion: envelope.specVersion,
+    createdAt: envelope.createdAt,
+    ...(envelope.profiles ? { profiles: envelope.profiles } : {}),
     ai: {
       root: aiRoot,
       parsedDir,
@@ -812,7 +783,7 @@ export function normalizeParserRecords(
  * Serialize a NeoZip manifest as pretty UTF-8 JSON with trailing newline.
  */
 export function serializeNeoZipManifest(manifest: NeoZipManifest): string {
-  return `${JSON.stringify(manifest, null, 2)}\n`;
+  return serializeManifest(manifest as KitNeoZipManifest);
 }
 
 /**
@@ -971,18 +942,6 @@ export function writeNzipCollectionBundle(
     Buffer.from(a.name, "utf-8").compare(Buffer.from(b.name, "utf-8")),
   );
 
-  const merkleRoot =
-    input.computeMerkle === true
-      ? contentMerkleRoot(
-          [
-            ...includedPrimaries.map((m) => ({
-              path: m.path,
-              content: m.data,
-            })),
-            ...wikiEntries.map((e) => ({ path: e.name, content: e.data })),
-          ],
-        )
-      : undefined;
   const createdAt = new Date().toISOString();
 
   const aiOkf = okfManifestBlock(input.okf, aiRoot);
@@ -1069,14 +1028,27 @@ export function writeNzipCollectionBundle(
     }
 
     mkdirSync(dirname(input.outputPath), { recursive: true });
-    const zip = buildZip(entries, {
+    const zipOpts: WriteZipOptions = {
       compression: input.compression,
       level: input.level,
       deflate: input.deflate,
       legacy: input.legacy,
       storeSuffixes: input.storeSuffixes,
       sha256Extra: input.sha256Extra === true,
-    });
+    };
+    let zip: Buffer;
+    let merkleRoot: string | undefined;
+    if (input.computeMerkle === true) {
+      // Kit Merkle v1 over non-META-INF members (same set as primaries + wiki).
+      const built = buildZipWithKitMerkle(entries, zipOpts, "v1");
+      if (!built.merkleRoot) {
+        throw new Error("merkle root requires at least one content leaf");
+      }
+      zip = built.buffer;
+      merkleRoot = built.merkleRoot;
+    } else {
+      zip = buildZipWithKit(entries, zipOpts);
+    }
     writeFileSync(input.outputPath, zip);
     return {
       bundlePath: input.outputPath,
@@ -1092,116 +1064,34 @@ export function writeNzipCollectionBundle(
   }
 }
 
-/**
- * Build a ZIP. Default integrity is ZIP CRC-32. Extra Field 0x014E is
- * written when `sha256Extra` is true; Extra Field 0x014F when `origin` is set.
- * Default compression is zstd (method 93); deflate (8) and store (0) supported.
- */
-export type WriteZipOptions = CompressOptions & {
-  /** Write Extra Field 0x014E on newly compressed members. Default false. */
-  sha256Extra?: boolean;
-};
+export type { WriteZipOptions } from "./neozipkit-writer.js";
 
+/**
+ * Build a ZIP via NeoZipKit. Default integrity is ZIP CRC-32. Extra Field
+ * 0x014E is written when `sha256Extra` is true; Extra Field 0x014F when
+ * `origin` is set. Default compression is zstd (method 93); deflate (8) and
+ * store (0) supported. Compression policy (suffix store list, level, legacy)
+ * is resolved in `compress.ts`.
+ */
 export function writeZipBuffer(
   entries: ZipArchiveEntry[],
   compressOpts: WriteZipOptions = {},
 ): Buffer {
-  return buildZip(entries, compressOpts);
+  return buildZipWithKit(entries, compressOpts);
 }
 
-function buildZip(
-  entries: ZipEntry[],
-  compressOpts: WriteZipOptions = {},
-): Buffer {
-  const localParts: Buffer[] = [];
-  const centralParts: Buffer[] = [];
-  let offset = 0;
-  const packTime = new Date();
-
-  for (const entry of entries) {
-    const nameBuf = Buffer.from(entry.name, "utf-8");
-    const copied = entry.precompressed;
-    const uncompressed = entry.data;
-    const crc = copied ? copied.crc32 >>> 0 : crc32(uncompressed);
-    const extra = copied
-      ? copied.extra
-      : makeEntryExtra(
-          compressOpts.sha256Extra === true
-            ? sha256Digest(uncompressed)
-            : undefined,
-          entry.origin,
-        );
-    const extraLen = extra.length;
-    const { time: dosTime, date: dosDate } = copied
-      ? { time: copied.dosTime, date: copied.dosDate }
-      : toDosDateTime(entry.mtime ?? packTime);
-
-    const payload = copied
-      ? {
-          method: copied.method,
-          data: copied.data,
-          compressedSize: copied.data.length,
-          uncompressedSize: copied.uncompressedSize,
-        }
-      : compressZipPayload(uncompressed, {
-          ...compressOpts,
-          entryName: entry.name,
-        });
-    const method = payload.method;
-    const versionNeeded = method === 93 ? 63 : 20;
-
-    const local = Buffer.alloc(30 + nameBuf.length + extraLen);
-    local.writeUInt32LE(0x04034b50, 0);
-    local.writeUInt16LE(versionNeeded, 4);
-    local.writeUInt16LE(0, 6); // flags
-    local.writeUInt16LE(method, 8);
-    local.writeUInt16LE(dosTime, 10);
-    local.writeUInt16LE(dosDate, 12);
-    local.writeUInt32LE(crc, 14);
-    local.writeUInt32LE(payload.compressedSize, 18);
-    local.writeUInt32LE(payload.uncompressedSize, 22);
-    local.writeUInt16LE(nameBuf.length, 26);
-    local.writeUInt16LE(extraLen, 28);
-    nameBuf.copy(local, 30);
-    extra.copy(local, 30 + nameBuf.length);
-
-    const central = Buffer.alloc(46 + nameBuf.length + extraLen);
-    central.writeUInt32LE(0x02014b50, 0);
-    central.writeUInt16LE(versionNeeded, 4); // version made by
-    central.writeUInt16LE(versionNeeded, 6); // version needed
-    central.writeUInt16LE(0, 8);
-    central.writeUInt16LE(method, 10);
-    central.writeUInt16LE(dosTime, 12);
-    central.writeUInt16LE(dosDate, 14);
-    central.writeUInt32LE(crc, 16);
-    central.writeUInt32LE(payload.compressedSize, 20);
-    central.writeUInt32LE(payload.uncompressedSize, 24);
-    central.writeUInt16LE(nameBuf.length, 28);
-    central.writeUInt16LE(extraLen, 30);
-    central.writeUInt16LE(0, 32);
-    central.writeUInt16LE(0, 34);
-    central.writeUInt16LE(0, 36);
-    central.writeUInt32LE(0, 38);
-    central.writeUInt32LE(offset, 42);
-    nameBuf.copy(central, 46);
-    extra.copy(central, 46 + nameBuf.length);
-
-    localParts.push(local, payload.data);
-    centralParts.push(central);
-    offset += local.length + payload.data.length;
-  }
-
-  const centralDir = Buffer.concat(centralParts);
-  const centralOffset = offset;
-  const eocd = Buffer.alloc(22);
-  eocd.writeUInt32LE(0x06054b50, 0);
-  eocd.writeUInt16LE(0, 4);
-  eocd.writeUInt16LE(0, 6);
-  eocd.writeUInt16LE(entries.length, 8);
-  eocd.writeUInt16LE(entries.length, 10);
-  eocd.writeUInt32LE(centralDir.length, 12);
-  eocd.writeUInt32LE(centralOffset, 16);
-  eocd.writeUInt16LE(0, 20);
-
-  return Buffer.concat([...localParts, centralDir, eocd]);
-}
+/**
+ * Register the ZipWiki `ai` manifest block with the kit validator registry.
+ * Soft validation: `ai` must be an object; `ai.root` a string when present.
+ */
+registerManifestBlock("ai", {
+  validate(value) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      return ["ai must be an object"];
+    }
+    const root = (value as { root?: unknown }).root;
+    if (root !== undefined && typeof root !== "string") {
+      return ["ai.root must be a string"];
+    }
+  },
+});

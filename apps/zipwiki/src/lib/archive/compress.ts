@@ -87,6 +87,22 @@ function clampLevel(level: number): number {
   return Math.max(0, Math.min(9, Math.trunc(level)));
 }
 
+/** Per-member method/level for the NeoZipKit writer (policy stays in ZipWiki). */
+export function resolveZipMemberCompression(opts: CompressOptions = {}): {
+  method: 0 | 8 | 93;
+  level: number;
+} {
+  const level = clampLevel(opts.level ?? 7);
+  const alg = resolveCompressionAlg({ ...opts, level });
+  const method =
+    alg === "store"
+      ? ZIP_METHOD_STORE
+      : alg === "deflate"
+        ? ZIP_METHOD_DEFLATE
+        : ZIP_METHOD_ZSTD;
+  return { method, level };
+}
+
 /**
  * Compress uncompressed payload for a ZIP local/central entry.
  * SHA-256 Extra Field must still hash the *uncompressed* bytes.

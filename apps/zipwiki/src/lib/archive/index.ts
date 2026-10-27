@@ -196,7 +196,9 @@ export {
   zipExtractLine,
   readCompressedPayload,
   readCompressedPayloadFromHandle,
+  inflateZipPayload,
   readInflatedWithExtraFromHandle,
+  readLocalExtraFieldFromBuffer,
   readLocalExtraFieldFromHandle,
   readZipEntry,
   readZipEntryFromHandle,
@@ -211,6 +213,7 @@ export type { VerifyPayloadResult } from "./integrity.js";
 export {
   EF_NZIP_SHA256,
   ZipIntegrityError,
+  wrapKitIntegrityError,
   assertPayloadIntegrity,
   manifestSha256ForPath,
   parseSha256FromExtra,
@@ -264,6 +267,11 @@ export {
   tryApplyOriginRule,
 } from "./origin-resolve.js";
 export { toDosDateTime } from "./nzip.js";
+export {
+  buildZipWithKit,
+  buildZipWithKitMerkle,
+  toKitMember,
+} from "./neozipkit-writer.js";
 export type { LoadedArchiveMembers } from "./rewrite.js";
 export {
   PROOF_SIDECAR_NAMES,

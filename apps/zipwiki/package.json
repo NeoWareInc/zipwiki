@@ -1,7 +1,7 @@
 {
   "name": "@zipwiki/zipwiki",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "ZipWiki — create .zipwiki archives and run LiteParse document tools",
   "type": "module",
   "exports": {
@@ -57,7 +57,8 @@
     "commander": "^12.1.0",
     "picocolors": "^1.1.1",
     "zod": "^3.25.0",
-    "@zipwiki/api-client": "workspace:*"
+    "@zipwiki/api-client": "workspace:*",
+    "neozipkit": "file:../../../neozipkit/packages/neozipkit"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

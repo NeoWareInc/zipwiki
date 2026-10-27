@@ -3,8 +3,20 @@
  * for unchanged members (no recompress). Always rebuilds local/central/EOCD.
  */
 
-import { renameSync, writeFileSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
+import {
+  META_TIMESTAMP_NZIP,
+  META_TOKEN_NZIP,
+  META_TOKEN_NZIP_LEGACY,
+  META_TS_SUBMIT_NZIP,
+} from "neozipkit/node";
 import {
   classifyEntry,
   DEFAULT_AI_ROOT,
@@ -14,21 +26,26 @@ import {
 import { isMetaInfPath } from "./merkle.js";
 import {
   listZipEntriesFromBuffer,
-  readCompressedPayload,
+  readRawMemberFromBuffer,
   type ZipListEntry,
 } from "./zip-list.js";
-import {
-  readLocalExtraField,
-  readZipEntryVerifiedFromBuffer,
-} from "./integrity.js";
+import { readZipEntryVerifiedFromBuffer } from "./integrity.js";
 import { parseOriginFromExtra } from "./origin-extra.js";
 
-/** Sidecars that bind a Merkle root — mutation would stale them. */
+/**
+ * Sidecars that bind a Merkle root. Content changes stale them, so a content
+ * rewrite drops them (re-stamp required). Includes legacy `NZIP.TOKEN`.
+ */
 export const PROOF_SIDECAR_NAMES = [
-  "META-INF/TOKEN.NZIP",
-  "META-INF/TIMESTAMP.NZIP",
-  "META-INF/TS-SUBMIT.NZIP",
+  META_TOKEN_NZIP,
+  META_TIMESTAMP_NZIP,
+  META_TS_SUBMIT_NZIP,
+  META_TOKEN_NZIP_LEGACY,
 ] as const;
+
+/** Notice shown when a content rewrite drops blockchain sidecars. */
+export const PROOF_SIDECARS_DROPPED_NOTICE =
+  "blockchain sidecars removed; re-stamp required";
 
 export function hasProofSidecars(entryNames: Iterable<string>): string[] {
   const lower = new Set(
@@ -37,21 +54,29 @@ export function hasProofSidecars(entryNames: Iterable<string>): string[] {
   return PROOF_SIDECAR_NAMES.filter((n) => lower.has(n.toLowerCase()));
 }
 
-/** Slice compressed bytes + extras from an existing archive member. */
+/** Notice string for dropped sidecar entry names, or undefined when none. */
+export function proofSidecarNotice(dropped: readonly string[]): string | undefined {
+  if (dropped.length === 0) return undefined;
+  return `${PROOF_SIDECARS_DROPPED_NOTICE} (${dropped.join(", ")})`;
+}
+
+/**
+ * Wrap an existing member for rewrite via kit `readRaw`: compressed bytes,
+ * CRC-32, local extras (0x014E / 0x014F), and DOS time copy without recompress.
+ */
 export function copyZipMember(
   buf: Buffer,
   listed: ZipListEntry,
   uncompressed: Buffer,
 ): ZipArchiveEntry {
-  const extra = readLocalExtraField(buf, listed);
-  const compressed = readCompressedPayload(buf, listed);
-  const origin = parseOriginFromExtra(extra);
+  const raw = readRawMemberFromBuffer(buf, listed);
+  const origin = parseOriginFromExtra(raw.localExtra);
   const precompressed: ZipPrecompressed = {
-    method: listed.method,
-    data: compressed,
-    crc32: listed.crc32 >>> 0,
-    uncompressedSize: listed.uncompressedSize,
-    extra,
+    method: raw.method,
+    data: raw.compressed,
+    crc32: raw.crc32 >>> 0,
+    uncompressedSize: raw.uncompressedSize,
+    extra: raw.localExtra,
     dosTime: listed.dosTime,
     dosDate: listed.dosDate,
   };
@@ -67,27 +92,56 @@ export type LoadedArchiveMembers = {
   buf: Buffer;
   listed: ZipListEntry[];
   entries: ZipArchiveEntry[];
+  /** Proof sidecar entry names omitted from `entries` (content rewrite). */
+  droppedSidecars: string[];
+  /** Set when sidecars were dropped: "blockchain sidecars removed; re-stamp required (…)". */
+  notice?: string;
+};
+
+export type LoadCopyableOptions = {
+  /**
+   * Keep TOKEN / TIMESTAMP / TS-SUBMIT sidecars as copied members (pure
+   * metadata rewrite). Default false: content changes drop them.
+   */
+  keepProofSidecars?: boolean;
 };
 
 /**
  * Inflate + verify every file member, keeping compressed slices for rewrite.
+ * Proof sidecars (bound to the old Merkle root) are dropped unless
+ * `keepProofSidecars` is set; see `droppedSidecars` / `notice`.
  */
-export function loadCopyableArchive(zipPath: string): LoadedArchiveMembers {
+export function loadCopyableArchive(
+  zipPath: string,
+  opts: LoadCopyableOptions = {},
+): LoadedArchiveMembers {
   const buf = readFileSync(zipPath);
   const listed = listZipEntriesFromBuffer(buf);
-  const proofs = hasProofSidecars(listed.map((e) => e.name));
-  if (proofs.length > 0) {
-    throw new Error(
-      `Cannot update archive with proof sidecars (${proofs.join(", ")}); re-stamp after a full pack.`,
-    );
-  }
+  const proofNames = new Set(
+    hasProofSidecars(listed.map((e) => e.name)).map((n) => n.toLowerCase()),
+  );
+  const droppedSidecars: string[] = [];
   const entries: ZipArchiveEntry[] = [];
   for (const e of listed) {
     if (e.name.endsWith("/")) continue;
+    if (
+      opts.keepProofSidecars !== true &&
+      proofNames.has(e.name.replace(/\\/g, "/").toLowerCase())
+    ) {
+      droppedSidecars.push(e.name);
+      continue;
+    }
     const verified = readZipEntryVerifiedFromBuffer(buf, e.name);
     entries.push(copyZipMember(buf, e, verified.data));
   }
-  return { buf, listed, entries };
+  const notice = proofSidecarNotice(droppedSidecars);
+  return {
+    buf,
+    listed,
+    entries,
+    droppedSidecars,
+    ...(notice ? { notice } : {}),
+  };
 }
 
 /**
@@ -196,13 +250,19 @@ export function resolveExistingPrimaryPath(
   throw new Error(`Document not found: ${key}${have}`);
 }
 
+/** Write `zipBuf` to a temp file beside `destPath`, then atomically rename. */
 export function writeArchiveAtomic(destPath: string, zipBuf: Buffer): void {
   const tmp = join(
     dirname(destPath),
     `.${Date.now()}-${Math.random().toString(36).slice(2)}.zipwiki.tmp`,
   );
-  writeFileSync(tmp, zipBuf);
-  renameSync(tmp, destPath);
+  try {
+    writeFileSync(tmp, zipBuf);
+    renameSync(tmp, destPath);
+  } catch (err) {
+    if (existsSync(tmp)) rmSync(tmp, { force: true });
+    throw err;
+  }
 }
 
 export function isContentPath(name: string): boolean {

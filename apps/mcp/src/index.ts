@@ -8,7 +8,6 @@ export {
   openFromBuffer,
   pack,
   readEntry,
-  readEntryFromBuffer,
   read,
   readManifest,
   readOkf,
