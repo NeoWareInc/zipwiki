@@ -117,13 +117,6 @@ export type StageOptions = CliParseOptions & {
    */
   yes?: boolean;
   testIntegrity?: boolean;
-  /**
-   * After a successful pack, compute the Merkle root and submit it to the
-   * Token Service (TS-SUBMIT.NZIP). Needs a verified email. Failure warns only.
-   */
-  stamp?: boolean;
-  stampEmail?: string;
-  stampNetwork?: string;
   showFiles?: boolean;
   verbose?: boolean;
   quiet?: boolean;

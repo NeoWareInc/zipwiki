@@ -37,24 +37,9 @@ import {
   resolveZipwikiApiUrl,
 } from "@zipwiki/zipwiki/config";
 import {
-  ChainError,
-  chainStatusSummary,
-  mintPackage,
-  stampPackage,
-  upgradePackage,
-  verifyPackage,
-} from "@zipwiki/zipwiki/chain";
-import {
   invalidatePackageCache,
   withCachedPackage,
 } from "./package-cache.js";
-import {
-  isChainPreviewOnly,
-  resolveChainPackage,
-  resolveChainPreview,
-  type ChainAction,
-  type McpChainArgs,
-} from "./chain-preview.js";
 import {
   isPackPreviewOnly,
   resolvePackPlanPreview,
@@ -87,28 +72,6 @@ function errorResult(err: unknown): ToolResult {
   return jsonResult({ error: message, code: "io_error" }, true);
 }
 
-/** Offline blockchain status for `open`; null when the package has no proof sidecars. */
-async function blockchainStatus(
-  packagePath: string,
-): Promise<Record<string, unknown> | null> {
-  try {
-    const s = await chainStatusSummary(packagePath);
-    if (!s) return null;
-    return {
-      kind: s.kind,
-      status: s.status,
-      merkleMatch: s.merkleMatch,
-      sidecars: s.sidecars,
-      ...(s.status === "merkle-mismatch"
-        ? { notice: "content changed since the proof; re-stamp required" }
-        : {}),
-      ...(s.status === "upgradable" ? { next: "upgrade" } : {}),
-    };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : String(err) };
-  }
-}
-
 export async function open(args: {
   package?: string;
 }): Promise<ToolResult> {
@@ -122,8 +85,7 @@ export async function open(args: {
       path: args.package,
       quiet: true,
     });
-    const blockchain = await blockchainStatus(result.package);
-    return jsonResult(blockchain ? { ...result, blockchain } : result);
+    return jsonResult(result);
   } catch (err) {
     return errorResult(err);
   }
@@ -673,7 +635,7 @@ export async function update(args: {
       ...result,
       noAiOkf,
       note: result.notice
-        ? `Call \`open\` next. ${result.notice}. Use the stamp tool to re-stamp. Unchanged members were copied compressed; parse/OKF ran only for add/update.`
+        ? `Call \`open\` next. ${result.notice}. Unchanged members were copied compressed; parse/OKF ran only for add/update.`
         : "Call `open` next. Unchanged members were copied compressed; parse/OKF ran only for add/update.",
     });
   } catch (err) {
@@ -699,123 +661,3 @@ export async function openFromBuffer(
   }
 }
 
-function chainErrorResult(err: unknown): ToolResult {
-  if (err instanceof ChainError) {
-    return jsonResult({ error: err.message, code: err.code }, true);
-  }
-  return errorResult(err);
-}
-
-/** Read-only: verify blockchain sidecars (offline unless `online`). */
-export async function verify(args: {
-  package?: string;
-  online?: boolean;
-}): Promise<ToolResult> {
-  try {
-    loadZipwikiHomeEnv();
-    const path = resolveChainPackage(args.package);
-    const online = args.online === true;
-    const result = await verifyPackage(path, { online });
-    return jsonResult({ package: path, online, ...result });
-  } catch (err) {
-    return chainErrorResult(err);
-  }
-}
-
-async function chainTool(
-  action: ChainAction,
-  args: McpChainArgs,
-  run: (path: string) => Promise<Record<string, unknown>>,
-): Promise<ToolResult> {
-  try {
-    loadZipwikiHomeEnv();
-    const preview = await resolveChainPreview(action, args);
-    const previewBody = {
-      status: "preview",
-      awaitingHumanApproval: true,
-      displayForUser: preview.displayForUser,
-      cliCommand: preview.cliCommand,
-      message: preview.message,
-      agentInstruction: preview.agentInstruction,
-      plan: preview.plan,
-      warnings: preview.warnings,
-    };
-    if (isChainPreviewOnly(args)) return jsonResult(previewBody);
-    if (args.humanApproved !== true) {
-      return jsonResult(
-        { ...previewBody, code: `${action}_needs_human_approval` },
-        true,
-      );
-    }
-    const path = preview.plan.package;
-    try {
-      const result = await run(path);
-      return jsonResult({ package: path, ...result });
-    } finally {
-      invalidatePackageCache(path);
-    }
-  } catch (err) {
-    return chainErrorResult(err);
-  }
-}
-
-/** Approval-gated: submit the Merkle root to the Token Service. */
-export async function stamp(args: McpChainArgs): Promise<ToolResult> {
-  return chainTool("stamp", args, async (path) => {
-    const r = await stampPackage(path, {
-      email: args.email,
-      network: args.network,
-      force: args.force === true,
-      wait: args.wait === true,
-      settings: args.settings,
-    });
-    return {
-      status: "stamped",
-      merkleRoot: r.stamp.merkleRoot,
-      network: r.settings.network,
-      written: r.stamp.written,
-      sidecar: "META-INF/TS-SUBMIT.NZIP",
-      ...(r.upgrade ? { upgrade: { status: r.upgrade.status } } : {}),
-      note: r.upgrade
-        ? "Call `verify` to check the proof."
-        : "Pending until the batch is on-chain. Call `upgrade` later, then `verify`.",
-    };
-  });
-}
-
-/** Approval-gated: upgrade TS-SUBMIT.NZIP to TIMESTAMP.NZIP. */
-export async function upgrade(args: McpChainArgs): Promise<ToolResult> {
-  return chainTool("upgrade", args, async (path) => {
-    const r = await upgradePackage(path, {
-      wait: args.wait === true,
-      settings: args.settings,
-    });
-    return {
-      status: r.status,
-      merkleRoot: r.merkleRoot,
-      note:
-        r.status === "pending"
-          ? "Not confirmed yet. Try again later."
-          : "Call `verify` to check the proof.",
-    };
-  });
-}
-
-/** Approval-gated: mint TOKEN.NZIP (spends gas). Wallet key comes from env only. */
-export async function mint(args: McpChainArgs): Promise<ToolResult> {
-  return chainTool("mint", args, async (path) => {
-    const r = await mintPackage(path, {
-      direct: args.direct === true,
-      network: args.network,
-      settings: args.settings,
-    });
-    return {
-      status: "minted",
-      mode: r.mode,
-      network: r.network,
-      merkleRoot: r.result.merkleRoot,
-      sidecar: "META-INF/TOKEN.NZIP",
-      note: "Call `verify` (online) to confirm on-chain.",
-    };
-  });
-}

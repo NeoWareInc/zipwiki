@@ -777,36 +777,6 @@ export async function runStage(
         console.error(formatOriginalsSummary(createSummary));
       }
 
-      if (
-        opts.stamp === true &&
-        outputPath &&
-        !opts.dryRun &&
-        packResult.merkleRoot
-      ) {
-        // The pack already succeeded; a failed stamp only warns.
-        try {
-          const { stampPackage } = await import("../lib/chain/index.js");
-          const stamped = await stampPackage(outputPath, {
-            email: opts.stampEmail,
-            network: opts.stampNetwork,
-            merkleRoot: packResult.merkleRoot,
-          });
-          if (!opts.quiet) {
-            console.error(
-              `[zipwiki] stamped ${basename(outputPath)} (${stamped.settings.network}) merkle=${stamped.stamp.merkleRoot}`,
-            );
-            console.error(
-              `[zipwiki] next: zipwiki upgrade ${basename(outputPath)} --wait`,
-            );
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.error(
-            `[zipwiki] warning: pack succeeded but stamp failed: ${msg}`,
-          );
-        }
-      }
-
       if (phase === "all" && outputPath && !opts.dryRun) {
         let archiveBytes: number | undefined;
         try {

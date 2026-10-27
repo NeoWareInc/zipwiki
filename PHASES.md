@@ -5,9 +5,9 @@ Living plan for this product repo. `zip-codex` remains the lab.
 ## Locked names
 
 - **ZipWiki** — product
-- **zipwiki** — the command: create (`pack`), query (`open` / `search` / `read`), chain (`stamp` / `verify` / …)
+- **zipwiki** — the command: create (`pack`) and query (`open` / `search` / `read`)
 - **zipaccess** — query library used by `zipwiki` and MCP
-- **NeoZipKit** — ZIP / NeoZip wire I/O (`neozipkit`); blockchain proofs via `neozip-blockchain`
+- **NeoZipKit** — ZIP / NeoZip wire I/O (`neozipkit`)
 - **`.zipwiki`** — the file (legacy `.nzip` still readable, not advertised)
 - **zipwiki.ai** — public site; later `api.zipwiki.ai` / `docs.zipwiki.ai`
 
@@ -52,14 +52,13 @@ engine lands.
 Package names `@zipwiki/*`; home `~/.zipwiki`. Hosted auth is stubbed through
 for Phase 3 (`zipwiki login`).
 
-### Phase 2+ — NeoZipKit + blockchain (0.3.0)
+### Phase 2+ — NeoZipKit (0.3.0)
 
-**In progress / landing.** ZIP framing, extras, Merkle, and the web Knowledge
-reader use NeoZipKit **1.6.0**. Token Service stamp / upgrade / mint / verify
-use neozip-blockchain **2.0.0** (OpenTimestamps removed). Wire AppNote is NeoZip
-**0.3.0-draft**. Dev trees may still use `file:` links to `../neozipkit` until
-those packages are published to npm and ZipWiki release tarballs pin them.
-Details: [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
+**Landing.** ZIP framing, extras, Merkle helpers, and the web Knowledge reader
+use NeoZipKit **1.6.0**. Wire AppNote is NeoZip **0.3.0-draft**. Token Service
+stamp / mint (`neozip-blockchain`) is **deferred** until product support is
+ready. Dev trees may use `file:` links to `../neozipkit` until `neozipkit@1.6.0`
+is published. Details: [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
 
 ## Phase 3 — TypeScript Beta (full product)
 

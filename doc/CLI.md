@@ -8,7 +8,6 @@ compile for.
 | --- | --- |
 | **Create** | `zipwiki pack` / `update` — build a `.zipwiki` knowledge base |
 | **Query** | `zipwiki open` / `search` / `read` / `extract` / `origin` — see **[QUERY.md](QUERY.md)** |
-| **Chain** | `zipwiki stamp` / `upgrade` / `mint` / `verify` — Token Service timestamp and NFT binding |
 
 Agent query of a finished package is **stdio MCP** ([MCP.md](MCP.md)), backed by
 the zipaccess library ([ZIPACCESS.md](ZIPACCESS.md)). Query commands do not
@@ -40,9 +39,6 @@ zipwiki pack ./docs -r -o out.zipwiki --parser liteparse --no-ai-okf
 | `--origin-pattern` | Filename regex; named groups fill `--origin-url-template` |
 | `--origin-file` | Store a `file:` URI per document |
 | `--origin-record manifest\|cd\|both` | Where URI, size, and date are stored. Default `manifest` (compressed in `META-INF/manifest.json`). `cd` keeps them on Extra Field `0x014F`. `both` writes both. CRC-32 stays on `0x014F` when the original is omitted or a URI is recorded |
-| `--stamp` | After a successful pack, submit the Merkle root to the Token Service (`META-INF/TS-SUBMIT.NZIP`). Needs a verified email; a failed stamp only warns |
-| `--stamp-email <email>` | Verified Token Service email for `--stamp` |
-| `--stamp-network <name>` | `base-sepolia` \| `base` for `--stamp` (default: `~/.zipwiki/chain.json` or `base-sepolia`) |
 
 Origin links can also come from pack-input files next to the corpus (not stored
 in the `.zipwiki`): per-file `*.url` / `*.origin.json` sidecars, a
@@ -88,32 +84,8 @@ zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
 
 Default package when omitted: `wiki.zipwiki` in the current directory.
 
-## zipwiki chain (blockchain ID)
-
-Needs network access to the NeoZip Token Service (and an RPC for mint / online
-verify). Secrets come from the environment only — never from
-`~/.zipwiki/chain.json` (that file holds non-secret `network` / `email` /
-`tokenServiceUrl` only).
-
-```bash
-zipwiki stamp ./out.zipwiki --email you@example.com
-zipwiki stamp ./out.zipwiki --wait          # poll until TIMESTAMP.NZIP
-zipwiki upgrade ./out.zipwiki --wait
-zipwiki mint ./out.zipwiki                 # TimestampProof NFT (needs TIMESTAMP)
-zipwiki mint ./out.zipwiki --direct        # wallet mint without TimestampProof
-zipwiki verify ./out.zipwiki               # offline Merkle + embedded proof
-zipwiki verify ./out.zipwiki --online
-```
-
-| Command | Effect |
-| --- | --- |
-| `stamp` | Submit Merkle root → `META-INF/TS-SUBMIT.NZIP` (`--wait` upgrades when confirmed) |
-| `upgrade` | Pending submit → `META-INF/TIMESTAMP.NZIP` |
-| `mint` | Write `META-INF/TOKEN.NZIP` (spends gas; key from `ZIPWIKI_WALLET_KEY` or `NEOZIP_WALLET_PASSKEY`) |
-| `verify` | Check sidecars; default offline; `--online` asks Token Service / chain |
-
-When `update` / enrich changes non-meta content, proof sidecars are dropped and
-you must re-stamp. See [NEOZIPKIT_INTEGRATION.md](NEOZIPKIT_INTEGRATION.md).
+Token Service stamp / mint / verify are **not** in ZipWiki yet (deferred until
+product support). See [NEOZIPKIT_INTEGRATION.md](NEOZIPKIT_INTEGRATION.md).
 
 ## API keys (Llama / AI)
 
@@ -130,7 +102,6 @@ them. Full lanes: [CONVEX.md](CONVEX.md) “Secret lanes”, [HOSTED-API.md](HOS
 
 1. `pack` (or take an existing `.zipwiki`)
 2. `open` / catalog
-3. Optional `verify` when the package may carry blockchain proofs
-4. `search`
-5. `read` OKF, then parsed only if needed
-6. `origin` with `--fetch` for omitted originals
+3. `search`
+4. `read` OKF, then parsed only if needed
+5. `origin` with `--fetch` for omitted originals

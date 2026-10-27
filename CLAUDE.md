@@ -2,15 +2,14 @@
 
 Same open sequence as [AGENTS.md](AGENTS.md):
 
-**pack → open → (optional verify) → search → read** (OKF before parsed;
-`origin` for Extra Field `0x014F`). Chain tools (`stamp` / `upgrade` / `mint`)
-use the same human-approval table pattern as `pack`.
+**pack → open → search → read** (OKF before parsed; `origin` for Extra Field
+`0x014F`).
 
 Do not add `wiki/search.json`, `wiki/okf/log.md`, or `wiki/okf/topics/pdf.md` to a package. See [AGENTS.md](AGENTS.md).
 
 Portable knowledge lives in **`.zipwiki`** packages. ZIP wire I/O is
-**NeoZipKit**; blockchain sidecars are **neozip-blockchain** — see
-[doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
+**NeoZipKit** — see [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
+Token Service stamp / mint is deferred.
 
 This repository’s Phase 1 surface is GitHub docs (`/doc`) and the marketing site
 (`apps/web` → zipwiki.ai). Phase 1b is `apps/server` (`GET /health` on Fly).

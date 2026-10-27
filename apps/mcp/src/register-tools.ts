@@ -8,10 +8,6 @@ import {
   origin,
   pack,
   update,
-  verify,
-  stamp,
-  upgrade,
-  mint,
   readEntry,
   read,
   readManifest,
@@ -43,11 +39,6 @@ const packageArg = z
   .string()
   .optional()
   .describe("Path to .zipwiki (default: wiki.zipwiki in cwd)");
-
-const networkArg = z
-  .enum(["base-sepolia", "base"])
-  .optional()
-  .describe("Chain network (default: ~/.zipwiki/chain.json or base-sepolia)");
 
 const confirmArgs = {
   confirm: z
@@ -528,74 +519,4 @@ export function registerTools(server: McpServer): void {
     async (args) => respond(await okfEnrich(args)),
   );
 
-  server.registerTool(
-    "verify",
-    {
-      description:
-        "Read-only: verify blockchain proofs (TS-SUBMIT / TIMESTAMP / TOKEN sidecars) in a local .zipwiki. Offline by default (Merkle binding + embedded proof). Set online:true to ask the Token Service / chain. Returns kind, status, and merkle match.",
-      inputSchema: {
-        package: packageArg,
-        online: z
-          .boolean()
-          .optional()
-          .describe("Contact the Token Service / chain (default false)"),
-      },
-    },
-    async (args) => respond(await verify(args)),
-  );
-
-  server.registerTool(
-    "stamp",
-    {
-      description:
-        "Submit the package Merkle root to the Token Service (writes META-INF/TS-SUBMIT.NZIP; no document content leaves the machine). Default: return a markdown table plan (displayForUser) — paste it into the chat and STOP for the human. After they approve in a later message, call again with confirm:true and humanApproved:true. Do not invent humanApproved in the same turn. Needs a verified email (arg, NEOZIP_RECIPIENT_EMAIL, or ~/.zipwiki/chain.json).",
-      inputSchema: {
-        package: packageArg,
-        network: networkArg,
-        email: z.string().optional().describe("Verified Token Service email"),
-        force: z
-          .boolean()
-          .optional()
-          .describe("Re-stamp even if a proof already binds the current content"),
-        wait: z
-          .boolean()
-          .optional()
-          .describe("After submit, poll until the timestamp is confirmed"),
-        ...confirmArgs,
-      },
-    },
-    async (args) => respond(await stamp(args)),
-  );
-
-  server.registerTool(
-    "upgrade",
-    {
-      description:
-        "Upgrade a pending stamp (TS-SUBMIT.NZIP) to a confirmed TIMESTAMP.NZIP once the batch is on-chain. Same approval pattern as pack: first call returns displayForUser (paste and STOP); only after the human approves in a later message call again with confirm:true and humanApproved:true.",
-      inputSchema: {
-        package: packageArg,
-        wait: z.boolean().optional().describe("Poll until confirmed (default: single check)"),
-        ...confirmArgs,
-      },
-    },
-    async (args) => respond(await upgrade(args)),
-  );
-
-  server.registerTool(
-    "mint",
-    {
-      description:
-        "Mint an NFT proof and write META-INF/TOKEN.NZIP. SPENDS GAS. Default mints a TimestampProof from a confirmed TIMESTAMP.NZIP; direct:true mints from the wallet. The wallet key is read from ZIPWIKI_WALLET_KEY / NEOZIP_WALLET_PASSKEY in the MCP environment only (never a tool argument). Same approval pattern as pack: first call returns displayForUser (paste and STOP); only after the human approves in a later message call again with confirm:true and humanApproved:true.",
-      inputSchema: {
-        package: packageArg,
-        network: networkArg,
-        direct: z
-          .boolean()
-          .optional()
-          .describe("Mint directly from the wallet (no TIMESTAMP.NZIP needed)"),
-        ...confirmArgs,
-      },
-    },
-    async (args) => respond(await mint(args)),
-  );
 }

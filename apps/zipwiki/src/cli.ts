@@ -54,7 +54,6 @@ import {
 } from "./inspect-cmd.js";
 import { installGroupedHelp } from "./cli-help.js";
 import { registerQueryCommands } from "./query-commands.js";
-import { registerChainCommands } from "./chain-cmd.js";
 import { runUpdateCommand } from "./update-cmd.js";
 import {
   buildCatalog,
@@ -382,16 +381,7 @@ withPipelineFlags(
     .description(
       "Alias for `stage --phase all`: parse → per-file OKF → manifest → .zipwiki",
     )
-    .argument("[files...]", "Documents or directories to pack")
-    .option(
-      "--stamp",
-      "After pack, submit the Merkle root to the Token Service (TS-SUBMIT.NZIP). Needs a verified email; a failed stamp only warns",
-    )
-    .option("--stamp-email <email>", "Verified Token Service email for --stamp")
-    .option(
-      "--stamp-network <name>",
-      "base-sepolia | base for --stamp (default: chain.json or base-sepolia)",
-    ),
+    .argument("[files...]", "Documents or directories to pack"),
 ).action(async (files: string[] | undefined, opts) => {
   const list = files ?? [];
   const stageOpts = stageOptionsFromCli(opts, {
@@ -972,7 +962,6 @@ program
   });
 
 registerQueryCommands(program);
-registerChainCommands(program);
 installGroupedHelp(program);
 
 program.hook("preAction", async (_thisCommand, actionCommand) => {
