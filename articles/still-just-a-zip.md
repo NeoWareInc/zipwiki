@@ -33,7 +33,7 @@ Typical layout (simplified):
 ```text
 reports.zipwiki
 ├── META-INF/
-│   └── manifest.json          # NeoZip + ZipWiki discovery
+│   └── manifest.json          # NeoZip + ZipWiki discovery (and package digest)
 ├── Q3-earnings.pdf            # optional primary (or omitted)
 ├── policy-handbook.docx
 └── wiki/
@@ -50,14 +50,12 @@ reports.zipwiki
 
 A ZipWiki package is built for selective reading. An agent does not need to inflate every PDF to answer a question. The usual path is:
 
-- Read the package digest (a short summary of what is inside).
-- Scan OKF concept cards under `wiki/okf/` — lightweight “back of the book” entries with descriptions, tags, and pointers to sources.
-- Open only the matching `wiki/parsed/….md` files for the passages that matter.
-- Reach for the original binary only when layout, signatures, or exact pagination are required—or follow an origin URI when the primary was omitted.
+1. **Read the package digest:** Check the high-level summary inside `manifest.json` to verify relevance.
+2. **Scan OKF concept cards:** Review lightweight entries under `wiki/okf/` with descriptions, tags, and pointers.
+3. **Open parsed markdown:** Read only the relevant passages in `wiki/parsed/….md`.
+4. **Inspect the original binary:** Fall back to the root primary only when signatures, exact styling, or pagination are required (or resolve the origin URI if omitted).
 
-## Why that order matters
-
-Digest and cards first, then only the markdown you need, keeps context windows small. Heavy originals stay optional. Agents answer from portable text instead of unpacking every PDF on every question.
+Walking this path keeps model context windows small and deterministic: heavy originals stay parked, and queries resolve against lightweight, portable text.
 
 ## Parsed markdown is the working copy
 
@@ -69,6 +67,20 @@ Tables stay as markdown tables. Figures can land in a sibling `.assets/` folder 
 
 Open Knowledge Format (OKF) concept files live under `wiki/okf/`. Each primary gets a card (plus an optional `index.md` that lists the bundle). Cards carry structured frontmatter—type, description, key facts, tags, and sources that point back into the package.
 
+For example:
+
+```yaml
+---
+type: Document
+title: "Q3 2026 Earnings Report"
+description: "Q3 gross margin expanded 140 bps YoY; recurring software revenue reached $42M."
+tags: [finance, revenue, q3]
+sources:
+  - resource: ../parsed/Q3-earnings.pdf.md
+    description: Parsed markdown in this package
+---
+```
+
 There is no hosted vector store required. The index travels with the ZIP. Share the file and you share the retrieval surface. That is why ZipWiki describes itself as portable document memory rather than “another cloud index.”
 
 ## Origins: shrink the archive without losing provenance
@@ -79,7 +91,7 @@ Later, `zipwiki origin --fetch` can download the remote file and verify it again
 
 ## Still compatible with the ZIP you already know
 
-Compression defaults to Zstandard (method 93) when it helps; binaries that do not shrink are stored. Unicode paths, CRC-32 on every member, and ordinary central-directory listing all remain. Tools that ignore Extra Field `0x014E` / `0x014F` and `META-INF/manifest.json` still extract content safely—APPNOTE tells readers to skip unknown extras.
+Standard packages default to Zstandard (method 93). Use Deflate (method 8) via `--legacy` when you need stock OS unzip tools that cannot inflate Zstd. Binaries that do not compress further are stored uncompressed (method 0). Unicode paths, CRC-32 on every member, and ordinary central-directory listing all remain. Central directory entries may carry Extra Fields (`0x014E` for NeoZip integrity and `0x014F` for remote origin resolution). Tools that do not know what those mean simply ignore them—as the PKWARE APPNOTE specifies.
 
 ZipWiki-aware CLIs and MCP servers go further: open, search, read parsed text, and resolve origins. The Application Note is the normative wire guide; this article is the map of what you will see when you peek inside.
 

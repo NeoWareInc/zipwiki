@@ -34,6 +34,7 @@ def md_to_html(raw: str) -> str:
     lines = strip_frontmatter(raw).splitlines()
     out: list[str] = []
     in_ul = False
+    in_ol = False
     in_code = False
     code_buf: list[str] = []
     para: list[str] = []
@@ -44,6 +45,15 @@ def md_to_html(raw: str) -> str:
         if para:
             out.append(f"<p>{inline(' '.join(para))}</p>")
             para = []
+
+    def close_lists() -> None:
+        nonlocal in_ul, in_ol
+        if in_ul:
+            out.append("</ul>")
+            in_ul = False
+        if in_ol:
+            out.append("</ol>")
+            in_ol = False
 
     for line in lines:
         if in_code:
@@ -60,16 +70,12 @@ def md_to_html(raw: str) -> str:
             continue
         if line.strip().startswith("```"):
             flush_para()
-            if in_ul:
-                out.append("</ul>")
-                in_ul = False
+            close_lists()
             in_code = True
             continue
         if line.startswith("# "):
             flush_para()
-            if in_ul:
-                out.append("</ul>")
-                in_ul = False
+            close_lists()
             # First H1 duplicates the title already printed in the template.
             if not skipped_h1:
                 skipped_h1 = True
@@ -78,32 +84,39 @@ def md_to_html(raw: str) -> str:
             continue
         if line.startswith("## "):
             flush_para()
-            if in_ul:
-                out.append("</ul>")
-                in_ul = False
+            close_lists()
             out.append(f"<h2>{inline(line[3:].strip())}</h2>")
             continue
         if re.match(r"^[-*] ", line):
             flush_para()
+            if in_ol:
+                out.append("</ol>")
+                in_ol = False
             if not in_ul:
                 out.append("<ul>")
                 in_ul = True
             out.append(f"<li>{inline(line[2:].strip())}</li>")
             continue
-        if not line.strip():
+        ol_match = re.match(r"^(\d+)\.\s+(.*)$", line)
+        if ol_match:
             flush_para()
             if in_ul:
                 out.append("</ul>")
                 in_ul = False
+            if not in_ol:
+                out.append("<ol>")
+                in_ol = True
+            out.append(f"<li>{inline(ol_match.group(2))}</li>")
             continue
-        if in_ul:
-            out.append("</ul>")
-            in_ul = False
+        if not line.strip():
+            flush_para()
+            close_lists()
+            continue
+        close_lists()
         para.append(line.strip())
 
     flush_para()
-    if in_ul:
-        out.append("</ul>")
+    close_lists()
     return "\n".join(out)
 
 
