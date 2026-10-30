@@ -1,0 +1,58 @@
+# ZipWiki
+
+> Portable knowledge packages (`.zipwiki`) for AI agents: compressed archives with extracted markdown and an OKF index so models can search and read records without unpacking binaries.
+
+ZipWiki is a product of NeoWare. The marketing site and account portal live at https://zipwiki.ai. Local pack and query work without login; hosted parse / AI OKF / account features need a ZipWiki login and credits.
+
+A `.zipwiki` is a ZIP with `META-INF/manifest.json`, `wiki/parsed/` (extracted markdown), and optional `wiki/okf/` (Open Knowledge Format concept cards). Prefer OKF and parsed text over original binaries. Extra Field `0x014F` may hold origin URI/CRC for omitted originals.
+
+## For agents
+
+When ZipWiki MCP is available on this machine, follow this open sequence:
+
+1. Pack (or open an existing package). For `pack`, show the proposed plan (markdown table) and wait for human approval before writing; never invent approval in the same turn.
+2. `open` — catalog
+3. Prefer `search` / `query`; else `read_okf_index` + `read_okf`
+4. Follow citations to `read_parsed` (stream, verified). Use `origin` with `fetch: true` only when the original is required
+5. `extract` only when a filesystem path is required
+
+Default package path: the `package` tool argument, or `wiki.zipwiki` in the MCP server cwd. Do not invent blockchain stamp/mint tools; Token Service support is not product-ready.
+
+Install the CLI + stdio MCP from https://zipwiki.ai/install (tarball or `npm install -g` from this site’s release index). Connect Cursor, Claude Code, or Claude Desktop via https://zipwiki.ai/mcp.
+
+## Product
+
+- [Product](https://zipwiki.ai/): What a `.zipwiki` is and why agents prefer it over classic ZIP dumps
+- [How it works](https://zipwiki.ai/how-it-works): Pack → index → selective query / extract
+- [MCP & CLI](https://zipwiki.ai/mcp): Stdio tools and terminal commands for the same local engine
+- [Install](https://zipwiki.ai/install): Download CLI + MCP for your OS; agent connection snippets
+- [Resources](https://zipwiki.ai/resources): Articles and background reading
+- [Contact](https://zipwiki.ai/contact): Human support
+
+## Format specifications
+
+Rendered on this site; canonical source is public markdown on GitHub (prefer the raw `.md` links when loading into context).
+
+- [Specs index](https://zipwiki.ai/docs): ZipWiki & NeoZip Application Notes and OKF producer profile
+- [ZipWiki Application Note](https://github.com/NeoWareInc/format-specs/blob/main/ZIPWIKI_APPNOTE.md): Layout for `.zipwiki` — manifest, parsed, OKF, omit-original, Extra Field `0x014F`
+- [NeoZip Application Note](https://github.com/NeoWareInc/format-specs/blob/main/NEOZIP_APPNOTE.md): Parent wire-format profile extending PKWARE APPNOTE
+- [OKF v0.2](https://github.com/NeoWareInc/format-specs/blob/main/OKF_SPEC.md): Open Knowledge Format concept cards and topic pages
+- [ZipWiki OKF Producer Profile](https://github.com/NeoWareInc/format-specs/blob/main/OKF_ZIPWIKI_VS_SPEC.md): How ZipWiki maps general OKF into packages
+- [format-specs repo](https://github.com/NeoWareInc/format-specs): Canonical public specs (ZipWiki product source stays private)
+
+## Examples
+
+Sample `.zipwiki` packages served for the Knowledge / Query UI (binary archives — use ZipWiki MCP/CLI to open, do not dump raw ZIP bytes into the model):
+
+- [Florida laws 2025](https://zipwiki.ai/examples/florida-laws-2025.zipwiki)
+- [Earnings 2025](https://zipwiki.ai/examples/earnings-2025.zipwiki)
+- [Medical PDFs](https://zipwiki.ai/examples/medical-pdfs.zipwiki)
+- [Charles Dickens](https://zipwiki.ai/examples/charles-dickens.zipwiki)
+
+## Optional
+
+- [Terms](https://zipwiki.ai/terms)
+- [Privacy](https://zipwiki.ai/privacy)
+- [Login](https://zipwiki.ai/login): Account portal (settings, keys, billing, hosted knowledge)
+- [Release index](https://zipwiki.ai/releases/latest.json): Latest CLI/MCP tarball metadata
+- [support@zipwiki.ai](mailto:support@zipwiki.ai): Support email
