@@ -29,6 +29,11 @@ Install the CLI + stdio MCP from https://zipwiki.ai/install (tarball or `npm ins
 - [Resources](https://zipwiki.ai/resources): Articles and background reading
 - [Contact](https://zipwiki.ai/contact): Human support
 
+## Articles
+
+- [Still Just a ZIP](https://zipwiki.ai/resources/still-just-a-zip): Inside the `.zipwiki` layout — manifest, OKF, parsed markdown, origins
+- [Introducing ZipWiki](https://zipwiki.ai/resources/introducing-zipwiki): Portable, AI-searchable knowledge packages
+
 ## Format specifications
 
 Rendered on this site; canonical source is public markdown on GitHub (prefer the raw `.md` links when loading into context).

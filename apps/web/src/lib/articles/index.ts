@@ -1,4 +1,5 @@
 import { introducingZipwiki } from "./introducing-zipwiki";
+import { stillJustAZip } from "./still-just-a-zip";
 import type { ResourceArticle } from "./types";
 
 export type { ArticleSection, ResourceArticle } from "./types";
@@ -10,6 +11,7 @@ export type { ArticleSection, ResourceArticle } from "./types";
  * off the website until publish. Only released pieces belong here.
  */
 export const RESOURCE_ARTICLES: readonly ResourceArticle[] = [
+  stillJustAZip,
   introducingZipwiki,
 ];
 

@@ -20,7 +20,7 @@ Optional assets for a later website publish (headers, OG images) stay under
 | Slug | Status | Title |
 | --- | --- | --- |
 | `introducing-zipwiki` | Released on site | Introducing ZipWiki: Portable, AI-Searchable Knowledge Packages |
-| `still-just-a-zip` | Draft (next blog) | Still Just a ZIP: A Look Inside the .zipwiki Format |
+| `still-just-a-zip` | Released on site | Still Just a ZIP: A Look Inside the .zipwiki Format |
 
 ## Editing
 

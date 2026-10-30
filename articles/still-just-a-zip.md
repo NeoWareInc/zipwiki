@@ -9,7 +9,7 @@ date: "November 3, 2026"
 category: Format
 readTimeMinutes: 6
 byline: "ZipWiki by NeoWare"
-status: draft
+status: published
 ---
 
 # Still Just a ZIP: A Look Inside the .zipwiki Format
