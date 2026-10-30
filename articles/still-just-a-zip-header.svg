@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-labelledby="sjz-title sjz-desc" font-family="Sora, 'Segoe UI', system-ui, -apple-system, sans-serif">
+  <title id="sjz-title">Still Just a ZIP: A Look Inside the .zipwiki Format</title>
+  <desc id="sjz-desc">On a sunlit desk, a teal zippered .zipwiki package opens its lid slightly to reveal an organized tree inside: META-INF/manifest.json, wiki/okf/ concept cards, wiki/parsed/ markdown, and optional originals - while standard OS unzip tools and an AI agent both read the same archive.</desc>
+  <defs>
+    <linearGradient id="sjz-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfeeea"/><stop offset=".6" stop-color="#eef8f5"/><stop offset="1" stop-color="#fdf0d8"/>
+    </linearGradient>
+    <radialGradient id="sjz-sun" cx=".78" cy=".28" r=".46">
+      <stop offset="0" stop-color="#fff3c4"/><stop offset=".35" stop-color="#ffe7a8" stop-opacity=".68"/><stop offset="1" stop-color="#ffe7a8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sjz-hill1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fd8c3"/><stop offset="1" stop-color="#c9e8d8"/>
+    </linearGradient>
+    <linearGradient id="sjz-hill2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6fc1a2"/><stop offset="1" stop-color="#a8dcc4"/>
+    </linearGradient>
+    <linearGradient id="sjz-desk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1e2c4"/><stop offset="1" stop-color="#e2cb9e"/>
+    </linearGradient>
+    <linearGradient id="sjz-crate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1aa59e"/><stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <linearGradient id="sjz-crate-side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0c5a57"/><stop offset="1" stop-color="#0f6e6a"/>
+    </linearGradient>
+    <linearGradient id="sjz-beam" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#fff3c4" stop-opacity=".92"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="sjz-glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#fff7d6" stop-opacity=".95"/><stop offset="1" stop-color="#fff7d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sjz-panel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f4f7f8" stop-opacity=".97"/><stop offset=".85" stop-color="#f4f7f8" stop-opacity=".92"/><stop offset="1" stop-color="#f4f7f8" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="sjz-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#1f3a44" flood-opacity=".18"/>
+    </filter>
+    <filter id="sjz-soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#1f3a44" flood-opacity=".14"/>
+    </filter>
+  </defs>
+
+  <!-- sky + sun -->
+  <rect width="1200" height="630" fill="url(#sjz-sky)"/>
+  <rect width="1200" height="630" fill="url(#sjz-sun)"/>
+  <circle cx="1028" cy="136" r="50" fill="#fff4cc" opacity=".9"/>
+  <g fill="#fff" opacity=".75">
+    <ellipse cx="720" cy="76" rx="76" ry="15"/><ellipse cx="766" cy="62" rx="46" ry="19"/>
+    <ellipse cx="1100" cy="240" rx="62" ry="12"/><ellipse cx="1132" cy="228" rx="36" ry="14"/>
+  </g>
+  <g fill="none" stroke="#5a6b78" stroke-width="2" stroke-linecap="round" opacity=".5">
+    <path d="M880 104 q6 -6 12 0 q6 -6 12 0"/><path d="M914 88 q5 -5 10 0 q5 -5 10 0"/>
+  </g>
+
+  <!-- hills -->
+  <path d="M0 420 C 180 360, 340 380, 500 400 S 840 350, 1000 376 S 1160 392, 1200 380 V500 H0 z" fill="url(#sjz-hill1)"/>
+  <path d="M0 448 C 220 404, 420 426, 620 430 S 960 396, 1200 420 V500 H0 z" fill="url(#sjz-hill2)"/>
+  <g fill="#3fa871">
+    <path d="M1084 392 l11 -28 l11 28 z"/><path d="M1104 396 l9 -22 l9 22 z"/>
+  </g>
+
+  <!-- desk -->
+  <path d="M0 470 H1200 V630 H0 z" fill="url(#sjz-desk)"/>
+  <rect x="0" y="466" width="1200" height="8" fill="#e8d4ad"/>
+  <g stroke="#d9c194" stroke-width="1.4" opacity=".7" fill="none">
+    <path d="M520 520 Q800 510 1180 522"/><path d="M560 580 Q880 568 1190 582"/>
+  </g>
+
+  <!-- text panel (left) -->
+  <rect x="0" y="0" width="640" height="630" fill="url(#sjz-panel)"/>
+  <g transform="translate(64 0)">
+    <!-- brand mark -->
+    <g transform="translate(0 92)">
+      <circle cx="18" cy="18" r="15" fill="none" stroke="#15202b" stroke-width="4"/>
+      <path d="M29 29 L39 39" stroke="#15202b" stroke-width="4.5" stroke-linecap="round"/>
+      <rect x="9" y="12" width="18" height="3" rx="1.5" fill="#2ea36b"/>
+      <rect x="7" y="17" width="22" height="3" rx="1.5" fill="#2ea36b"/>
+      <rect x="10" y="22" width="15" height="3" rx="1.5" fill="#2ea36b"/>
+      <text x="54" y="27" font-size="24" font-weight="800" fill="#15202b" font-family="Georgia, 'Times New Roman', serif">ZipWiki</text>
+    </g>
+    <text x="0" y="186" font-size="22" font-weight="700" letter-spacing="3.5" fill="#0f6e6a">FORMAT DEEP DIVE</text>
+    <text font-size="44" font-weight="800" fill="#15202b" letter-spacing="-0.5">
+      <tspan x="0" y="248">Still Just a ZIP:</tspan>
+      <tspan x="0" y="302">A Look Inside the</tspan>
+      <tspan x="0" y="356">.zipwiki Format</tspan>
+    </text>
+    <rect x="0" y="390" width="72" height="5" rx="2.5" fill="#14948e"/>
+    <text font-size="19" fill="#5a6b78">
+      <tspan x="0" y="444">Opens with ordinary unzip tools &#8212; plus</tspan>
+      <tspan x="0" y="472">digest, OKF cards, and parsed markdown inside.</tspan>
+    </text>
+    <g transform="translate(0 520)">
+      <rect width="128" height="30" rx="15" fill="#dff0ef"/>
+      <text x="64" y="20" font-size="13" font-weight="700" fill="#0f6e6a" text-anchor="middle">PKWARE + AI</text>
+      <text x="146" y="21" font-size="19" font-weight="700" fill="#0f6e6a" text-decoration="underline">https://zipwiki.ai</text>
+    </g>
+  </g>
+
+  <!-- warm beam rising out of the package -->
+  <ellipse cx="770" cy="436" rx="185" ry="125" fill="url(#sjz-glow)"/>
+  <path d="M652 382 L610 106 H940 L888 382 z" fill="url(#sjz-beam)"/>
+
+  <!-- inside-the-archive tree card (cutaway x-ray view) -->
+  <g transform="translate(612 68)" filter="url(#sjz-shadow)">
+    <rect x="-5" y="-5" width="366" height="258" rx="18" fill="#cfd8dc" opacity=".65"/>
+    <rect width="356" height="248" rx="14" fill="#ffffff" stroke="#d5e3e6" stroke-width="1.5"/>
+    <!-- window header bar -->
+    <path d="M14 0 h328 a14 14 0 0 1 14 14 v26 H0 v-26 a14 14 0 0 1 14 -14 z" fill="#0f6e6a"/>
+    <circle cx="18" cy="20" r="5" fill="#ffd27a"/>
+    <circle cx="33" cy="20" r="5" fill="#9fe3dc"/>
+    <circle cx="48" cy="20" r="5" fill="#5cc28a"/>
+    <text x="68" y="24.5" font-size="11.5" font-weight="700" fill="#ffffff" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace">reports.zipwiki</text>
+    <rect x="252" y="10" width="90" height="20" rx="10" fill="#1aa59e"/>
+    <text x="297" y="23.5" font-size="9.5" font-weight="700" fill="#e8fbf8" text-anchor="middle">Standard ZIP</text>
+
+    <!-- tree lines -->
+    <g font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11">
+      <!-- row 1: manifest -->
+      <g transform="translate(18 52)">
+        <rect width="320" height="36" rx="8" fill="#f2faf9" stroke="#bce3de" stroke-width="1.2"/>
+        <rect x="8" y="8" width="54" height="20" rx="5" fill="#0f6e6a"/>
+        <text x="35" y="21.5" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="Sora, sans-serif">DIGEST</text>
+        <text x="72" y="17" font-weight="700" fill="#15202b">META-INF/manifest.json</text>
+        <text x="72" y="30" font-size="9.5" fill="#5a6b78" font-family="Sora, sans-serif">NeoZip discovery + package summary</text>
+      </g>
+
+      <!-- row 2: okf -->
+      <g transform="translate(18 96)">
+        <rect width="320" height="36" rx="8" fill="#fffaf1" stroke="#ebd0a3" stroke-width="1.4"/>
+        <rect x="8" y="8" width="54" height="20" rx="5" fill="#d97706"/>
+        <text x="35" y="21.5" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="Sora, sans-serif">INDEX</text>
+        <text x="72" y="17" font-weight="700" fill="#15202b">wiki/okf/Q3-earnings.md</text>
+        <text x="72" y="30" font-size="9.5" fill="#7a3e06" font-family="Sora, sans-serif">Concept card &#183; tags &#183; key facts &#183; sources</text>
+      </g>
+
+      <!-- row 3: parsed -->
+      <g transform="translate(18 140)">
+        <rect width="320" height="36" rx="8" fill="#f2faf9" stroke="#bce3de" stroke-width="1.2"/>
+        <rect x="8" y="8" width="54" height="20" rx="5" fill="#14948e"/>
+        <text x="35" y="21.5" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="Sora, sans-serif">TEXT</text>
+        <text x="72" y="17" font-weight="700" fill="#15202b">wiki/parsed/Q3-earnings.pdf.md</text>
+        <text x="72" y="30" font-size="9.5" fill="#0f6e6a" font-family="Sora, sans-serif">Clean UTF-8 markdown + 0x014F origin</text>
+      </g>
+
+      <!-- row 4: original -->
+      <g transform="translate(18 184)">
+        <rect width="320" height="36" rx="8" fill="#f8fafb" stroke="#dde5e9" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <rect x="8" y="8" width="54" height="20" rx="5" fill="#64748b"/>
+        <text x="35" y="21.5" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle" font-family="Sora, sans-serif">SOURCE</text>
+        <text x="72" y="17" font-weight="700" fill="#334155">Q3-earnings.pdf</text>
+        <text x="72" y="30" font-size="9.5" fill="#64748b" font-family="Sora, sans-serif">Bundled primary &#8212; or omitted via CRC link</text>
+      </g>
+    </g>
+
+    <!-- bottom step flow -->
+    <text x="178" y="237" font-size="10" font-weight="700" fill="#0f6e6a" text-anchor="middle">AI path:  1. Digest   &#8594;   2. OKF card   &#8594;   3. Parsed .md   &#8594;   4. Original</text>
+  </g>
+
+  <!-- sparkles around the beam -->
+  <g fill="#ffc94d">
+    <path d="M592 162 Q594 170 602 172 Q594 174 592 182 Q590 174 582 172 Q590 170 592 162 z"/>
+    <path d="M992 132 Q993.8 139 1001 140.5 Q993.8 142 992 149 Q990.2 142 983 140.5 Q990.2 139 992 132 z"/>
+  </g>
+
+  <!-- .zipwiki isometric crate on the desk -->
+  <g transform="translate(650 352)" filter="url(#sjz-shadow)">
+    <path d="M0 44 L120 16 L240 44 L120 72 z" fill="#3fbdb5"/>
+    <path d="M0 44 L120 72 V172 L0 144 z" fill="url(#sjz-crate-side)"/>
+    <path d="M240 44 L120 72 V172 L240 144 z" fill="url(#sjz-crate)"/>
+    <!-- zipper track + pull -->
+    <path d="M181 58 V156" stroke="#e8f7f5" stroke-width="6" stroke-dasharray="3.5 3.5"/>
+    <rect x="173" y="84" width="16" height="28" rx="4" fill="#ffd27a" stroke="#b45309" stroke-width="1.5"/>
+    <text transform="translate(20 110) skewY(13.1)" font-size="18" font-weight="700" fill="#dff0ef">.zipwiki</text>
+    <text transform="translate(22 132) skewY(13.1)" font-size="10" fill="#9fe3dc">still a standard .zip</text>
+  </g>
+
+  <!-- right-side callout badges: Unzip anywhere + Selective AI read -->
+  <g transform="translate(992 192)" filter="url(#sjz-soft)">
+    <rect width="182" height="78" rx="14" fill="#ffffff" stroke="#cfe2e5" stroke-width="1.5"/>
+    <circle cx="26" cy="26" r="13" fill="#dff0ef"/>
+    <path d="M21 26 l4 4 l8 -8" stroke="#0f6e6a" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="46" y="23" font-size="11.5" font-weight="700" fill="#15202b">Finder &amp; unzip</text>
+    <text x="46" y="37" font-size="9.5" fill="#5a6b78">Standard central dir</text>
+    <rect x="14" y="48" width="154" height="20" rx="10" fill="#f2faf9"/>
+    <text x="91" y="61.5" font-size="9" font-weight="700" fill="#0f6e6a" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace">CRC-32 &#183; Zstd / Deflate</text>
+  </g>
+
+  <g transform="translate(992 290)" filter="url(#sjz-soft)">
+    <rect width="182" height="78" rx="14" fill="#ffffff" stroke="#ebd0a3" stroke-width="1.5"/>
+    <circle cx="26" cy="26" r="13" fill="#fff3d6"/>
+    <path d="M26 17 Q27.5 24.5 35 26 Q27.5 27.5 26 35 Q24.5 27.5 17 26 Q24.5 24.5 26 17 z" fill="#d97706"/>
+    <text x="46" y="23" font-size="11.5" font-weight="700" fill="#15202b">AI-native inside</text>
+    <text x="46" y="37" font-size="9.5" fill="#5a6b78">No blind binary dump</text>
+    <rect x="14" y="48" width="154" height="20" rx="10" fill="#fffaf1"/>
+    <text x="91" y="61.5" font-size="9" font-weight="700" fill="#b45309" text-anchor="middle" font-family="'JetBrains Mono', ui-monospace, monospace">~2 KB read &#183; 0x014F</text>
+  </g>
+
+  <!-- mug on desk -->
+  <g transform="translate(1126 512)">
+    <path d="M2 4 h36 v36 a8 8 0 0 1 -8 8 h-20 a8 8 0 0 1 -8 -8 z" fill="#fff"/>
+    <path d="M38 12 a10 10 0 0 1 0 20" fill="none" stroke="#e4ecee" stroke-width="5"/>
+    <ellipse cx="20" cy="5" rx="18" ry="4" fill="#7a4a2a"/>
+    <path d="M13 -6 q4 -6 0 -12 M24 -4 q4 -6 0 -12" stroke="#c5d2d8" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

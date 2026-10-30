@@ -47,9 +47,21 @@ print(m.group(1).strip() if m else pathlib.Path(sys.argv[1]).stem)
 TITLE_ESC="$(python3 -c 'import html,sys; print(html.escape(sys.argv[1]))' "$TITLE")"
 BYLINE_ESC="$(python3 -c 'import html,sys; print(html.escape(sys.argv[1]))' "$BYLINE")"
 
-python3 - "$HTML" "$TITLE_ESC" "$BYLINE_ESC" "$BODY" <<'PY'
+HEADER_SVG=""
+if [[ -f "$DIR/$BASENAME-header.svg" ]]; then
+  HEADER_SVG="$DIR/$BASENAME-header.svg"
+elif [[ -f "$ROOT/apps/web/public/articles/$BASENAME-header.svg" ]]; then
+  HEADER_SVG="$ROOT/apps/web/public/articles/$BASENAME-header.svg"
+fi
+
+python3 - "$HTML" "$TITLE_ESC" "$BYLINE_ESC" "$BODY" "$HEADER_SVG" <<'PY'
 import pathlib, sys
-html_path, title, byline, body = sys.argv[1:5]
+html_path, title, byline, body, header_svg = sys.argv[1:6]
+if header_svg:
+    header_uri = pathlib.Path(header_svg).resolve().as_uri()
+    header_block = f'<img class="header" src="{header_uri}" alt="{title}" />\n  <p class="byline">{byline}</p>'
+else:
+    header_block = f'<p class="byline">{byline}</p>\n  <h1>{title}</h1>'
 pathlib.Path(html_path).write_text(
     f"""<!DOCTYPE html>
 <html lang="en">
@@ -65,6 +77,13 @@ pathlib.Path(html_path).write_text(
       color: #1a1a1a;
       max-width: 7.1in;
       margin: 0 auto;
+    }}
+    .header {{
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 0 0 0.35em;
     }}
     .byline {{
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -90,7 +109,7 @@ pathlib.Path(html_path).write_text(
       page-break-after: avoid;
     }}
     p {{ margin: 0 0 0.7em; }}
-    ul {{ margin: 0 0 0.8em; padding-left: 1.25em; }}
+    ul, ol {{ margin: 0 0 0.8em; padding-left: 1.25em; }}
     li {{ margin: 0 0 0.35em; }}
     code {{
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -118,8 +137,7 @@ pathlib.Path(html_path).write_text(
   </style>
 </head>
 <body>
-  <p class="byline">{byline}</p>
-  <h1>{title}</h1>
+  {header_block}
   {body}
   <p class="footer">zipwiki.ai · NeoWare, Inc.</p>
 </body>
