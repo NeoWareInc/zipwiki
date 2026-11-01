@@ -55,10 +55,9 @@ for Phase 3 (`zipwiki login`).
 ### Phase 2+ — NeoZipKit (0.3.0)
 
 **Landing.** ZIP framing, extras, Merkle helpers, and the web Knowledge reader
-use NeoZipKit **1.6.0**. Wire AppNote is NeoZip **0.3.0-draft**. Token Service
+use NeoZipKit **1.6.1**. Wire AppNote is NeoZip **0.3.0-draft**. Token Service
 stamp / mint (`neozip-blockchain`) is **deferred** until product support is
-ready. Dev trees may use `file:` links to `../neozipkit` until `neozipkit@1.6.0`
-is published. Details: [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
+ready. Details: [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
 
 ## Phase 3 — TypeScript Beta (full product)
 

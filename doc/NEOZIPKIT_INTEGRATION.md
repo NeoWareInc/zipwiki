@@ -42,7 +42,7 @@ helpers were removed in 1.6.0; ZipWiki composes general primitives.
 
 ## Dependencies (dev)
 
-- `@zipwiki/zipwiki` / `@zipwiki/web` → `neozipkit` (`file:../neozipkit/packages/neozipkit` until published `^1.6.0`)
+- `@zipwiki/zipwiki` / `@zipwiki/web` → `neozipkit@1.6.1`
 
 Local pack does **not** need login or blockchain credentials.
 

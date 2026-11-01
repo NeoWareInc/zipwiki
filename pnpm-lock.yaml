@@ -120,8 +120,8 @@ importers:
         specifier: ^18.0.14
         version: 18.0.14
       neozipkit:
-        specifier: file:../../../neozipkit/packages/neozipkit
-        version: file:../neozipkit/packages/neozipkit
+        specifier: 1.6.1
+        version: 1.6.1
       react:
         specifier: ^19.1.0
         version: 19.3.0
@@ -193,8 +193,8 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
       neozipkit:
-        specifier: file:../../../neozipkit/packages/neozipkit
-        version: file:../neozipkit/packages/neozipkit
+        specifier: 1.6.1
+        version: 1.6.1
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
@@ -1950,8 +1950,8 @@ packages:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
 
-  neozipkit@file:../neozipkit/packages/neozipkit:
-    resolution: {directory: ../neozipkit/packages/neozipkit, type: directory}
+  neozipkit@1.6.1:
+    resolution: {integrity: sha512-0vZY8GZ+pBMCyy/UivUBVGk9id6njGEtYzm52Kalu7o1A+IxPGhGNRzJ0QTVRjUkSQ1JcD/IwnoQ8IbcJAVN9g==}
     engines: {node: '>=22.15.0'}
 
   node-releases@2.0.56:
@@ -3893,7 +3893,7 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  neozipkit@file:../neozipkit/packages/neozipkit:
+  neozipkit@1.6.1:
     dependencies:
       buffer: 6.0.3
       fzstd: 0.1.1
