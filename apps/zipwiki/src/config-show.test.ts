@@ -42,7 +42,7 @@ describe("config show text", () => {
         LLAMA_CLOUD_API_KEY: "llx…secret",
       }),
       "steve@neoware.io",
-    );
+    ).replace(/\x1B\[[0-9;]*m/g, "");
     assert.match(text, /Account:.*steve@neoware\.io/);
     assert.match(text, /Environment:.*Dev/);
     assert.match(text, /Document parsing:.*ZipWiki account · LlamaParse/);

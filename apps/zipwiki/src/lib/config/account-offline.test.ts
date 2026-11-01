@@ -52,7 +52,7 @@ describe("account optional for local pack", () => {
     assert.equal(payload.setupComplete, true);
     assert.equal(payload.settings.parseCredential, "local");
     assert.equal(payload.settings.okfCredential, "local");
-    assert.equal(payload.settings.okf.useAi, false);
+    assert.equal(payload.settings.okf.useAi, true);
     assert.equal(
       payload.settings.parser.engine,
       DEFAULT_ACCOUNT_SETTINGS.parser.engine,

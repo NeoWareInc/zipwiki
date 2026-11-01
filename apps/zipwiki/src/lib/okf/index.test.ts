@@ -87,7 +87,7 @@ describe("okf render", () => {
     assert.match(doc, /sources:/);
     assert.match(doc, /resource: \.\.\/\.\.\/hello\.txt/);
     assert.match(doc, /resource: \.\.\/parsed\/hello\.txt\.md/);
-    assert.match(doc, /Primary content in this package/);
+    assert.match(doc, /Document in this package/);
     assert.match(doc, /Parsed markdown in this package/);
     assert.match(doc, /generated: \{ by: "?process:test"?/);
     const { body } = splitFrontmatter(doc);
