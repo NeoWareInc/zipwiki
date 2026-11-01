@@ -5,7 +5,7 @@ export const stillJustAZip: ResourceArticle = {
   title: "Still Just a ZIP: A Look Inside the .zipwiki Format",
   excerpt:
     "A .zipwiki opens with ordinary unzip tools—because it is a ZIP. Here is what ZipWiki adds inside the archive so AI can find answers without treating your documents as a blind box.",
-  date: "November 3, 2026",
+  date: "November 1, 2026",
   category: "Format",
   readTimeMinutes: 6,
   byline: "ZipWiki by NeoWare",
@@ -16,7 +16,7 @@ export const stillJustAZip: ResourceArticle = {
     {
       heading: "Open it anywhere",
       paragraphs: [
-        "If you rename a .zipwiki to .zip and double-click it, Finder, Explorer, and stock unzip utilities will list and extract its members. That is intentional. ZipWiki does not invent a proprietary container. A package is a PKWARE-compatible ZIP that also carries an AI knowledge tree and a small amount of NeoZip metadata.",
+        "If you rename a .zipwiki to .zip and double-click it, Finder, Explorer, and stock unzip utilities will list and extract its members. That is intentional. ZipWiki does not invent a proprietary container. A package is a standard ZIP that also carries an AI knowledge tree and a small amount of NeoZip metadata.",
         "Agents and humans share the same file. You can email it, sync it, check it into git LFS, or park it on a USB drive. Whatever already moves ZIP files can move ZipWiki packages—no new archive format to adopt first.",
       ],
     },
@@ -95,7 +95,7 @@ sources:
     {
       heading: "Still compatible with the ZIP you already know",
       paragraphs: [
-        "Standard packages default to Zstandard (method 93). Use Deflate (method 8) via --legacy when you need stock OS unzip tools that cannot inflate Zstd. Binaries that do not compress further are stored uncompressed (method 0). Unicode paths, CRC-32 on every member, and ordinary central-directory listing all remain. Central directory entries may carry Extra Fields (0x014E for NeoZip integrity and 0x014F for remote origin resolution). Tools that do not know what those mean simply ignore them—as the PKWARE APPNOTE specifies.",
+        "Standard packages default to Zstandard (method 93). Use Deflate (method 8) via --legacy when you need stock OS unzip tools that cannot inflate Zstd. Binaries that do not compress further are stored uncompressed (method 0). Unicode paths, CRC-32 on every member, and ordinary central-directory listing all remain. Central directory entries may carry Extra Fields (0x014E for NeoZip integrity and 0x014F for remote origin resolution). Tools that do not know what those mean simply ignore them—as the ZIP format specifies.",
         "ZipWiki-aware CLIs and MCP servers go further: open, search, read parsed text, and resolve origins. The Application Note is the normative wire guide; this article is the map of what you will see when you peek inside.",
         "ZipWiki is in Beta. Pack a folder, open the .zipwiki like any ZIP, then let an agent walk digest → OKF → parsed markdown. Same file. Far less of a blind box.",
       ],
