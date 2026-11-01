@@ -27,13 +27,8 @@ import {
   searchPackage,
   updatePackage,
   parseUpdateSpecs,
-  clipUtf8,
 } from "@zipwiki/zipwiki/access";
 import type { OkfEnrichment } from "@zipwiki/zipwiki/okf";
-import {
-  listZipEntriesFromBuffer,
-  readZipEntryPayload,
-} from "@zipwiki/zipwiki/archive";
 import { runPack } from "@zipwiki/zipwiki";
 import {
   loadZipwikiHomeEnv,
@@ -639,7 +634,9 @@ export async function update(args: {
     return jsonResult({
       ...result,
       noAiOkf,
-      note: "Call `open` next. Unchanged members were copied compressed; parse/OKF ran only for add/update.",
+      note: result.notice
+        ? `Call \`open\` next. ${result.notice}. Unchanged members were copied compressed; parse/OKF ran only for add/update.`
+        : "Call `open` next. Unchanged members were copied compressed; parse/OKF ran only for add/update.",
     });
   } catch (err) {
     return errorResult(err);
@@ -664,34 +661,3 @@ export async function openFromBuffer(
   }
 }
 
-/** @deprecated Hosted HTTP MCP helpers. */
-export async function readEntryFromBuffer(
-  buf: Buffer,
-  label: string,
-  entryPath: string,
-  maxBytes = DEFAULT_MAX_BYTES,
-  offset = 0,
-): Promise<ToolResult> {
-  try {
-    const entry = entryPath.replace(/^\/+/, "").replace(/\\/g, "/");
-    const entries = listZipEntriesFromBuffer(buf);
-    const hit = entries.find((e) => e.name === entry);
-    if (!hit) {
-      return jsonResult(
-        { error: `Entry not found: ${entry}`, code: "not_found" },
-        true,
-      );
-    }
-    const clipped = clipUtf8(readZipEntryPayload(buf, hit), maxBytes, offset);
-    return jsonResult({
-      package: label,
-      path: entry,
-      truncated: clipped.truncated,
-      totalBytes: clipped.totalBytes,
-      offset,
-      text: clipped.text,
-    });
-  } catch (err) {
-    return errorResult(err);
-  }
-}

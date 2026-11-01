@@ -5,8 +5,12 @@ Portable knowledge lives in **`.zipwiki`** packages (ZIP + `META-INF/manifest.js
 
 | Surface | Role |
 | --- | --- |
-| **zipwiki** | Create (`pack`: markdown table → human yes → write) and query (`open` / `search` / `read` / `origin`) |
+| **zipwiki** | Create (`pack`: markdown table → human yes → write), query (`open` / `search` / `read` / `origin`) |
 | **stdio MCP** | Agents on this machine → zipaccess library |
+
+ZIP wire I/O is **NeoZipKit**. Token Service stamp / mint is deferred (no
+`neozip-blockchain` dependency yet). See
+[doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
 
 ## Pack (MCP) — markdown table in chat
 
@@ -28,9 +32,9 @@ Default package: `package` tool arg, or `wiki.zipwiki` in the MCP cwd.
 
 Do not write `wiki/search.json`, `wiki/okf/log.md`, or `wiki/okf/topics/pdf.md` into a `.zipwiki`. `search` reads OKF markdown. Other topic pages stay. `log.md` is optional in the OKF language spec and ZipWiki does not emit it. If an older archive still has `search.json`, `log.md`, or `topics/pdf.md`, the next update deletes it.
 
-Specs: [doc/ZIPWIKI_APPNOTE.md](doc/ZIPWIKI_APPNOTE.md), [doc/ZIPACCESS.md](doc/ZIPACCESS.md),
-[doc/MCP.md](doc/MCP.md), [doc/CLI.md](doc/CLI.md). Future NeoZipKit ZIP-writer swap
-(prefer general ZipkitNode hooks, not a ZipWiki layer in the kit):
+Specs: [doc/ZIPWIKI_APPNOTE.md](doc/ZIPWIKI_APPNOTE.md) (ZipWiki profile),
+[doc/format/NEOZIP_APPNOTE.md](doc/format/NEOZIP_APPNOTE.md) (NeoZip wire),
+[doc/ZIPACCESS.md](doc/ZIPACCESS.md), [doc/MCP.md](doc/MCP.md), [doc/CLI.md](doc/CLI.md),
 [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
 
 This checkout includes Phase 2: `@zipwiki/zipwiki` (pack and query) and

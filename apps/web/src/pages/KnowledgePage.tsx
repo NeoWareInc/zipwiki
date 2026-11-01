@@ -418,7 +418,6 @@ export default function KnowledgePage() {
   const [followPath, setFollowPath] = useState("");
   const [followKind, setFollowKind] = useState<"read" | "search" | "origin" | null>(null);
   const [askSources, setAskSources] = useState<AskSource[]>([]);
-  const archiveRef = useRef<ArrayBuffer | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const reportActivity = useMutation(api.usage.reportActivity);
   const reportQueryAnomaly = useMutation(api.usage.reportQueryAnomaly);
@@ -448,10 +447,8 @@ export default function KnowledgePage() {
       setFollowKind(null);
       setAskSources([]);
       setViewing(null);
-      archiveRef.current = null;
       try {
         const buf = await file.arrayBuffer();
-        archiveRef.current = buf;
         const opened = await openNzip(buf, file.name);
         setSummary(opened);
         void reportActivity({
@@ -520,18 +517,16 @@ export default function KnowledgePage() {
     setFollowKind(null);
     setAskSources([]);
     setViewing(null);
-    archiveRef.current = null;
     if (inputRef.current) inputRef.current.value = "";
   }
 
   async function testIntegrity() {
-    const buf = archiveRef.current;
-    if (!buf || !summary || testing) return;
+    if (!summary || testing) return;
     setTesting(true);
     setIntegrityOpen(true);
     setIntegrity([]);
     try {
-      await testArchiveIntegrity(buf, summary.entries, (line) => {
+      await testArchiveIntegrity(summary.reader, (line) => {
         setIntegrity((current) => [...(current ?? []), line]);
       });
     } finally {
@@ -545,11 +540,10 @@ export default function KnowledgePage() {
   }
 
   async function downloadEntry(entryName: string) {
-    const buf = archiveRef.current;
     const entry = entryNamed(entryName);
-    if (!buf || !entry) return;
+    if (!summary || !entry) return;
     try {
-      const data = await readZipEntryPayload(buf, entry);
+      const data = await readZipEntryPayload(summary.reader, entry);
       const bytes = new Uint8Array(data.byteLength);
       bytes.set(data);
       const blob = new Blob([bytes]);
@@ -576,10 +570,9 @@ export default function KnowledgePage() {
   }
 
   async function askPackage(text?: string) {
-    const buf = archiveRef.current;
     const q = (text ?? question).trim();
     if (text) setQuestion(text);
-    if (!buf || !summary || !q || asking || outOfCredits || creditsLocked) return;
+    if (!summary || !q || asking || outOfCredits || creditsLocked) return;
     setAskError("");
     setAnswer(null);
     setPackageQuery(null);
@@ -588,7 +581,7 @@ export default function KnowledgePage() {
     setAskSources([]);
     setAsking("searching");
     try {
-      const found = await queryPackage(buf, summary.entries, q);
+      const found = await queryPackage(summary.reader, q);
       setPackageQuery(found);
       let sources: AskSource[] = [];
       for (const passage of found.passages) {
@@ -682,7 +675,7 @@ export default function KnowledgePage() {
             setFollowKind("search");
             setFollowPath(phrase.phrase);
             setAsking("reading");
-            const hits = await searchPackagePhrase(buf, summary.entries, phrase.phrase);
+            const hits = await searchPackagePhrase(summary.reader, phrase.phrase);
             if (hits.length === 0) {
               void reportQueryAnomaly({
                 engine: "query_no_phrase_hits",
@@ -745,8 +738,7 @@ export default function KnowledgePage() {
             setFollowPath(offset > 0 ? `${read.path} at ${offset}` : read.path);
             setAsking("reading");
             const loaded = await readPackageFollow(
-              buf,
-              summary.entries,
+              summary.reader,
               read.path,
               offset,
             );
@@ -848,7 +840,6 @@ export default function KnowledgePage() {
   const openedExample = summary
     ? examplePackageForFilename(summary.filename)
     : undefined;
-  const openArchive = archiveRef.current;
 
   return (
     <div className="space-y-8">
@@ -975,6 +966,14 @@ export default function KnowledgePage() {
               </h1>
               <p className="mt-1 text-sm text-(--muted)">
                 {summary.filename} · {formatBytes(summary.byteLength)}
+                {summary.blockchain ? (
+                  <span
+                    title={summary.blockchain.title}
+                    className="ml-2 inline-block rounded-full border border-(--border) bg-(--paper) px-2 py-0.5 align-middle text-xs font-medium text-(--ink)"
+                  >
+                    {summary.blockchain.label}
+                  </span>
+                ) : null}
               </p>
               <p className="text-sm text-(--muted)">
                 {inputDocumentsLine(summary)}
@@ -1349,9 +1348,9 @@ export default function KnowledgePage() {
           onClose={() => setIntegrityOpen(false)}
         />
       ) : null}
-      {viewingEntry && openArchive ? (
+      {viewingEntry && summary ? (
         <MarkdownViewDialog
-          archive={openArchive}
+          reader={summary.reader}
           entry={viewingEntry}
           onClose={() => setViewing(null)}
           onDownload={() => void downloadEntry(viewingEntry.name)}

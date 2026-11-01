@@ -32,7 +32,7 @@ Default package: tool arg `package`, or `wiki.zipwiki` in the MCP server working
 | `extract` | Verified extract to disk (`fetchOrigin` also downloads 0x014F originals) | zipaccess lib |
 | `origin` | Extra Field `0x014F` URI/CRC; `fetch` downloads and verifies CRC-32 | zipaccess lib |
 | `pack` | Pack sources → `.zipwiki`. Default: markdown table plan (`displayForUser`). Pack only with `confirm:true` + `humanApproved:true` after human chat approval | zipwiki |
-| `update` | Add / update / delete documents (one rewrite; copies unchanged compressed members) | zipwiki |
+| `update` | Add / update / delete documents (one rewrite; copies unchanged compressed members). Drops proof sidecars when content changes | zipwiki |
 | `okf_enrich` | Apply host-LLM OKF enrichment into `.zipwiki` | zipaccess lib |
 
 ### Create workflow (default)
@@ -54,6 +54,9 @@ Optional: request hosted/BYO OKF on `pack` when the plan still has hosted OKF re
 5. `extract` only when a filesystem path is required (`fetchOrigin` to pull originals next to the parse)
 
 `maxBytes` (default 160_000) caps **bytes returned** from a single read — not archive size or tokens. Binary entries return `encoding: "base64"`.
+
+Token Service stamp / mint / verify MCP tools are deferred until product support.
+
 
 ## Claude Code (stdio)
 

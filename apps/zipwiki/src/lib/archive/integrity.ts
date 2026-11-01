@@ -4,9 +4,15 @@
 
 import { createHash } from "node:crypto";
 import {
+  ZipIntegrityError as KitZipIntegrityError,
+  crc32 as kitCrc32,
+  getExtraField,
+} from "neozipkit/node";
+import {
   findZipEntry,
   listZipEntriesFromBuffer,
   readInflatedWithExtraFromHandle,
+  readLocalExtraFieldFromBuffer,
   readZipEntryPayload,
   useZipHandle,
   type ZipHandle,
@@ -16,15 +22,38 @@ import {
 /** NeoZip Extra Field: SHA-256 of uncompressed payload (APPNOTE). */
 export const EF_NZIP_SHA256 = 0x014e;
 
+/**
+ * ZipWiki integrity failure (`AccessError` maps this to `integrity_failed`).
+ * Kit reader failures are wrapped via {@link wrapKitIntegrityError} with the
+ * original error on `cause` and its code on `kitCode`.
+ */
 export class ZipIntegrityError extends Error {
   readonly code = "integrity_failed" as const;
   readonly entryName: string;
+  /** Kit `ZipIntegrityError.code` when this wraps a NeoZipKit reader error. */
+  readonly kitCode?: KitZipIntegrityError["code"];
 
-  constructor(message: string, entryName: string) {
-    super(message);
+  constructor(
+    message: string,
+    entryName: string,
+    opts?: { cause?: unknown; kitCode?: KitZipIntegrityError["code"] },
+  ) {
+    super(message, opts?.cause !== undefined ? { cause: opts.cause } : undefined);
     this.name = "ZipIntegrityError";
     this.entryName = entryName;
+    if (opts?.kitCode) this.kitCode = opts.kitCode;
   }
+}
+
+/** Convert a NeoZipKit reader integrity error to the ZipWiki class; pass others through. */
+export function wrapKitIntegrityError(err: unknown): unknown {
+  if (err instanceof KitZipIntegrityError) {
+    return new ZipIntegrityError(err.message, err.entry ?? "", {
+      cause: err,
+      kitCode: err.code,
+    });
+  }
+  return err;
 }
 
 export type VerifyPayloadResult = {
@@ -38,34 +67,17 @@ export type VerifyPayloadResult = {
 };
 
 function crc32(buf: Buffer): number {
-  let crc = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) {
-    crc ^= buf[i]!;
-    for (let j = 0; j < 8; j++) {
-      crc = crc & 1 ? (crc >>> 1) ^ 0xedb88320 : crc >>> 1;
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+  return kitCrc32(buf) >>> 0;
 }
 
 export function sha256Hex(buf: Buffer): string {
   return createHash("sha256").update(buf).digest("hex");
 }
 
-/** Walk ZIP Extra Field blob for NeoZip 0x014E (32-byte digest). */
+/** NeoZip 0x014E (32-byte SHA-256 digest) from an Extra Field blob. */
 export function parseSha256FromExtra(extra: Buffer): Buffer | null {
-  let i = 0;
-  while (i + 4 <= extra.length) {
-    const id = extra.readUInt16LE(i);
-    const size = extra.readUInt16LE(i + 2);
-    i += 4;
-    if (i + size > extra.length) break;
-    if (id === EF_NZIP_SHA256 && size === 32) {
-      return Buffer.from(extra.subarray(i, i + 32));
-    }
-    i += size;
-  }
-  return null;
+  const dig = getExtraField(extra, EF_NZIP_SHA256);
+  return dig && dig.length === 32 ? Buffer.from(dig) : null;
 }
 
 /** Local-header Extra Field for an entry. */
@@ -73,14 +85,11 @@ export function readLocalExtraField(
   buf: Buffer,
   entry: ZipListEntry,
 ): Buffer {
-  const local = entry.localHeaderOffset;
-  if (buf.readUInt32LE(local) !== 0x04034b50) {
-    throw new Error(`Invalid local header for ${entry.name}`);
+  try {
+    return readLocalExtraFieldFromBuffer(buf, entry);
+  } catch (err) {
+    throw wrapKitIntegrityError(err);
   }
-  const nameLen = buf.readUInt16LE(local + 26);
-  const extraLen = buf.readUInt16LE(local + 28);
-  const extraStart = local + 30 + nameLen;
-  return Buffer.from(buf.subarray(extraStart, extraStart + extraLen));
 }
 
 /**
@@ -213,7 +222,13 @@ export function readZipEntryVerifiedFromHandle(
   entryName: string,
 ): { data: Buffer; integrity: VerifyPayloadResult } {
   const entry = findZipEntry(handle.entries, entryName);
-  const { extra, data } = readInflatedWithExtraFromHandle(handle, entry);
+  let extra: Buffer;
+  let data: Buffer;
+  try {
+    ({ extra, data } = readInflatedWithExtraFromHandle(handle, entry));
+  } catch (err) {
+    throw wrapKitIntegrityError(err);
+  }
   const expectedSha256Hex = parseSha256FromExtra(extra)
     ? null
     : manifestSha256FromEntries(handle.entries, entryName, () => {
@@ -231,7 +246,12 @@ export function readZipEntryVerifiedFromBuffer(
 ): { data: Buffer; integrity: VerifyPayloadResult } {
   const entries = listZipEntriesFromBuffer(buf);
   const entry = findZipEntry(entries, entryName);
-  const data = readZipEntryPayload(buf, entry);
+  let data: Buffer;
+  try {
+    data = readZipEntryPayload(buf, entry);
+  } catch (err) {
+    throw wrapKitIntegrityError(err);
+  }
   const extra = readLocalExtraField(buf, entry);
   const expectedSha256Hex = parseSha256FromExtra(extra)
     ? null

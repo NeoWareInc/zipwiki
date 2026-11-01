@@ -1,12 +1,20 @@
 /**
  * ZIP central-directory listing and payload inflate for store/deflate/zstd.
- * Disk reads use EOCD tail + central-directory + per-entry pread (no full-file mmap).
+ *
+ * Wraps NeoZipKit {@link ZipReaderNode}: EOCD tail + central-directory + per-entry
+ * pread (no full-file mmap). Payload reads here are **unverified**; use
+ * `integrity.ts` for CRC-32 / SHA-256 checks.
  */
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { closeSync, fstatSync, openSync, readSync } from "node:fs";
+import { statSync } from "node:fs";
 import { resolve } from "node:path";
-import { inflateRawSync, zstdDecompressSync } from "node:zlib";
+import {
+  ZipReaderNode,
+  inflateZipPayloadSync,
+  type ZipReaderEntry,
+  type ZipReaderRaw,
+} from "neozipkit/node";
 import {
   originToApiFields,
   parseOriginFromExtra,
@@ -33,7 +41,8 @@ export type ZipListEntry = {
 
 export type ZipHandle = {
   path: string;
-  fd: number;
+  /** NeoZipKit reader holding the open fd + parsed central directory. */
+  reader: ZipReaderNode;
   size: number;
   mtimeMs: number;
   ino: number;
@@ -49,138 +58,97 @@ export function resetZipPreadBytes(): void {
 
 const zipHandleAls = new AsyncLocalStorage<ZipHandle>();
 
-function preadAll(fd: number, length: number, position: number): Buffer {
-  if (length <= 0) return Buffer.alloc(0);
-  const buf = Buffer.allocUnsafe(length);
-  let offset = 0;
-  while (offset < length) {
-    const n = readSync(fd, buf, offset, length - offset, position + offset);
-    if (n === 0) {
-      throw new Error(
-        `Unexpected EOF reading ZIP at offset ${position + offset}`,
-      );
-    }
-    offset += n;
+/** Reader `preadBytes` already folded into the module-level counter. */
+const preadCounted = new WeakMap<ZipReaderNode, number>();
+
+function syncPreadBytes(reader: ZipReaderNode): void {
+  const seen = preadCounted.get(reader) ?? 0;
+  const now = reader.preadBytes;
+  if (now > seen) {
+    zipPreadBytes += now - seen;
+    preadCounted.set(reader, now);
   }
-  zipPreadBytes += length;
-  return buf;
 }
 
-function findEocdOffset(scan: Buffer): number {
-  const maxScan = Math.min(scan.length, 65536 + 22);
-  for (let i = scan.length - 22; i >= scan.length - maxScan; i--) {
-    if (i < 0) break;
-    if (scan.readUInt32LE(i) === 0x06054b50) return i;
+/** Map a kit reader entry onto the ZipWiki list shape (origin fields from 0x014F). */
+function toListEntry(e: ZipReaderEntry): ZipListEntry {
+  return {
+    name: e.name,
+    method: e.method,
+    compressedSize: e.compressedSize,
+    uncompressedSize: e.uncompressedSize,
+    crc32: e.crc32,
+    dosTime: e.dosTime,
+    dosDate: e.dosDate,
+    extraFieldLength: e.centralExtra.length,
+    extra: e.centralExtra,
+    localHeaderOffset: e.localHeaderOffset,
+    ...originToApiFields(parseOriginFromExtra(e.centralExtra)),
+  };
+}
+
+/** Rebuild a kit reader entry from a list entry (stateless raw reads). */
+function toReaderEntry(entry: ZipListEntry): ZipReaderEntry {
+  return {
+    name: entry.name,
+    method: entry.method,
+    compressedSize: entry.compressedSize,
+    uncompressedSize: entry.uncompressedSize,
+    crc32: entry.crc32,
+    dosTime: entry.dosTime,
+    dosDate: entry.dosDate,
+    localHeaderOffset: entry.localHeaderOffset,
+    centralExtra: entry.extra,
+    flags: 0,
+    comment: "",
+    externalAttr: 0,
+    internalAttr: 0,
+  };
+}
+
+const bufferReaders = new WeakMap<Buffer, ZipReaderNode>();
+
+function readerForBuffer(buf: Buffer): ZipReaderNode {
+  let reader = bufferReaders.get(buf);
+  if (!reader) {
+    reader = ZipReaderNode.fromBuffer(buf);
+    bufferReaders.set(buf, reader);
   }
-  return -1;
+  return reader;
 }
 
-function parseCentralDirectory(
-  cd: Buffer,
-  totalEntries: number,
-): ZipListEntry[] {
-  const entries: ZipListEntry[] = [];
-  let offset = 0;
-  for (let n = 0; n < totalEntries; n++) {
-    if (offset + 46 > cd.length || cd.readUInt32LE(offset) !== 0x02014b50) {
-      throw new Error(`Invalid central directory signature at ${offset}`);
-    }
-    const method = cd.readUInt16LE(offset + 10);
-    const dosTime = cd.readUInt16LE(offset + 12);
-    const dosDate = cd.readUInt16LE(offset + 14);
-    const crc32 = cd.readUInt32LE(offset + 16);
-    const compressedSize = cd.readUInt32LE(offset + 20);
-    const uncompressedSize = cd.readUInt32LE(offset + 24);
-    const nameLen = cd.readUInt16LE(offset + 28);
-    const extraLen = cd.readUInt16LE(offset + 30);
-    const commentLen = cd.readUInt16LE(offset + 32);
-    const localHeaderOffset = cd.readUInt32LE(offset + 42);
-    const recEnd = offset + 46 + nameLen + extraLen + commentLen;
-    if (recEnd > cd.length) {
-      throw new Error(`Truncated central directory at entry ${n}`);
-    }
-    const name = cd.subarray(offset + 46, offset + 46 + nameLen).toString("utf-8");
-    const extraStart = offset + 46 + nameLen;
-    const centralExtra = Buffer.from(
-      cd.subarray(extraStart, extraStart + extraLen),
-    );
-    const origin = parseOriginFromExtra(centralExtra);
-    entries.push({
-      name,
-      method,
-      compressedSize,
-      uncompressedSize,
-      crc32,
-      dosTime,
-      dosDate,
-      extraFieldLength: extraLen,
-      extra: centralExtra,
-      localHeaderOffset,
-      ...originToApiFields(origin),
-    });
-    offset = recEnd;
-  }
-  return entries;
-}
-
-function listFromEocdWindow(
-  scan: Buffer,
-  fileSize: number,
-  readCd: (offset: number, size: number) => Buffer,
-): ZipListEntry[] {
-  const eocdRel = findEocdOffset(scan);
-  if (eocdRel < 0) throw new Error("ZIP EOCD not found");
-  const eocdAbs = fileSize - scan.length + eocdRel;
-  const totalEntries = scan.readUInt16LE(eocdRel + 10);
-  const cdSizeField = scan.readUInt32LE(eocdRel + 12);
-  const centralOffset = scan.readUInt32LE(eocdRel + 16);
-  const cdSize =
-    cdSizeField > 0 ? cdSizeField : Math.max(0, eocdAbs - centralOffset);
-  const cd = readCd(centralOffset, cdSize);
-  return parseCentralDirectory(cd, totalEntries);
-}
-
+/** Always re-parses the central directory (callers may mutate `buf` between calls). */
 export function listZipEntriesFromBuffer(buf: Buffer): ZipListEntry[] {
-  const maxScan = Math.min(buf.length, 65536 + 22);
-  const scan = buf.subarray(buf.length - maxScan);
-  return listFromEocdWindow(scan, buf.length, (offset, size) =>
-    Buffer.from(buf.subarray(offset, offset + size)),
-  );
-}
-
-function listZipEntriesFromFd(fd: number, fileSize: number): ZipListEntry[] {
-  const maxScan = Math.min(fileSize, 65536 + 22);
-  const scanStart = fileSize - maxScan;
-  const scan = preadAll(fd, maxScan, scanStart);
-  return listFromEocdWindow(scan, fileSize, (offset, size) =>
-    preadAll(fd, size, offset),
-  );
+  const reader = ZipReaderNode.fromBuffer(buf);
+  bufferReaders.set(buf, reader);
+  return reader.entries().map(toListEntry);
 }
 
 /** Open a ZIP, parse the central directory via ranged reads, keep the fd. */
 export function openZipHandle(zipPath: string): ZipHandle {
   const path = resolve(zipPath);
-  const fd = openSync(path, "r");
+  const reader = ZipReaderNode.open(path);
   try {
-    const st = fstatSync(fd);
-    const entries = listZipEntriesFromFd(fd, st.size);
+    const st = statSync(path);
+    syncPreadBytes(reader);
     return {
       path,
-      fd,
-      size: st.size,
+      reader,
+      size: reader.size,
       mtimeMs: st.mtimeMs,
       ino: st.ino,
-      entries,
+      entries: reader.entries().map(toListEntry),
     };
   } catch (err) {
-    closeSync(fd);
+    reader.close();
     throw err;
   }
 }
 
 export function closeZipHandle(handle: ZipHandle): void {
   try {
-    closeSync(handle.fd);
+    syncPreadBytes(handle.reader);
+    handle.reader.close();
   } catch {
     // already closed
   }
@@ -226,22 +194,17 @@ export function findZipEntry(
   return entry;
 }
 
-function inflateZipPayload(
+/** Inflate a compressed payload (store / deflate / zstd) without verification. */
+export function inflateZipPayload(
   compressed: Buffer,
-  entry: ZipListEntry,
+  entry: Pick<ZipListEntry, "name" | "method">,
 ): Buffer {
-  if (entry.method === 0) {
-    return Buffer.from(compressed);
+  if (entry.method !== 0 && entry.method !== 8 && entry.method !== 93) {
+    throw new Error(
+      `ZIP entry "${entry.name}" uses unsupported method ${entry.method}`,
+    );
   }
-  if (entry.method === 8) {
-    return inflateRawSync(compressed);
-  }
-  if (entry.method === 93) {
-    return zstdDecompressSync(compressed);
-  }
-  throw new Error(
-    `ZIP entry "${entry.name}" uses unsupported method ${entry.method}`,
-  );
+  return inflateZipPayloadSync(entry.method, compressed);
 }
 
 type LocalLayout = {
@@ -249,53 +212,27 @@ type LocalLayout = {
   compressed: Buffer;
 };
 
-function localLayoutFromBuffer(buf: Buffer, entry: ZipListEntry): LocalLayout {
-  const local = entry.localHeaderOffset;
-  if (buf.readUInt32LE(local) !== 0x04034b50) {
-    throw new Error(`Invalid local header for ${entry.name}`);
-  }
-  const nameLen = buf.readUInt16LE(local + 26);
-  const extraLen = buf.readUInt16LE(local + 28);
-  const extraStart = local + 30 + nameLen;
-  const dataStart = extraStart + extraLen;
-  return {
-    extra: Buffer.from(buf.subarray(extraStart, extraStart + extraLen)),
-    compressed: Buffer.from(
-      buf.subarray(dataStart, dataStart + entry.compressedSize),
-    ),
-  };
-}
-
-function localLayoutFromFd(fd: number, entry: ZipListEntry): LocalLayout {
-  const local = entry.localHeaderOffset;
-  const header = preadAll(fd, 30, local);
-  if (header.readUInt32LE(0) !== 0x04034b50) {
-    throw new Error(`Invalid local header for ${entry.name}`);
-  }
-  const nameLen = header.readUInt16LE(26);
-  const extraLen = header.readUInt16LE(28);
-  const extraStart = local + 30 + nameLen;
-  const extra = extraLen > 0 ? preadAll(fd, extraLen, extraStart) : Buffer.alloc(0);
-  const dataStart = extraStart + extraLen;
-  const compressed =
-    entry.compressedSize > 0
-      ? preadAll(fd, entry.compressedSize, dataStart)
-      : Buffer.alloc(0);
-  return { extra, compressed };
+function localLayoutFromReader(
+  reader: ZipReaderNode,
+  entry: ZipListEntry,
+): LocalLayout {
+  const raw = reader.readRaw(toReaderEntry(entry));
+  syncPreadBytes(reader);
+  return { extra: raw.localExtra, compressed: raw.compressed };
 }
 
 export function readLocalExtraFieldFromHandle(
   handle: ZipHandle,
   entry: ZipListEntry,
 ): Buffer {
-  return localLayoutFromFd(handle.fd, entry).extra;
+  return localLayoutFromReader(handle.reader, entry).extra;
 }
 
 export function readInflatedWithExtraFromHandle(
   handle: ZipHandle,
   entry: ZipListEntry,
 ): { extra: Buffer; data: Buffer } {
-  const layout = localLayoutFromFd(handle.fd, entry);
+  const layout = localLayoutFromReader(handle.reader, entry);
   return {
     extra: layout.extra,
     data: inflateZipPayload(layout.compressed, entry),
@@ -325,19 +262,35 @@ export function readZipEntry(zipPath: string, entryName: string): Buffer {
 }
 
 export function readZipEntryPayload(buf: Buffer, entry: ZipListEntry): Buffer {
-  return inflateZipPayload(localLayoutFromBuffer(buf, entry).compressed, entry);
+  return inflateZipPayload(readCompressedPayload(buf, entry), entry);
 }
 
 /** Compressed payload bytes for one CD entry (no inflate). */
 export function readCompressedPayload(buf: Buffer, entry: ZipListEntry): Buffer {
-  return localLayoutFromBuffer(buf, entry).compressed;
+  return readerForBuffer(buf).readRaw(toReaderEntry(entry)).compressed;
 }
 
 export function readCompressedPayloadFromHandle(
   handle: ZipHandle,
   entry: ZipListEntry,
 ): Buffer {
-  return localLayoutFromFd(handle.fd, entry).compressed;
+  return localLayoutFromReader(handle.reader, entry).compressed;
+}
+
+/** Kit `readRaw` for one member of an in-memory archive (no inflate, no verify). */
+export function readRawMemberFromBuffer(
+  buf: Buffer,
+  entry: ZipListEntry,
+): ZipReaderRaw {
+  return readerForBuffer(buf).readRaw(toReaderEntry(entry));
+}
+
+/** Local-header Extra Field for an entry in an in-memory archive. */
+export function readLocalExtraFieldFromBuffer(
+  buf: Buffer,
+  entry: ZipListEntry,
+): Buffer {
+  return readerForBuffer(buf).readRaw(toReaderEntry(entry)).localExtra;
 }
 
 /** Decode MS-DOS date/time to local calendar fields. */

@@ -84,11 +84,23 @@ describe("rewrite helpers", () => {
     );
   });
 
-  it("hasProofSidecars detects TOKEN/TIMESTAMP", () => {
+  it("hasProofSidecars detects TOKEN/TIMESTAMP/TS-SUBMIT and legacy NZIP.TOKEN", () => {
     assert.deepEqual(hasProofSidecars(["META-INF/manifest.json"]), []);
     assert.deepEqual(hasProofSidecars(["META-INF/TOKEN.NZIP"]), [
       "META-INF/TOKEN.NZIP",
     ]);
+    assert.deepEqual(
+      hasProofSidecars([
+        "meta-inf/ts-submit.nzip",
+        "META-INF/NZIP.TOKEN",
+        "META-INF/TIMESTAMP.NZIP",
+      ]).sort(),
+      [
+        "META-INF/NZIP.TOKEN",
+        "META-INF/TIMESTAMP.NZIP",
+        "META-INF/TS-SUBMIT.NZIP",
+      ],
+    );
   });
 
   it("copies compressed payload, extras, and DOS mtime", () => {
@@ -140,8 +152,37 @@ describe("rewrite helpers", () => {
     assert.deepEqual(entry.precompressed?.data, data);
   });
 
-  it("loadCopyableArchive refuses proof sidecars", () => {
+  it("loadCopyableArchive drops proof sidecars and surfaces a notice", () => {
     const zipPath = join(dir, "proof.zipwiki");
+    writeFileSync(
+      zipPath,
+      writeZipBuffer([
+        { name: "doc.txt", data: Buffer.from("x") },
+        { name: "META-INF/TOKEN.NZIP", data: Buffer.from("{}") },
+        { name: "META-INF/TIMESTAMP.NZIP", data: Buffer.from("{}") },
+        { name: "META-INF/TS-SUBMIT.NZIP", data: Buffer.from("{}") },
+        { name: "META-INF/NZIP.TOKEN", data: Buffer.from("{}") },
+      ]),
+    );
+    const loaded = loadCopyableArchive(zipPath);
+    assert.deepEqual(
+      loaded.entries.map((e) => e.name),
+      ["doc.txt"],
+    );
+    assert.deepEqual(loaded.droppedSidecars.sort(), [
+      "META-INF/NZIP.TOKEN",
+      "META-INF/TIMESTAMP.NZIP",
+      "META-INF/TOKEN.NZIP",
+      "META-INF/TS-SUBMIT.NZIP",
+    ]);
+    assert.match(
+      loaded.notice ?? "",
+      /^blockchain sidecars removed; re-stamp required/,
+    );
+  });
+
+  it("loadCopyableArchive keeps proof sidecars when asked (pure metadata)", () => {
+    const zipPath = join(dir, "proof-keep.zipwiki");
     writeFileSync(
       zipPath,
       writeZipBuffer([
@@ -149,7 +190,13 @@ describe("rewrite helpers", () => {
         { name: "META-INF/TOKEN.NZIP", data: Buffer.from("{}") },
       ]),
     );
-    assert.throws(() => loadCopyableArchive(zipPath), /proof sidecars/);
+    const loaded = loadCopyableArchive(zipPath, { keepProofSidecars: true });
+    assert.deepEqual(
+      loaded.entries.map((e) => e.name),
+      ["doc.txt", "META-INF/TOKEN.NZIP"],
+    );
+    assert.deepEqual(loaded.droppedSidecars, []);
+    assert.equal(loaded.notice, undefined);
   });
 
   it("writeArchiveAtomic replaces dest", () => {

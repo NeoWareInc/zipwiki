@@ -7,6 +7,7 @@ Living plan for this product repo. `zip-codex` remains the lab.
 - **ZipWiki** — product
 - **zipwiki** — the command: create (`pack`) and query (`open` / `search` / `read`)
 - **zipaccess** — query library used by `zipwiki` and MCP
+- **NeoZipKit** — ZIP / NeoZip wire I/O (`neozipkit`)
 - **`.zipwiki`** — the file (legacy `.nzip` still readable, not advertised)
 - **zipwiki.ai** — public site; later `api.zipwiki.ai` / `docs.zipwiki.ai`
 
@@ -50,6 +51,13 @@ engine lands.
 
 Package names `@zipwiki/*`; home `~/.zipwiki`. Hosted auth is stubbed through
 for Phase 3 (`zipwiki login`).
+
+### Phase 2+ — NeoZipKit (0.3.0)
+
+**Landing.** ZIP framing, extras, Merkle helpers, and the web Knowledge reader
+use NeoZipKit **1.6.1**. Wire AppNote is NeoZip **0.3.0-draft**. Token Service
+stamp / mint (`neozip-blockchain`) is **deferred** until product support is
+ready. Details: [doc/NEOZIPKIT_INTEGRATION.md](doc/NEOZIPKIT_INTEGRATION.md).
 
 ## Phase 3 — TypeScript Beta (full product)
 

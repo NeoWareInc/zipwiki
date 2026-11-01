@@ -1,7 +1,9 @@
+import type { ZipReaderBrowser } from "neozipkit/browser";
+import { detectBlockchainBadge, type BlockchainBadge } from "./blockchain";
 import {
   BUNDLE_PATHS,
-  listZipEntriesFromBuffer,
-  readZipEntryText,
+  createPackageReader,
+  listZipEntries,
   zipMethodLabel,
   type ZipListEntry,
 } from "./zip";
@@ -48,6 +50,10 @@ export type NzipOpenSummary = {
   methods: string[];
   entries: ZipListEntry[];
   entryCount: number;
+  /** Shared kit reader: all entry reads go through it (size, CRC-32, SHA-256 verified). */
+  reader: ZipReaderBrowser;
+  /** From META-INF/TOKEN.NZIP, TIMESTAMP.NZIP, or TS-SUBMIT.NZIP sidecars. */
+  blockchain?: BlockchainBadge;
 };
 
 /**
@@ -90,7 +96,8 @@ export async function openNzip(
   buf: ArrayBuffer,
   filename: string,
 ): Promise<NzipOpenSummary> {
-  const entries = listZipEntriesFromBuffer(buf);
+  const reader = await createPackageReader(buf);
+  const entries = listZipEntries(reader);
   const files = entries.filter((e) => !e.name.endsWith("/"));
 
   let manifest: Record<string, unknown> | null = null;
@@ -99,8 +106,11 @@ export async function openNzip(
     throw new Error(`Missing ${BUNDLE_PATHS.manifest} — not a ZipWiki .nzip`);
   }
   try {
-    const raw = await readZipEntryText(buf, entries, BUNDLE_PATHS.manifest);
-    manifest = JSON.parse(raw) as Record<string, unknown>;
+    const bytes = await reader.readEntry(man.name);
+    manifest = JSON.parse(new TextDecoder("utf-8").decode(bytes)) as Record<
+      string,
+      unknown
+    >;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Failed to read manifest: ${msg}`);
@@ -182,6 +192,11 @@ export async function openNzip(
     return applyManifestOrigin(p, extra);
   });
 
+  const blockchain = await detectBlockchainBadge(
+    reader,
+    files.map((e) => e.name),
+  );
+
   const methodSet = new Set(files.map((e) => zipMethodLabel(e.method)));
 
   return {
@@ -223,6 +238,8 @@ export async function openNzip(
     methods: [...methodSet].sort(),
     entries: files,
     entryCount: files.length,
+    reader,
+    ...(blockchain ? { blockchain } : {}),
   };
 }
 

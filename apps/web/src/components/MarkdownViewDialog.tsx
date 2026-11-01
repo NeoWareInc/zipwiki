@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type MouseEvent } from "react";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
+import type { ZipReaderBrowser } from "neozipkit/browser";
 import { readZipEntryPayload, type ZipListEntry } from "../lib/nzip";
 
 type LoadState =
@@ -13,12 +14,12 @@ function isJsonPath(path: string): boolean {
 }
 
 export function MarkdownViewDialog({
-  archive,
+  reader,
   entry,
   onClose,
   onDownload,
 }: {
-  archive: ArrayBuffer;
+  reader: ZipReaderBrowser;
   entry: ZipListEntry;
   onClose: () => void;
   onDownload: () => void;
@@ -31,7 +32,7 @@ export function MarkdownViewDialog({
     setState({ kind: "loading" });
     void (async () => {
       try {
-        const data = await readZipEntryPayload(archive, entry);
+        const data = await readZipEntryPayload(reader, entry);
         const text = new TextDecoder("utf-8").decode(data);
         if (isJsonPath(entry.name)) {
           let plain = text;
@@ -69,7 +70,7 @@ export function MarkdownViewDialog({
     return () => {
       cancelled = true;
     };
-  }, [archive, entry]);
+  }, [reader, entry]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {

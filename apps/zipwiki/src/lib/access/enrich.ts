@@ -45,6 +45,8 @@ export type EnrichOkfResult = {
   conceptType: string;
   /** Profile stored on the primary this concept describes. */
   okfProfile?: string;
+  /** Set when blockchain sidecars were dropped (re-stamp required). */
+  notice?: string;
 };
 
 function resolveConceptFileName(args: EnrichOkfArgs): string {
@@ -198,6 +200,11 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
         okf.profiles = profiles;
       }
       ai.okf = okf;
+      if (loaded.droppedSidecars.length > 0 && Array.isArray(man.profiles)) {
+        const kept = (man.profiles as unknown[]).filter((p) => p !== "tokenized");
+        if (kept.length > 0) man.profiles = kept;
+        else delete man.profiles;
+      }
       if (Array.isArray(ai.primaries)) {
         for (const row of ai.primaries) {
           if (!row || typeof row !== "object") continue;
@@ -230,5 +237,6 @@ export async function enrichOkf(args: EnrichOkfArgs): Promise<EnrichOkfResult> {
     title: built.title,
     conceptType: built.conceptType,
     ...(okfProfile ? { okfProfile } : {}),
+    ...(loaded.notice ? { notice: loaded.notice } : {}),
   };
 }

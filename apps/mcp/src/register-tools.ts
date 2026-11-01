@@ -40,6 +40,21 @@ const packageArg = z
   .optional()
   .describe("Path to .zipwiki (default: wiki.zipwiki in cwd)");
 
+const confirmArgs = {
+  confirm: z
+    .boolean()
+    .optional()
+    .describe(
+      "Default false: return a markdown table plan only. true: execute after humanApproved.",
+    ),
+  humanApproved: z
+    .boolean()
+    .optional()
+    .describe(
+      "Set true only after the human approved the table in a later chat message. Required with confirm:true.",
+    ),
+};
+
 /** Register ZipWiki MCP tools on a server instance (local FS only). */
 export function registerTools(server: McpServer): void {
   server.registerTool(
@@ -503,4 +518,5 @@ export function registerTools(server: McpServer): void {
     },
     async (args) => respond(await okfEnrich(args)),
   );
+
 }

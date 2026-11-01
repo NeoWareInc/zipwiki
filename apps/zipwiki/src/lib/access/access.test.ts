@@ -102,7 +102,7 @@ describe("zipaccess", () => {
   it("buildCatalog / formatCatalogText are readable", () => {
     const catalog = buildCatalog(out);
     const text = formatCatalogText(catalog);
-    assert.match(text, /PRIMARY/);
+    assert.match(text, /DOCUMENT/);
     assert.match(text, /Warehouse Lease/);
     assert.match(text, /read --okf/);
     for (const key of CATALOG_RESULT_FIELDS) {

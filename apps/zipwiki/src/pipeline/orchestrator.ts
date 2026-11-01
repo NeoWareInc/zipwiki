@@ -571,6 +571,7 @@ export async function runStage(
     let members: StageResult["members"] = [];
     let errors = 0;
     let outputPath: string | undefined;
+    const packResult: { merkleRoot?: string } = {};
 
     const runParseOkf = async (mode: "both" | "parse" | "okf") => {
       const result = await runParseAndOkfPhase({
@@ -632,6 +633,7 @@ export async function runStage(
           omitOriginalDocuments,
           title: stripPackageExtension(basename(outputPath)) || "bundle",
           inputRoots,
+          result: packResult,
         });
       } else {
         // all
@@ -680,6 +682,7 @@ export async function runStage(
             omitOriginalDocuments,
             title: stripPackageExtension(basename(outputPath)) || "bundle",
             inputRoots,
+            result: packResult,
           });
         } else {
           phasesRun.push("manifest");

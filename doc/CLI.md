@@ -84,6 +84,9 @@ zipwiki origin ./knowledge/docs.zipwiki --parsed deed.pdf --fetch -o ./deed.pdf
 
 Default package when omitted: `wiki.zipwiki` in the current directory.
 
+Token Service stamp / mint / verify are **not** in ZipWiki yet (deferred until
+product support). See [NEOZIPKIT_INTEGRATION.md](NEOZIPKIT_INTEGRATION.md).
+
 ## API keys (Llama / AI)
 
 | Mode | What the CLI needs | Vendor key location |

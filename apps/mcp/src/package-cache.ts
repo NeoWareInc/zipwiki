@@ -1,5 +1,6 @@
 /**
- * Session cache of ZipHandle (CD + fd) for the long-lived stdio MCP process.
+ * Session cache of ZipHandle (wraps a NeoZipKit ZipReaderNode: CD + fd) for the
+ * long-lived stdio MCP process.
  */
 
 import { statSync } from "node:fs";
