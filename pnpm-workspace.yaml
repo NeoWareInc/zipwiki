@@ -17,7 +17,7 @@ allowBuilds:
   "@llamaindex/liteparse-win32-x64-msvc": true
 
 minimumReleaseAgeExclude:
-  - neozipkit@1.6.1
+  - neozipkit@1.6.1 || 1.6.2
 
 patchedDependencies:
   '@convex-dev/auth@0.0.95': patches/@convex-dev__auth@0.0.95.patch

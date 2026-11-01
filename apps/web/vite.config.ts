@@ -1,10 +1,9 @@
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 const repoRoot = path.resolve(__dirname, "../..");
-const bufferInject = path.resolve(__dirname, "src/polyfills/buffer-inject.js");
 
 function convexDeploymentUrl(raw: string | undefined): string {
   const url = raw?.trim().replace(/\/+$/, "") ?? "";
@@ -13,35 +12,6 @@ function convexDeploymentUrl(raw: string | undefined): string {
     return "";
   }
   return url;
-}
-
-/**
- * NeoZipKit 1.6.x browser-esm references bare `Buffer` while only assigning
- * `globalThis.Buffer` at the end of the file. Under ESM that is not a lexical
- * binding, so browsers throw `Buffer is not defined`. Prepend a local binding.
- */
-function neozipkitBufferShim(): Plugin {
-  return {
-    name: "neozipkit-buffer-shim",
-    enforce: "pre",
-    transform(code, id) {
-      const norm = id.replace(/\\/g, "/");
-      const isKitBrowserBundle =
-        norm.includes("/neozipkit/dist/browser-esm/") ||
-        norm.includes("/.vite/deps/neozipkit_browser");
-      if (!isKitBrowserBundle) return null;
-      if (code.includes("/* zipwiki-buffer-shim */")) return null;
-      return {
-        code:
-          `/* zipwiki-buffer-shim */\n` +
-          `import { Buffer as __ZipWikiBufferPolyfill } from "buffer";\n` +
-          `const Buffer = globalThis.Buffer ?? __ZipWikiBufferPolyfill;\n` +
-          `if (typeof globalThis !== "undefined") globalThis.Buffer = Buffer;\n` +
-          code,
-        map: null,
-      };
-    },
-  };
 }
 
 export default defineConfig(({ mode }) => {
@@ -57,7 +27,7 @@ export default defineConfig(({ mode }) => {
   const proxyTarget = apiUrl || "https://zipwiki-api-dev.fly.dev";
 
   return {
-    plugins: [neozipkitBufferShim(), react(), tailwindcss()],
+    plugins: [react(), tailwindcss()],
     base: "/",
     envDir: repoRoot,
     experimental: {
@@ -70,24 +40,11 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.VITE_API_URL": JSON.stringify(
         apiUrl || env.VITE_API_URL || "",
       ),
-      global: "globalThis",
     },
     resolve: {
       alias: {
         "@convex": path.resolve(__dirname, "../../convex"),
         "@public-specs": path.resolve(__dirname, "../../public-specs"),
-        buffer: "buffer/",
-      },
-    },
-    optimizeDeps: {
-      include: ["buffer", "neozipkit/browser"],
-      esbuildOptions: {
-        // Injects `import { Buffer } from …` into prebundled deps so bare
-        // `Buffer` in neozipkit/browser-esm resolves during `vite dev`.
-        inject: [bufferInject],
-        define: {
-          global: "globalThis",
-        },
       },
     },
     server: {

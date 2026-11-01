@@ -110,9 +110,6 @@ importers:
       '@zipwiki/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
-      buffer:
-        specifier: ^6.0.3
-        version: 6.0.3
       convex:
         specifier: ^1.45.0
         version: 1.46.0(react@19.3.0)
@@ -123,8 +120,8 @@ importers:
         specifier: ^18.0.14
         version: 18.0.14
       neozipkit:
-        specifier: 1.6.1
-        version: 1.6.1
+        specifier: 1.6.2
+        version: 1.6.2
       react:
         specifier: ^19.1.0
         version: 19.3.0
@@ -196,8 +193,8 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
       neozipkit:
-        specifier: 1.6.1
-        version: 1.6.1
+        specifier: 1.6.2
+        version: 1.6.2
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
@@ -1953,8 +1950,8 @@ packages:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
 
-  neozipkit@1.6.1:
-    resolution: {integrity: sha512-0vZY8GZ+pBMCyy/UivUBVGk9id6njGEtYzm52Kalu7o1A+IxPGhGNRzJ0QTVRjUkSQ1JcD/IwnoQ8IbcJAVN9g==}
+  neozipkit@1.6.2:
+    resolution: {integrity: sha512-wVDpYGRWRNL9PWyi2Ftn2B0ThLleaBqzA94REXFcKuloHQpcDnNDi3TubmQamP9j31Hu/p9gXkYvLs7DsCz4Sg==}
     engines: {node: '>=22.15.0'}
 
   node-releases@2.0.56:
@@ -3896,7 +3893,7 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  neozipkit@1.6.1:
+  neozipkit@1.6.2:
     dependencies:
       buffer: 6.0.3
       fzstd: 0.1.1
