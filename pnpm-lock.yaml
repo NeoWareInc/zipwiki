@@ -110,6 +110,9 @@ importers:
       '@zipwiki/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      buffer:
+        specifier: ^6.0.3
+        version: 6.0.3
       convex:
         specifier: ^1.45.0
         version: 1.46.0(react@19.3.0)
