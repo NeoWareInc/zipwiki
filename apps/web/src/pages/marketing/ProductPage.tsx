@@ -1,6 +1,8 @@
+import { Link } from "react-router-dom";
 import {
   CLASSIC_ZIP_PROBLEM,
   HOME_OUTCOMES,
+  HOME_RELEASE_ANNOUNCEMENT,
   PRODUCT_CAPABILITIES,
   PRODUCT_HERO_IMAGE,
   PRODUCT_STATS,
@@ -22,6 +24,17 @@ import {
 export default function ProductPage() {
   return (
     <main>
+      <div className="border-b border-(--line) bg-(--accent)/8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-3 gap-y-1 px-6 py-3 text-sm">
+          <p className="text-(--ink)">{HOME_RELEASE_ANNOUNCEMENT.text}</p>
+          <Link
+            to={HOME_RELEASE_ANNOUNCEMENT.ctaTo}
+            className="font-semibold text-(--accent) transition-colors hover:text-(--accent-bright)"
+          >
+            {HOME_RELEASE_ANNOUNCEMENT.ctaLabel} →
+          </Link>
+        </div>
+      </div>
       <Section>
         <PageHero
           kicker="Product"

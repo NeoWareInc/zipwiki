@@ -37,6 +37,13 @@ export const PAGE_TITLES: Record<string, string> = {
   "/privacy": `Privacy — ${SITE_NAME}`,
 };
 
+/** One-line release notice on the product home page. */
+export const HOME_RELEASE_ANNOUNCEMENT = {
+  text: "ZipWiki v0.3.0 is released — CLI, MCP, and NeoZipKit ZIP I/O.",
+  ctaLabel: "Install",
+  ctaTo: "/install",
+} as const;
+
 /** Website outcomes (doc/FEATURES.md "What to emphasize"). No package paths here. */
 export const HOME_OUTCOMES = [
   {
