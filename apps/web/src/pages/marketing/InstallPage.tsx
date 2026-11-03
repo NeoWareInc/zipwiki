@@ -137,8 +137,9 @@ function isDevHost(hostname: string): boolean {
 }
 
 export default function InstallPage() {
-  const [version, setVersion] = useState("0.2.0");
-  const [published, setPublished] = useState<Set<string>>(new Set());
+  const [version, setVersion] = useState("0.3.0");
+  /** null = index not loaded yet (or failed) — treat listed platforms as available. */
+  const [published, setPublished] = useState<Set<string> | null>(null);
   const [siteOrigin, setSiteOrigin] = useState("https://zipwiki.ai");
   const [devHost, setDevHost] = useState(false);
   /** Production: /releases. Dev rehearsal host: /dev-releases (never on zipwiki.ai). */
@@ -171,7 +172,7 @@ export default function InstallPage() {
         }
       })
       .catch(() => {
-        /* keep defaults when the index is missing */
+        /* keep defaults + optimistic downloads when the index is missing */
       });
     return () => {
       cancelled = true;
@@ -292,7 +293,8 @@ export default function InstallPage() {
             const file = tarballName(version, build.platform, build.arch);
             const href = `${releasesBase}/${file}`;
             const command = `npm i -g --allow-remote=root ${siteOrigin}${href}`;
-            const ready = published.has(file);
+            // Only hide a platform once the index confirms it is missing.
+            const ready = published === null || published.has(file);
             return (
               <article
                 key={build.id}
@@ -311,7 +313,7 @@ export default function InstallPage() {
                     </a>
                   ) : (
                     <span className="text-sm text-(--muted)">
-                      Not published yet
+                      Not in this release
                     </span>
                   )}
                 </div>
@@ -322,7 +324,7 @@ export default function InstallPage() {
                   />
                 ) : (
                   <p className="mt-3 text-sm text-(--muted)">
-                    No install URL until this platform’s tarball is published.
+                    This platform is not included in the current release index.
                   </p>
                 )}
               </article>
@@ -337,8 +339,8 @@ export default function InstallPage() {
           >
             THIRD_PARTY_NOTICES
           </a>
-          . Linux builds need glibc (Debian/Ubuntu/RHEL). Alpine musl is not
-          published on this page yet.
+          . Linux builds need glibc (Debian/Ubuntu/RHEL). There is no Alpine
+          musl build yet.
         </p>
       </Section>
 
